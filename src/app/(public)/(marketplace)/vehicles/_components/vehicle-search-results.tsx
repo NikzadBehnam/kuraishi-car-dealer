@@ -31,7 +31,7 @@ export function VehicleSearchResults({
   return (
     <div className="site-container grid gap-7 py-9 lg:grid-cols-[17.5rem_1fr]">
       <aside
-        className={`${open ? "fixed inset-0 z-[60] overflow-auto" : "hidden"} bg-surface p-6 lg:sticky lg:top-24 lg:block lg:self-start lg:rounded-xl lg:border lg:shadow-sm`}
+        className={`${open ? "fixed inset-0 z-60 overflow-auto" : "hidden"} bg-surface p-6 lg:sticky lg:top-24 lg:block lg:self-start lg:rounded lg:border lg:shadow-sm`}
       >
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-extrabold">{content.filters}</h2>

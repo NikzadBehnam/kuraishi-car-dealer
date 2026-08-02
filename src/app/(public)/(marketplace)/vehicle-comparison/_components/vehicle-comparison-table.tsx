@@ -9,6 +9,15 @@ import {
   formatTransmission,
 } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
 export function ComparisonTable() {
   const { comparison, toggleComparison } = useVehicleState();
@@ -37,15 +46,19 @@ export function ComparisonTable() {
       ["Verfügbarkeit", () => "Sofort verfügbar"],
     ];
   return (
-    <div className="bg-surface overflow-x-auto rounded-xl border">
-      <table className="w-full border-collapse text-left">
-        <caption className="sr-only">Vergleich ausgewählter Fahrzeuge</caption>
-        <thead>
-          <tr>
-            <th className="bg-surface sticky left-0 min-w-40 p-4">Merkmal</th>
+    <div className="bg-surface overflow-hidden rounded border">
+      <Table className="border-collapse text-left">
+        <TableCaption className="sr-only">
+          Vergleich ausgewählter Fahrzeuge
+        </TableCaption>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="bg-surface sticky left-0 z-10 h-auto min-w-40 p-4">
+              Merkmal
+            </TableHead>
             {selected.map((vehicle) => (
-              <th
-                className="min-w-60 border-l p-4"
+              <TableHead
+                className="h-auto min-w-60 border-l p-4"
                 scope="col"
                 key={vehicle.id}
               >
@@ -58,25 +71,28 @@ export function ComparisonTable() {
                 >
                   Entfernen
                 </Button>
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map(([label, getValue]) => (
-            <tr key={label}>
-              <th scope="row" className="bg-surface sticky left-0 border-t p-4">
+            <TableRow key={label}>
+              <TableHead
+                scope="row"
+                className="bg-surface sticky left-0 z-10 h-auto p-4"
+              >
                 {label}
-              </th>
+              </TableHead>
               {selected.map((vehicle) => (
-                <td className="border-t border-l p-4" key={vehicle.id}>
+                <TableCell className="border-l p-4" key={vehicle.id}>
                   {getValue(vehicle)}
-                </td>
+                </TableCell>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

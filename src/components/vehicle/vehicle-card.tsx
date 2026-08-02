@@ -28,7 +28,7 @@ export function VehicleCard({
           : "group overflow-hidden"
       }
     >
-      <div className="bg-secondary relative aspect-[16/10] overflow-hidden">
+      <div className="bg-secondary relative aspect-16/10 overflow-hidden">
         <Image
           className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           fill

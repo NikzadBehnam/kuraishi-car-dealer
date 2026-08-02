@@ -1,6 +1,13 @@
 "use client";
 import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/formatters";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 export function FinancingCalculator() {
   const [price, setPrice] = useState(39900);
   const [downPayment, setDownPayment] = useState(5000);
@@ -32,18 +39,22 @@ export function FinancingCalculator() {
           onChange={(event) => setDownPayment(Number(event.target.value))}
         />
       </label>
-      <label className="field">
-        Laufzeit
-        <select
-          className="control"
-          value={months}
-          onChange={(event) => setMonths(Number(event.target.value))}
+      <div className="field">
+        <span>Laufzeit</span>
+        <Select
+          value={String(months)}
+          onValueChange={(value) => setMonths(Number(value))}
         >
-          <option value="36">36 Monate</option>
-          <option value="48">48 Monate</option>
-          <option value="60">60 Monate</option>
-        </select>
-      </label>
+          <SelectTrigger aria-label="Laufzeit">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="36">36 Monate</SelectItem>
+            <SelectItem value="48">48 Monate</SelectItem>
+            <SelectItem value="60">60 Monate</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <div className="bg-primary rounded-xl p-6 text-white">
         <span className="text-sm text-[#c9d3df]">
           Unverbindliche Beispielrate

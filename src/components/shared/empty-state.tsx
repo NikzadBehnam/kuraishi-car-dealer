@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SearchX } from "lucide-react";
+import { CarFront, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/config/routes.config";
 export function EmptyState({
@@ -14,8 +14,11 @@ export function EmptyState({
       <SearchX className="text-muted-foreground size-12" />
       <h2 className="section-title mt-5 text-3xl">{title}</h2>
       <p className="text-muted-foreground mt-3">{description}</p>
-      <Button asChild variant="accent" className="mt-6">
-        <Link href={routes.vehicles}>Fahrzeuge entdecken</Link>
+      <Button asChild variant="accent" className="mt-6 rounded-[15px]">
+        <Link href={routes.vehicles}>
+          <CarFront />
+          Fahrzeuge entdecken
+        </Link>
       </Button>
     </div>
   );

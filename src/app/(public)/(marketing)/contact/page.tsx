@@ -20,13 +20,13 @@ export default function ContactPage() {
         breadcrumb="Kontakt"
       />
       <div className="site-container grid gap-6 py-10 lg:grid-cols-[1.2fr_.8fr]">
-        <Card className="p-7">
+        <Card className="rounded-[15px] p-7">
           <h2 className="section-title text-3xl">Termin anfragen</h2>
           <div className="mt-7">
             <ContactForm />
           </div>
         </Card>
-        <Card className="p-7">
+        <Card className="rounded-[15px] p-7">
           <h2 className="section-title text-3xl">{siteConfig.name}</h2>
           <div className="text-muted-foreground mt-6 grid gap-4">
             <p className="flex gap-2">

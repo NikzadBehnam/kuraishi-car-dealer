@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  CalendarIcon,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -27,6 +32,7 @@ const months = [
 
 type MonthPickerProps = {
   id?: string;
+  className?: string;
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -38,6 +44,7 @@ type MonthPickerProps = {
 
 export function MonthPicker({
   id,
+  className,
   value,
   onChange,
   placeholder = "Monat auswählen",
@@ -69,8 +76,9 @@ export function MonthPicker({
           aria-invalid={invalid}
           data-empty={!value}
           className={cn(
-            "control h-12 justify-start rounded-[var(--radius-sm)] px-3 text-left font-normal hover:translate-y-0",
+            "control justify-start rounded-sm px-3 text-left font-normal hover:translate-y-0",
             "data-[empty=true]:text-muted-foreground",
+            className,
           )}
         >
           <CalendarIcon className="text-muted-foreground size-4" />
@@ -111,6 +119,7 @@ export function MonthPicker({
               setView((current) => (current === "months" ? "years" : "months"))
             }
           >
+            <CalendarRange className="size-4" />
             {view === "months"
               ? visibleYear
               : `${Math.max(yearPageStart, minYear)}–${yearPageEnd}`}
@@ -148,7 +157,7 @@ export function MonthPicker({
                     type="button"
                     variant={isSelected ? "accent" : "ghost"}
                     size="sm"
-                    className="min-h-10 px-2 hover:translate-y-0"
+                    className="min-h-9 px-2 hover:translate-y-0"
                     disabled={isFuture}
                     aria-pressed={isSelected}
                     onClick={() => {
@@ -173,7 +182,7 @@ export function MonthPicker({
                     type="button"
                     variant={year === visibleYear ? "accent" : "ghost"}
                     size="sm"
-                    className="min-h-10 px-2 hover:translate-y-0"
+                    className="min-h-9 px-2 hover:translate-y-0"
                     disabled={unavailable}
                     aria-pressed={year === visibleYear}
                     onClick={() => {

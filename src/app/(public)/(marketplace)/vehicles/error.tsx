@@ -1,4 +1,5 @@
 "use client";
+import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 export default function Error({ reset }: { reset: () => void }) {
   return (
@@ -8,6 +9,7 @@ export default function Error({ reset }: { reset: () => void }) {
         Bitte versuchen Sie es erneut.
       </p>
       <Button className="mt-6" onClick={reset}>
+        <RotateCcw />
         Erneut versuchen
       </Button>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Heart, Menu, X } from "lucide-react";
+import { CarFront, Heart, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { commonContent } from "@/content/de/common";
 import { mainNavigation } from "@/config/navigation.config";
@@ -47,8 +47,13 @@ export function SiteHeader() {
               </span>
             </Link>
           </Button>
-          <Button asChild variant="accent" className="hidden sm:inline-flex">
+          <Button
+            asChild
+            variant="accent"
+            className="hidden rounded-[15px] sm:inline-flex"
+          >
             <Link href={routes.vehicles}>
+              <CarFront />
               {commonContent.actions.findVehicle}
             </Link>
           </Button>

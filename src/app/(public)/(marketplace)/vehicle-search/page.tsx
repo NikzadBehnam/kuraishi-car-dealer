@@ -1,7 +1,15 @@
 import Link from "next/link";
+import { CarFront, RotateCcw } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { vehicles } from "@/data/vehicles";
 import { publicRoutes } from "@/config/routes.config";
 import { createPublicMetadata } from "@/lib/metadata";
@@ -37,25 +45,32 @@ export default function AdvancedSearchPage() {
         breadcrumb="Fahrzeugsuche"
       />
       <div className="site-container py-10">
-        <Card className="p-7">
+        <Card className="rounded p-7">
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {fields.map((field) => (
-              <label className="field" key={field}>
-                {field}
-                <select className="control">
-                  <option>Beliebig</option>
-                  <option>Auswahl 1</option>
-                  <option>Auswahl 2</option>
-                </select>
-              </label>
+              <div className="field" key={field}>
+                <span>{field}</span>
+                <Select defaultValue="any">
+                  <SelectTrigger aria-label={field}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Beliebig</SelectItem>
+                    <SelectItem value="option-1">Auswahl 1</SelectItem>
+                    <SelectItem value="option-2">Auswahl 2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             ))}
           </div>
-          <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
-            <Button variant="outline" type="reset">
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <Button variant="outline" type="reset" className="rounded-[15px]">
+              <RotateCcw />
               Alles zurücksetzen
             </Button>
-            <Button asChild variant="accent">
+            <Button asChild variant="accent" className="rounded-[15px]">
               <Link href={publicRoutes.vehicles}>
+                <CarFront />
                 {vehicles.length} Fahrzeuge anzeigen
               </Link>
             </Button>

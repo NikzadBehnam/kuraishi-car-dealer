@@ -1,11 +1,18 @@
 "use client";
 import { useMemo, useState } from "react";
-import { Filter, X } from "lucide-react";
+import { Filter, RotateCcw, X } from "lucide-react";
 import type { Vehicle } from "@/types/vehicle";
 import { filterVehicles, type VehicleFilters } from "@/lib/vehicle-filters";
 import { vehicleListingContent as content } from "@/content/de/vehicle-listing";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
 export function VehicleSearchResults({
   vehicles,
@@ -88,10 +95,11 @@ export function VehicleSearchResults({
           ]}
         />
         <Button
-          className="w-full"
+          className="w-full rounded-[15px]"
           variant="outline"
           onClick={() => setFilters({})}
         >
+          <RotateCcw />
           Alle Filter zurücksetzen
         </Button>
       </aside>
@@ -114,17 +122,22 @@ export function VehicleSearchResults({
               <Filter />
               Filter
             </Button>
-            <select
-              aria-label={content.sort}
-              className="control w-auto"
-              value={filters.sort ?? ""}
-              onChange={(event) => update("sort", event.target.value)}
+            <Select
+              value={filters.sort ?? "relevance"}
+              onValueChange={(value) =>
+                update("sort", value === "relevance" ? "" : value)
+              }
             >
-              <option value="">Relevanz</option>
-              <option value="price-asc">Preis aufsteigend</option>
-              <option value="price-desc">Preis absteigend</option>
-              <option value="newest">Neueste Angebote</option>
-            </select>
+              <SelectTrigger aria-label={content.sort} className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="relevance">Relevanz</SelectItem>
+                <SelectItem value="price-asc">Preis aufsteigend</SelectItem>
+                <SelectItem value="price-desc">Preis absteigend</SelectItem>
+                <SelectItem value="newest">Neueste Angebote</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         {results.length ? (
@@ -155,20 +168,24 @@ function FilterSelect({
   options: string[][];
 }) {
   return (
-    <label className="field mb-5">
-      {label}
-      <select
-        className="control"
-        value={value ?? ""}
-        onChange={(event) => onChange(event.target.value)}
+    <div className="field mb-5">
+      <span>{label}</span>
+      <Select
+        value={value ?? "all"}
+        onValueChange={(value) => onChange(value === "all" ? "" : value)}
       >
-        <option value="">Alle</option>
-        {options.map(([value, label]) => (
-          <option value={value} key={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-    </label>
+        <SelectTrigger aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Alle</SelectItem>
+          {options.map(([value, label]) => (
+            <SelectItem value={value} key={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

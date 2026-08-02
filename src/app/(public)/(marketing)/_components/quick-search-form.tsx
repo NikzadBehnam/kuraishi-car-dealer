@@ -2,6 +2,13 @@
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { vehicles } from "@/data/vehicles";
 import { routes } from "@/config/routes.config";
 export function QuickSearchForm() {
@@ -18,28 +25,42 @@ export function QuickSearchForm() {
         router.push(`${routes.vehicles}?${params}`);
       }}
     >
-      <select aria-label="Marke" name="make" className="control">
-        <option value="">Alle Marken</option>
-        {[...new Set(vehicles.map((vehicle) => vehicle.make))]
-          .toSorted()
-          .map((make) => (
-            <option key={make}>{make}</option>
-          ))}
-      </select>
-      <select aria-label="Fahrzeugtyp" name="bodyType" className="control">
-        <option value="">Alle Fahrzeugtypen</option>
-        <option value="suv">SUV</option>
-        <option value="compact">Kleinwagen</option>
-        <option value="sedan">Limousine</option>
-        <option value="wagon">Kombi</option>
-      </select>
-      <select aria-label="Preis bis" name="maximumPrice" className="control">
-        <option value="">Preis bis</option>
-        <option value="30000">30.000 €</option>
-        <option value="40000">40.000 €</option>
-        <option value="50000">50.000 €</option>
-      </select>
-      <Button variant="accent" type="submit">
+      <Select name="make">
+        <SelectTrigger aria-label="Marke">
+          <SelectValue placeholder="Alle Marken" />
+        </SelectTrigger>
+        <SelectContent>
+          {[...new Set(vehicles.map((vehicle) => vehicle.make))]
+            .toSorted()
+            .map((make) => (
+              <SelectItem key={make} value={make}>
+                {make}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+      <Select name="bodyType">
+        <SelectTrigger aria-label="Fahrzeugtyp">
+          <SelectValue placeholder="Alle Fahrzeugtypen" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="suv">SUV</SelectItem>
+          <SelectItem value="compact">Kleinwagen</SelectItem>
+          <SelectItem value="sedan">Limousine</SelectItem>
+          <SelectItem value="wagon">Kombi</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select name="maximumPrice">
+        <SelectTrigger aria-label="Preis bis">
+          <SelectValue placeholder="Preis bis" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="30000">30.000 €</SelectItem>
+          <SelectItem value="40000">40.000 €</SelectItem>
+          <SelectItem value="50000">50.000 €</SelectItem>
+        </SelectContent>
+      </Select>
+      <Button variant="accent" type="submit" className="rounded-[15px]">
         <Search />
         Suchen
       </Button>

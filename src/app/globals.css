@@ -188,7 +188,7 @@ textarea:focus-visible {
   font-weight: 700;
 }
 .control {
-  height: 3rem;
+  height: 2.25rem;
   width: 100%;
   border: 1px solid var(--input);
   border-radius: var(--radius-sm);

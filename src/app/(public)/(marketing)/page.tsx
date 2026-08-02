@@ -1,6 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Calculator,
+  CarFront,
+  Check,
+  ShieldCheck,
+} from "lucide-react";
 import { homePageContent } from "@/content/de/home-page";
 import { vehicles } from "@/data/vehicles";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
@@ -125,7 +131,10 @@ export default function HomePage() {
                 passt.
               </p>
               <Button asChild variant="accent" className="mt-6">
-                <Link href={publicRoutes.financing}>Rate berechnen</Link>
+                <Link href={publicRoutes.financing}>
+                  <Calculator />
+                  Rate berechnen
+                </Link>
               </Button>
             </Card>
             <Card className="p-8">
@@ -136,7 +145,10 @@ export default function HomePage() {
                 Bewertung.
               </p>
               <Button asChild className="mt-6">
-                <Link href={publicRoutes.sellVehicle}>Bewertung starten</Link>
+                <Link href={publicRoutes.sellVehicle}>
+                  <CarFront />
+                  Bewertung starten
+                </Link>
               </Button>
             </Card>
           </div>

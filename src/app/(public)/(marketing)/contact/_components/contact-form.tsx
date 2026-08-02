@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { LoaderCircle, Send } from "lucide-react";
 import {
   contactFormSchema,
   type ContactFormValues,
@@ -10,6 +11,13 @@ import {
 import { formContent } from "@/content/de/forms";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const {
@@ -48,18 +56,34 @@ export function ContactForm() {
           label={formContent.appointmentType}
           error={errors.appointmentType?.message}
         >
-          <select
-            id="appointment-type"
-            className="control"
-            {...register("appointmentType")}
-          >
-            <option>Probefahrt</option>
-            <option>Beratung</option>
-            <option>Finanzierung</option>
-            <option>Fahrzeugbewertung</option>
-            <option>Werkstatt</option>
-            <option>Rückruf</option>
-          </select>
+          <Controller
+            name="appointmentType"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger
+                  id="appointment-type"
+                  aria-invalid={!!errors.appointmentType}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    "Probefahrt",
+                    "Beratung",
+                    "Finanzierung",
+                    "Fahrzeugbewertung",
+                    "Werkstatt",
+                    "Rückruf",
+                  ].map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
         </Field>
         <Field
           id="preferred-date"
@@ -72,6 +96,7 @@ export function ContactForm() {
             render={({ field }) => (
               <DatePicker
                 id="preferred-date"
+                className="focus-visible:outline-none!"
                 value={field.value}
                 onChange={field.onChange}
                 invalid={!!errors.preferredDate}
@@ -88,7 +113,7 @@ export function ContactForm() {
         >
           <input
             id="contact-name"
-            className="control"
+            className="control focus-visible:outline-none!"
             aria-invalid={!!errors.name}
             {...register("name")}
           />
@@ -100,7 +125,7 @@ export function ContactForm() {
         >
           <input
             id="contact-email"
-            className="control"
+            className="control focus-visible:outline-none!"
             type="email"
             aria-invalid={!!errors.email}
             {...register("email")}
@@ -114,14 +139,14 @@ export function ContactForm() {
       >
         <textarea
           id="contact-message"
-          className="control"
+          className="control focus-visible:outline-none!"
           rows={5}
           {...register("message")}
         />
       </Field>
       <label className="flex items-start gap-3 text-sm">
         <input
-          className="mt-1 size-4"
+          className="mt-1 size-4 focus-visible:outline-none!"
           type="checkbox"
           {...register("consent")}
         />
@@ -130,7 +155,12 @@ export function ContactForm() {
       {errors.consent && (
         <p className="text-destructive text-sm">{errors.consent.message}</p>
       )}
-      <Button variant="accent" disabled={isSubmitting}>
+      <Button
+        variant="accent"
+        disabled={isSubmitting}
+        className="w-full justify-center rounded-[15px] focus-visible:outline-none!"
+      >
+        {isSubmitting ? <LoaderCircle className="animate-spin" /> : <Send />}
         {isSubmitting ? "Wird gesendet …" : "Anfrage senden"}
       </Button>
     </form>

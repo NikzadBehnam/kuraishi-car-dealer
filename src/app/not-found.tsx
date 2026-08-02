@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { House } from "lucide-react";
 import { Button } from "@/components/ui/button";
 export default function NotFound() {
   return (
@@ -10,8 +11,11 @@ export default function NotFound() {
       <p className="text-muted-foreground mt-4">
         Die gesuchte Seite ist nicht verfügbar.
       </p>
-      <Button asChild variant="accent" className="mt-7">
-        <Link href="/">Zur Startseite</Link>
+      <Button asChild variant="accent" className="mt-7 rounded-[15px]">
+        <Link href="/">
+          <House />
+          Zur Startseite
+        </Link>
       </Button>
     </div>
   );

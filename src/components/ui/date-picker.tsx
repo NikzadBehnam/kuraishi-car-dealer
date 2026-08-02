@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { addMonths, format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarIcon,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -30,6 +36,7 @@ const months = [
 
 type DatePickerProps = {
   id?: string;
+  className?: string;
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -40,6 +47,7 @@ type DatePickerProps = {
 
 export function DatePicker({
   id,
+  className,
   value,
   onChange,
   placeholder = "Datum auswählen",
@@ -80,8 +88,9 @@ export function DatePicker({
           aria-invalid={invalid}
           data-empty={!selected}
           className={cn(
-            "control h-12 justify-start rounded-[var(--radius-sm)] px-3 text-left font-normal hover:translate-y-0",
+            "control justify-start rounded-[var(--radius-sm)] px-3 text-left font-normal hover:translate-y-0",
             "data-[empty=true]:text-muted-foreground",
+            className,
           )}
         >
           <CalendarIcon className="text-muted-foreground size-4" />
@@ -116,6 +125,7 @@ export function DatePicker({
                   aria-label="Monat auswählen"
                   onClick={() => setView("months")}
                 >
+                  <CalendarDays className="size-4" />
                   {months[visibleMonthIndex]}
                 </Button>
                 <Button
@@ -126,6 +136,7 @@ export function DatePicker({
                   aria-label="Jahr auswählen"
                   onClick={() => setView("years")}
                 >
+                  <CalendarRange className="size-4" />
                   {visibleYear}
                 </Button>
               </div>
@@ -187,6 +198,7 @@ export function DatePicker({
                 aria-label="Jahr auswählen"
                 onClick={() => setView("years")}
               >
+                <CalendarRange className="size-4" />
                 {visibleYear}
               </Button>
               <Button
@@ -217,7 +229,7 @@ export function DatePicker({
                     type="button"
                     variant={index === visibleMonthIndex ? "accent" : "ghost"}
                     size="sm"
-                    className="min-h-10 px-2 hover:translate-y-0"
+                    className="min-h-9 px-2 hover:translate-y-0"
                     disabled={unavailable}
                     aria-pressed={index === visibleMonthIndex}
                     onClick={() => {
@@ -258,6 +270,7 @@ export function DatePicker({
                 aria-label="Kalender anzeigen"
                 onClick={() => setView("calendar")}
               >
+                <CalendarDays className="size-4" />
                 {Math.max(yearPageStart, minYear)}–{yearPageEnd}
               </Button>
               <Button
@@ -287,7 +300,7 @@ export function DatePicker({
                   type="button"
                   variant={year === visibleYear ? "accent" : "ghost"}
                   size="sm"
-                  className="min-h-10 px-2 hover:translate-y-0"
+                  className="min-h-9 px-2 hover:translate-y-0"
                   disabled={year < minYear || year > maxYear}
                   aria-pressed={year === visibleYear}
                   onClick={() => {

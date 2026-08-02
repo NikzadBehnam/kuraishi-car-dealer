@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check, MapPin, Phone } from "lucide-react";
+import { CalendarCheck, Check, Mail, MapPin, Phone } from "lucide-react";
 import { vehicles } from "@/data/vehicles";
 import { dealers } from "@/data/dealers";
 import {
@@ -155,6 +155,7 @@ export default async function VehicleDetailPage({
             </p>
             <Button asChild variant="accent" className="mt-6 w-full">
               <Link href={`${publicRoutes.contact}?vehicle=${vehicle.slug}`}>
+                <Mail />
                 Händler kontaktieren
               </Link>
             </Button>
@@ -196,10 +197,14 @@ export default async function VehicleDetailPage({
       </section>
       <div className="bg-surface fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t p-3 lg:hidden">
         <Button asChild variant="outline" className="flex-1">
-          <a href={`tel:${dealer.phone}`}>Anrufen</a>
+          <a href={`tel:${dealer.phone}`}>
+            <Phone />
+            Anrufen
+          </a>
         </Button>
         <Button asChild variant="accent" className="flex-1">
           <Link href={`${publicRoutes.contact}?vehicle=${vehicle.slug}`}>
+            <CalendarCheck />
             Probefahrt
           </Link>
         </Button>

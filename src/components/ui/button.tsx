@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 const buttonVariants = cva(
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold transition-[transform,background-color,color] duration-200 hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex h-9 min-h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-bold transition-[transform,background-color,color] duration-200 hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -16,13 +16,13 @@ const buttonVariants = cva(
         outline: "border border-border bg-surface hover:bg-surface-muted",
         ghost: "hover:bg-surface-muted",
         destructive: "bg-destructive text-white",
-        link: "min-h-0 rounded-none p-0 text-primary underline-offset-4 hover:translate-y-0 hover:underline",
+        link: "rounded-none px-0 text-primary underline-offset-4 hover:translate-y-0 hover:underline",
       },
       size: {
-        default: "h-11",
-        sm: "min-h-9 px-4",
-        lg: "h-13 px-7 text-base",
-        icon: "size-11 p-0",
+        default: "px-4",
+        sm: "px-4",
+        lg: "px-4",
+        icon: "w-9 px-0",
       },
     },
     defaultVariants: { variant: "primary", size: "default" },

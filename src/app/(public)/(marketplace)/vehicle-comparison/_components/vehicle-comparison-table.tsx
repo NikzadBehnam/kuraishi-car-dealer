@@ -1,4 +1,5 @@
 "use client";
+import { Trash2 } from "lucide-react";
 import { vehicles } from "@/data/vehicles";
 import { useVehicleState } from "@/components/providers/vehicle-state-provider";
 import {
@@ -69,6 +70,7 @@ export function ComparisonTable() {
                   variant="outline"
                   onClick={() => toggleComparison(vehicle.id)}
                 >
+                  <Trash2 />
                   Entfernen
                 </Button>
               </TableHead>

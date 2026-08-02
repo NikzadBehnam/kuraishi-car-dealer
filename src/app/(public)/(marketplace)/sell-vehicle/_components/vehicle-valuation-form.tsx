@@ -2,10 +2,18 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, ArrowRight, ClipboardCheck } from "lucide-react";
 import { vehicleValuationSchema } from "../_schemas/vehicle-valuation.schema";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { MonthPicker } from "@/components/ui/month-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 type Values = z.infer<typeof vehicleValuationSchema>;
 export function ValuationForm() {
   const [step, setStep] = useState(1);
@@ -43,7 +51,7 @@ export function ValuationForm() {
           <Field id="valuation-make" label="Marke" error={errors.make?.message}>
             <input
               id="valuation-make"
-              className="control"
+              className="control focus-visible:outline-none!"
               {...register("make")}
             />
           </Field>
@@ -54,7 +62,7 @@ export function ValuationForm() {
           >
             <input
               id="valuation-model"
-              className="control"
+              className="control focus-visible:outline-none!"
               {...register("model")}
             />
           </Field>
@@ -69,6 +77,7 @@ export function ValuationForm() {
               render={({ field }) => (
                 <MonthPicker
                   id="first-registration"
+                  className="focus-visible:outline-none!"
                   value={field.value}
                   onChange={field.onChange}
                   invalid={!!errors.firstRegistration}
@@ -85,7 +94,7 @@ export function ValuationForm() {
             <input
               id="valuation-mileage"
               type="number"
-              className="control"
+              className="control focus-visible:outline-none!"
               {...register("mileage", { valueAsNumber: true })}
             />
           </Field>
@@ -94,23 +103,22 @@ export function ValuationForm() {
       {step === 2 && (
         <div className="grid gap-5">
           <Field id="vehicle-condition" label="Zustand">
-            <select id="vehicle-condition" className="control">
-              <option>Sehr gut</option>
-              <option>Gut</option>
-              <option>Gebrauchsspuren</option>
-            </select>
+            <SimpleSelect
+              id="vehicle-condition"
+              items={["Sehr gut", "Gut", "Gebrauchsspuren"]}
+            />
           </Field>
           <Field id="accident-history" label="Unfallhistorie">
-            <select id="accident-history" className="control">
-              <option>Unfallfrei</option>
-              <option>Reparierter Schaden</option>
-            </select>
+            <SimpleSelect
+              id="accident-history"
+              items={["Unfallfrei", "Reparierter Schaden"]}
+            />
           </Field>
           <Field id="service-history" label="Servicehistorie">
-            <select id="service-history" className="control">
-              <option>Lückenlos</option>
-              <option>Teilweise</option>
-            </select>
+            <SimpleSelect
+              id="service-history"
+              items={["Lückenlos", "Teilweise"]}
+            />
           </Field>
         </div>
       )}
@@ -123,22 +131,25 @@ export function ValuationForm() {
           <input
             id="valuation-email"
             type="email"
-            className="control"
+            className="control focus-visible:outline-none!"
             {...register("email")}
           />
         </Field>
       )}
-      <div className="mt-7 flex justify-between">
+      <div className="mt-7 flex gap-2">
         <Button
+          className="rounded-r"
           type="button"
           variant="outline"
           disabled={step === 1}
           onClick={() => setStep((value) => value - 1)}
         >
+          <ArrowLeft />
           Zurück
         </Button>
         {step < 3 ? (
           <Button
+            className="rounded-l"
             type="button"
             variant="accent"
             onClick={async () => {
@@ -154,14 +165,32 @@ export function ValuationForm() {
             }}
           >
             Weiter
+            <ArrowRight />
           </Button>
         ) : (
-          <Button type="submit" variant="accent">
+          <Button type="submit" variant="accent" className="rounded-l">
+            <ClipboardCheck />
             Bewertung anfragen
           </Button>
         )}
       </div>
     </form>
+  );
+}
+function SimpleSelect({ id, items }: { id: string; items: string[] }) {
+  return (
+    <Select defaultValue={items[0]}>
+      <SelectTrigger id={id}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map((item) => (
+          <SelectItem key={item} value={item}>
+            {item}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 function Field({

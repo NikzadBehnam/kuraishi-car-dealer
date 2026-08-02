@@ -1,0 +1,17 @@
+export const vehicleListingContent = {
+  title: "Fahrzeuge entdecken",
+  description: "Geprüfte Qualität. Transparent beschrieben. Sofort verfügbar.",
+  filters: "Filter",
+  make: "Marke",
+  bodyType: "Fahrzeugtyp",
+  fuelType: "Kraftstoff",
+  maximumPrice: "Preis bis",
+  sort: "Sortierung",
+  allMakes: "Alle Marken",
+  allTypes: "Alle Fahrzeugtypen",
+  allFuelTypes: "Alle Kraftstoffe",
+  unlimited: "Unbegrenzt",
+  results: "Fahrzeuge",
+  noResults: "Keine passenden Fahrzeuge gefunden",
+  noResultsHint: "Ändern Sie Ihre Filter oder setzen Sie die Suche zurück.",
+};

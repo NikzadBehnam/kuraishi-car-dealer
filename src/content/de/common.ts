@@ -1,0 +1,36 @@
+export const commonContent = {
+  navigation: {
+    vehicles: "Fahrzeuge",
+    sellVehicle: "Fahrzeug verkaufen",
+    financing: "Finanzierung",
+    services: "Services",
+    about: "Über uns",
+    contact: "Kontakt",
+    favourites: "Merkliste",
+    comparison: "Vergleich",
+  },
+  actions: {
+    findVehicle: "Fahrzeug finden",
+    viewDetails: "Details ansehen",
+    save: "Fahrzeug merken",
+    remove: "Entfernen",
+    compare: "Vergleichen",
+    contactDealer: "Händler kontaktieren",
+    requestTestDrive: "Probefahrt vereinbaren",
+    reset: "Zurücksetzen",
+    showResults: "Fahrzeuge anzeigen",
+    submit: "Anfrage senden",
+  },
+  states: {
+    loading: "Inhalte werden geladen …",
+    errorTitle: "Etwas ist schiefgelaufen",
+    errorDescription: "Bitte versuchen Sie es erneut.",
+    emptyTitle: "Keine Fahrzeuge gefunden",
+  },
+  footer: {
+    vehicles: "Fahrzeuge",
+    support: "Service",
+    legal: "Rechtliches",
+    copyright: "Alle Fahrzeugangaben sind unverbindlich.",
+  },
+} as const;

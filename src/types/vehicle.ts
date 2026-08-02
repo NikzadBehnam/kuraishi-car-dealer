@@ -1,0 +1,31 @@
+export type FuelType = "petrol" | "diesel" | "electric" | "hybrid";
+export type TransmissionType = "automatic" | "manual";
+export type BodyType = "suv" | "compact" | "sedan" | "wagon" | "van" | "sports";
+export interface Vehicle {
+  id: string;
+  slug: string;
+  make: string;
+  model: string;
+  variant: string;
+  price: number;
+  monthlyRate: number;
+  firstRegistration: string;
+  mileage: number;
+  fuelType: FuelType;
+  transmissionType: TransmissionType;
+  powerKw: number;
+  powerPs: number;
+  bodyType: BodyType;
+  exteriorColor: string;
+  consumption?: number;
+  co2Emission?: number;
+  condition: "used" | "demonstrator" | "annual";
+  features: string[];
+  description: string;
+  images: string[];
+  dealerId: string;
+  location: string;
+  isFeatured: boolean;
+  isAvailable: boolean;
+  labels: string[];
+}

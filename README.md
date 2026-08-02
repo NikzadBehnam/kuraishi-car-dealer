@@ -1,4 +1,4 @@
-# Autowelt Rhein
+# Kuraishi car dealer
 
 Production-oriented Phase 1 user interface for a German dealership and vehicle marketplace. The application uses local typed demo data and browser storage; it deliberately does not simulate production authentication, inventory, financing approval, payments, email delivery, or booking infrastructure.
 

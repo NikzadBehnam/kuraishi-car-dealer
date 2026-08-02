@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://autowelt-rhein.example"),
   title: { default: siteConfig.name, template: `%s | ${siteConfig.name}` },
   description: siteConfig.description,
+  other: { google: "notranslate" },
   openGraph: {
     title: siteConfig.name,
     description: siteConfig.description,
@@ -33,7 +34,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="de" suppressHydrationWarning>
+    <html
+      lang="de"
+      translate="no"
+      className="notranslate"
+      suppressHydrationWarning
+    >
       <body className={`${sourceSans.variable} ${archivo.variable}`}>
         <ThemeProvider
           attribute="class"

@@ -65,7 +65,7 @@ export function ComparisonTable() {
               >
                 {vehicle.make} {vehicle.model}
                 <Button
-                  className="mt-3 block"
+                  className="mt-3 flex w-fit items-center justify-center"
                   size="sm"
                   variant="outline"
                   onClick={() => toggleComparison(vehicle.id)}

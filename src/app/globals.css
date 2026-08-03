@@ -227,6 +227,49 @@ textarea.control {
 .dark .brand-logo-dark {
   display: block;
 }
+@keyframes footer-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes footer-qr-scan {
+  0%,
+  15% {
+    transform: translateY(-0.4rem);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.55;
+  }
+  75%,
+  100% {
+    transform: translateY(7.4rem);
+    opacity: 0;
+  }
+}
+.footer-reveal {
+  animation: footer-reveal 600ms var(--ease-out) both;
+}
+.footer-newsletter-input:focus,
+.footer-newsletter-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+}
+.footer-qr-scan {
+  position: absolute;
+  inset-inline: 0.4rem;
+  top: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 0.55rem var(--accent);
+  animation: footer-qr-scan 3.4s ease-in-out infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

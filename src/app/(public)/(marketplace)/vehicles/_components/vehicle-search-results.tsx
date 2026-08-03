@@ -110,7 +110,7 @@ export function VehicleSearchResults({
               {results.length} {content.results}
             </p>
             <p className="text-muted-foreground text-sm">
-              Standort Düsseldorf · 100 km
+              Standort Wien · 100 km
             </p>
           </div>
           <div className="flex gap-2">

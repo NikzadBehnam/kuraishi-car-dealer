@@ -24,14 +24,14 @@ export function VehicleStateProvider({ children }: { children: ReactNode }) {
       setFavourites(
         new Set(
           JSON.parse(
-            localStorage.getItem("autowelt-favourites") ?? "[]",
+            localStorage.getItem("kuraishi-favourites") ?? "[]",
           ) as string[],
         ),
       );
       setComparison(
         new Set(
           JSON.parse(
-            localStorage.getItem("autowelt-comparison") ?? "[]",
+            localStorage.getItem("kuraishi-comparison") ?? "[]",
           ) as string[],
         ),
       );
@@ -47,7 +47,7 @@ export function VehicleStateProvider({ children }: { children: ReactNode }) {
           next.add(id);
           toast.success("Fahrzeug wurde zur Merkliste hinzugefügt.");
         }
-        localStorage.setItem("autowelt-favourites", JSON.stringify([...next]));
+        localStorage.setItem("kuraishi-favourites", JSON.stringify([...next]));
         return next;
       }),
     [],
@@ -65,7 +65,7 @@ export function VehicleStateProvider({ children }: { children: ReactNode }) {
           next.add(id);
           toast.success("Fahrzeug wurde zum Vergleich hinzugefügt.");
         }
-        localStorage.setItem("autowelt-comparison", JSON.stringify([...next]));
+        localStorage.setItem("kuraishi-comparison", JSON.stringify([...next]));
         return next;
       }),
     [],

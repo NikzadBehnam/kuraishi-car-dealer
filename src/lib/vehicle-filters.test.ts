@@ -17,7 +17,7 @@ describe("filterVehicles", () => {
     const result = filterVehicles(vehicles, {
       make: "Volkswagen",
       model: "Tiguan",
-      location: "Düsseldorf",
+      location: "Wien",
     });
 
     assert.equal(result.length, 1);

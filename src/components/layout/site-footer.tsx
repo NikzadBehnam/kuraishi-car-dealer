@@ -1,21 +1,32 @@
 import Link from "next/link";
 import { siteConfig } from "@/config/site.config";
 import { routes } from "@/config/routes.config";
+import { BrandLogo } from "@/components/brand-logo";
 export function SiteFooter() {
   return (
     <footer className="mt-20 bg-[#0c192b] py-14 text-[#c9d3df]">
       <div className="site-container grid gap-10 md:grid-cols-2 lg:grid-cols-4">
         <div>
-          <div className="font-heading text-xl font-extrabold text-white">
-            <span className="text-accent">▲</span> AUTOWELT RHEIN
-          </div>
+          <BrandLogo
+            variant="full"
+            tone="dark"
+            className="w-full max-w-[15rem]"
+          />
           <p className="mt-4">{siteConfig.tagline}</p>
           <p className="mt-4 text-sm">
             {siteConfig.address.street}
             <br />
             {siteConfig.address.postalCode} {siteConfig.address.city}
             <br />
+            {siteConfig.address.country}
+            <br />
             {siteConfig.contact.phone}
+            <br />
+            <a href={`mailto:${siteConfig.contact.email}`}>
+              {siteConfig.contact.email}
+            </a>
+            <br />
+            <a href={siteConfig.url}>www.kuraishi-autohandel.at</a>
           </p>
         </div>
         <FooterGroup

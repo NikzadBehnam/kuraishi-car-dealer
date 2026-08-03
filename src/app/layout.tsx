@@ -16,14 +16,14 @@ const archivo = Archivo({
   display: "swap",
 });
 export const metadata: Metadata = {
-  metadataBase: new URL("https://autowelt-rhein.example"),
+  metadataBase: new URL(siteConfig.url),
   title: { default: siteConfig.name, template: `%s | ${siteConfig.name}` },
   description: siteConfig.description,
   openGraph: {
     title: siteConfig.name,
     description: siteConfig.description,
     type: "website",
-    locale: "de_DE",
+    locale: "de_AT",
   },
   robots: { index: true, follow: true },
 };

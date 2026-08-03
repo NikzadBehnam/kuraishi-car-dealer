@@ -18,10 +18,10 @@ export default function SellVehiclePage() {
         breadcrumb="Fahrzeug verkaufen"
       />
       <div className="site-container grid py-10 lg:grid-cols-[1.2fr_.8fr]">
-        <Card className="rounded-t-[15px] rounded-b-none p-7 lg:rounded-l-[15px] lg:rounded-r-none">
+        <Card className="rounded-t-[15px] rounded-b-none border-b-0 p-7 lg:rounded-l-[15px] lg:rounded-r-none lg:border-r-0 lg:border-b">
           <ValuationForm />
         </Card>
-        <Card className="bg-brand-panel text-brand-panel-foreground rounded-t-none rounded-b-[15px] p-8 lg:rounded-l-none lg:rounded-r-[15px]">
+        <Card className="bg-brand-panel text-brand-panel-foreground rounded-t-none rounded-b-[15px] border-t-0 p-8 lg:rounded-l-none lg:rounded-r-[15px] lg:border-t lg:border-l-0">
           <p className="eyebrow text-[#ff9a75]">Ihr Vorteil</p>
           <h2 className="section-title mt-3">
             Einfach, sicher und ohne Verpflichtung.

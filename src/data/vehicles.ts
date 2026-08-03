@@ -350,8 +350,8 @@ export const vehicles: Vehicle[] = entries.map((entry, index) => ({
     (n) =>
       `https://images.unsplash.com/${images[(index + n - 1) % images.length]}?auto=format&fit=crop&w=1400&q=82`,
   ),
-  dealerId: "rhein-duesseldorf",
-  location: "Düsseldorf",
+  dealerId: "kuraishi-wien",
+  location: "Wien",
   isFeatured: index < 6,
   isAvailable: true,
   labels: index % 5 === 0 ? ["Top-Angebot"] : index % 7 === 0 ? ["Neu"] : [],

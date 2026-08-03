@@ -43,7 +43,7 @@ export function VehicleDiscoverySearch() {
   const router = useRouter();
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
-  const [location, setLocation] = useState("Düsseldorf");
+  const [location, setLocation] = useState("Wien");
 
   const makes = useMemo(
     () => [...new Set(vehicles.map((vehicle) => vehicle.make))].toSorted(),

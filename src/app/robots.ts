@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { internalRoutes, publicRoutes } from "@/config/routes.config";
+import { siteConfig } from "@/config/site.config";
 export default function robots(): MetadataRoute.Robots {
   const publicPaths = new Set<string>(Object.values(publicRoutes));
   return {
@@ -16,6 +17,6 @@ export default function robots(): MetadataRoute.Robots {
         ),
       ],
     },
-    sitemap: "https://autowelt-rhein.example/sitemap.xml",
+    sitemap: `${siteConfig.url}/sitemap.xml`,
   };
 }

@@ -8,6 +8,7 @@ import { routes } from "@/config/routes.config";
 import { useVehicleState } from "@/components/providers/vehicle-state-provider";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandLogo } from "@/components/brand-logo";
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { favourites } = useVehicleState();
@@ -15,10 +16,11 @@ export function SiteHeader() {
     <header className="glass sticky top-0 z-50 h-[var(--header-height)] border-b">
       <div className="site-container flex h-full items-center gap-8">
         <Link
-          className="font-heading text-primary text-xl font-extrabold tracking-[-.04em]"
+          className="w-[clamp(8.5rem,14vw,11rem)] shrink-0"
           href={routes.home}
+          aria-label="Kuraishi Autohandel – Startseite"
         >
-          <span className="text-accent">▲</span> AUTOWELT RHEIN
+          <BrandLogo priority />
         </Link>
         <nav
           aria-label="Hauptnavigation"

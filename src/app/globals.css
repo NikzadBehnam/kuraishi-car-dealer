@@ -218,6 +218,18 @@ textarea.control {
 .dark .glass {
   background: rgb(9 17 30/0.9);
 }
+.brand-logo-light {
+  display: block;
+}
+.brand-logo-dark {
+  display: none;
+}
+.dark .brand-logo-light {
+  display: none;
+}
+.dark .brand-logo-dark {
+  display: block;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

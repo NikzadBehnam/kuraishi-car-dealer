@@ -3,7 +3,7 @@ import { publicRoutes } from "@/config/routes.config";
 import { createPublicMetadata } from "@/lib/metadata";
 export const metadata = createPublicMetadata(
   "Allgemeine Geschäftsbedingungen",
-  "Allgemeine Geschäftsbedingungen von Autowelt Rhein.",
+  "Allgemeine Geschäftsbedingungen von Kuraishi Autohandel e.U.",
   publicRoutes.terms,
 );
 export default function Page() {

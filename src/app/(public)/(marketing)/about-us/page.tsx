@@ -6,7 +6,7 @@ import { createPublicMetadata } from "@/lib/metadata";
 
 export const metadata = createPublicMetadata(
   "Über uns",
-  "Automobilkompetenz aus Düsseldorf – seit 1998.",
+  "Automobilkompetenz aus Wien – seit 1998.",
   publicRoutes.about,
 );
 export default function AboutPage() {
@@ -14,7 +14,7 @@ export default function AboutPage() {
     <>
       <PageHeader
         title="Über uns"
-        description="Automobilkompetenz aus Düsseldorf – seit 1998."
+        description="Automobilkompetenz aus Wien – seit 1998."
         breadcrumb="Über uns"
       />
       <div className="site-container grid gap-8 py-10 lg:grid-cols-2">
@@ -24,9 +24,9 @@ export default function AboutPage() {
             Fahrzeuge sind unser Beruf. Vertrauen ist unser Antrieb.
           </h2>
           <p className="text-muted-foreground mt-5 leading-7">
-            Autowelt Rhein steht für sorgfältig ausgewählte Fahrzeuge, faire
-            Beratung und verlässlichen Service. Unser Team begleitet Sie vom
-            ersten Gespräch bis weit über die Fahrzeugübergabe hinaus.
+            Kuraishi Autohandel steht für sorgfältig ausgewählte Fahrzeuge,
+            faire Beratung und verlässlichen Service. Unser Team begleitet Sie
+            vom ersten Gespräch bis weit über die Fahrzeugübergabe hinaus.
           </p>
           <div className="mt-7 grid grid-cols-2 gap-3">
             {[
@@ -35,20 +35,20 @@ export default function AboutPage() {
               ["Fahrzeuge jährlich", "über 800"],
               ["Team", "32 Fachleute"],
             ].map(([label, value]) => (
-              <Card className="p-4" key={label}>
+              <Card className="rounded-[15px] p-4" key={label}>
                 <span className="text-muted-foreground text-xs">{label}</span>
                 <strong className="block">{value}</strong>
               </Card>
             ))}
           </div>
         </div>
-        <div className="relative min-h-[28rem] overflow-hidden rounded-xl">
+        <div className="relative min-h-112 overflow-hidden rounded-[15px]">
           <Image
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
-            src="https://images.unsplash.com/photo-1562141961-b5d08d39e17b?auto=format&fit=crop&w=1200&q=82"
-            alt="Showroom der Autowelt Rhein"
+            src="https://images.unsplash.com/photo-1727893344848-2ec8eba4bacd?auto=format&fit=crop&w=1200&q=82"
+            alt="Showroom von Kuraishi Autohandel"
           />
         </div>
       </div>

@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
 import { publicRoutes, routeBuilders } from "@/config/routes.config";
 import { vehicles } from "@/data/vehicles";
+import { siteConfig } from "@/config/site.config";
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://autowelt-rhein.example";
+  const base = siteConfig.url;
   return [
     ...Object.values(publicRoutes).map((route) => ({
       url: `${base}${route}`,

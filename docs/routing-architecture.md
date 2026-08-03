@@ -2,7 +2,7 @@
 
 ## Strategy
 
-Autowelt Rhein uses a single App Router root layout and responsibility-based route groups. Every physical route segment and private folder is English. German remains limited to visible content, metadata and canonical browser URLs.
+Kuraishi Autohandel uses a single App Router root layout and responsibility-based route groups. Every physical route segment and private folder is English. German remains limited to visible content, metadata and canonical browser URLs.
 
 The implemented groups are:
 

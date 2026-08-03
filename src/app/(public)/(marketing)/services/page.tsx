@@ -17,7 +17,6 @@ const services = [
   "Versicherung",
   "Zulassungsservice",
   "Werkstatt",
-  "Fahrzeuglieferung",
 ];
 export default function ServicesPage() {
   return (
@@ -27,9 +26,9 @@ export default function ServicesPage() {
         description="Alles rund um Ihr Fahrzeug – persönlich aus einer Hand."
         breadcrumb="Services"
       />
-      <div className="site-container grid gap-5 py-10 md:grid-cols-2 lg:grid-cols-3">
+      <div className="site-container grid gap-4 py-10 md:grid-cols-2 lg:grid-cols-3">
         {services.map((service, index) => (
-          <Card className="p-6" key={service}>
+          <Card className="rounded-none p-6" key={index}>
             <p className="eyebrow">0{index + 1}</p>
             <h2 className="mt-3 text-xl font-extrabold">{service}</h2>
             <p className="text-muted-foreground mt-3">

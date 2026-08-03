@@ -8,7 +8,6 @@ export interface Vehicle {
   model: string;
   variant: string;
   price: number;
-  monthlyRate: number;
   firstRegistration: string;
   mileage: number;
   fuelType: FuelType;

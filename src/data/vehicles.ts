@@ -324,7 +324,6 @@ export const vehicles: Vehicle[] = entries.map((entry, index) => ({
   model: entry[1],
   variant: entry[2],
   price: entry[3],
-  monthlyRate: Math.round(entry[3] / 120),
   firstRegistration: entry[4],
   mileage: entry[5],
   fuelType: entry[6],

@@ -35,7 +35,6 @@ export function ComparisonTable() {
   const rows: Array<[string, (vehicle: (typeof vehicles)[number]) => string]> =
     [
       ["Preis", (vehicle) => formatCurrency(vehicle.price)],
-      ["Monatliche Rate", (vehicle) => formatCurrency(vehicle.monthlyRate)],
       ["Kilometerstand", (vehicle) => formatMileage(vehicle.mileage)],
       [
         "Erstzulassung",

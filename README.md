@@ -1,6 +1,6 @@
 # Kuraishi car dealer
 
-Production-oriented Phase 1 user interface for a German dealership and vehicle marketplace. The application uses local typed demo data and browser storage; it deliberately does not simulate production authentication, inventory, financing approval, payments, email delivery, or booking infrastructure.
+Production-oriented Phase 1 user interface for a German dealership and vehicle marketplace. The application uses local typed demo data and browser storage; it deliberately does not simulate production authentication, inventory, payments, email delivery, or booking infrastructure.
 
 ## Technology stack
 
@@ -59,7 +59,7 @@ Filtering is implemented in `src/lib/vehicle-filters.ts`, independent of the vis
 
 ## Forms and future integrations
 
-Forms use schemas from `src/schemas`. Submission currently waits briefly and returns an explicit UI-only success state. Replace those submit handlers with server actions or API clients for CRM, booking, email, inventory and financing services. Vehicle and dealer types are intentionally suitable for API mapping.
+Forms use schemas from `src/schemas`. Submission currently waits briefly and returns an explicit UI-only success state. Replace those submit handlers with server actions or API clients for CRM, booking, email and inventory services. Vehicle and dealer types are intentionally suitable for API mapping.
 
 ## Legal notice
 

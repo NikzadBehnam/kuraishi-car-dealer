@@ -52,9 +52,6 @@ export function VehicleCard({
           <p className="mt-4 text-2xl font-black tracking-tight">
             {formatCurrency(vehicle.price)}
           </p>
-          <p className="text-muted-foreground text-sm">
-            ab {formatCurrency(vehicle.monthlyRate)} mtl.¹
-          </p>
           <div className="text-muted-foreground mt-4 grid grid-cols-2 gap-2 text-xs">
             <span className="flex items-center gap-1">
               <Gauge className="size-4" />

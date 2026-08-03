@@ -7,7 +7,7 @@ Autowelt Rhein uses a single App Router root layout and responsibility-based rou
 The implemented groups are:
 
 - `(public)`: public header, main landmark and footer
-- `(marketing)`: homepage, about, services, financing and contact pages
+- `(marketing)`: homepage, about, services and contact pages
 - `(marketplace)`: marketplace subnavigation, marketplace loading state and marketplace error recovery
 - `(legal)`: semantic legal-information wrapper and legal error recovery
 
@@ -23,7 +23,7 @@ Route groups do not add URL segments.
 
 `src/proxy.ts` rewrites German requests to English internal routes before route matching. It redirects direct requests to localized English internal paths back to their German canonical equivalents. Dynamic vehicle slugs and query strings are preserved by cloning `request.nextUrl` and changing only `pathname`.
 
-Routes whose German and English paths are already identical, such as `/services` and `/financing`, pass through unchanged. Static assets, API routes and files with extensions are excluded from the Proxy matcher.
+Routes whose German and English paths are already identical, such as `/services`, pass through unchanged. Static assets, API routes and files with extensions are excluded from the Proxy matcher.
 
 ## Layout responsibilities
 

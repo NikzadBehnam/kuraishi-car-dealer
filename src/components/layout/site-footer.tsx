@@ -30,7 +30,6 @@ export function SiteFooter() {
         <FooterGroup
           title="Service"
           links={[
-            ["Finanzierung", routes.financing],
             ["Inzahlungnahme", routes.sellVehicle],
             ["Kontakt", routes.contact],
           ]}

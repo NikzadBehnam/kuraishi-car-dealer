@@ -25,9 +25,5 @@ export const homePageContent = {
       title: "Transparente Preise",
       text: "Klare Historie und nachvollziehbare Kosten.",
     },
-    {
-      title: "Finanzierung nach Maß",
-      text: "Flexible Laufzeiten und persönliche Beratung.",
-    },
   ],
 };

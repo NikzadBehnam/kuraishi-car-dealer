@@ -2,7 +2,6 @@ export const commonContent = {
   navigation: {
     vehicles: "Fahrzeuge",
     sellVehicle: "Fahrzeug verkaufen",
-    financing: "Finanzierung",
     services: "Services",
     about: "Über uns",
     contact: "Kontakt",

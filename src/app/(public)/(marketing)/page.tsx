@@ -1,12 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Calculator,
-  CarFront,
-  Check,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, CarFront, Check, ShieldCheck } from "lucide-react";
 import { homePageContent } from "@/content/de/home-page";
 import { vehicles } from "@/data/vehicles";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
@@ -90,7 +84,7 @@ export default function HomePage() {
           <h2 className="section-title mt-3">
             {homePageContent.benefitsTitle}
           </h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
             {homePageContent.benefits.map((benefit) => (
               <Card className="p-6" key={benefit.title}>
                 <ShieldCheck className="text-success size-8" />
@@ -99,22 +93,8 @@ export default function HomePage() {
               </Card>
             ))}
           </div>
-          <div className="mt-12 grid gap-5 lg:grid-cols-2">
-            <Card className="bg-primary p-8 text-white">
-              <p className="eyebrow text-[#ff9a75]">Finanzierung</p>
-              <h2 className="section-title mt-3">Traumwagen. Planbare Rate.</h2>
-              <p className="mt-4 text-[#c9d3df]">
-                Berechnen Sie unverbindlich eine Monatsrate, die zu Ihrem Alltag
-                passt.
-              </p>
-              <Button asChild variant="accent" className="mt-6">
-                <Link href={publicRoutes.financing}>
-                  <Calculator />
-                  Rate berechnen
-                </Link>
-              </Button>
-            </Card>
-            <Card className="p-8">
+          <div className="mt-12">
+            <Card className="p-8 lg:max-w-2xl">
               <p className="eyebrow">Inzahlungnahme</p>
               <h2 className="section-title mt-3">Was ist Ihr Fahrzeug wert?</h2>
               <p className="text-muted-foreground mt-4">

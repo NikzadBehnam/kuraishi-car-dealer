@@ -7,12 +7,10 @@ import { createPublicMetadata } from "@/lib/metadata";
 
 export const metadata = createPublicMetadata(
   "Services",
-  "Services rund um Fahrzeugkauf, Finanzierung und Werkstatt.",
+  "Services rund um Fahrzeugkauf, Fahrzeugankauf und Werkstatt.",
   publicRoutes.services,
 );
 const services = [
-  "Finanzierung",
-  "Leasing",
   "Inzahlungnahme",
   "Fahrzeugankauf",
   "Garantie",

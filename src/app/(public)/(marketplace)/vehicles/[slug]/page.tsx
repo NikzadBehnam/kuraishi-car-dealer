@@ -150,9 +150,6 @@ export default async function VehicleDetailPage({
             <p className="text-4xl font-black tracking-tight">
               {formatCurrency(vehicle.price)}
             </p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Finanzierung ab {formatCurrency(vehicle.monthlyRate)} mtl.¹
-            </p>
             <Button asChild variant="accent" className="mt-6 w-full">
               <Link href={`${publicRoutes.contact}?vehicle=${vehicle.slug}`}>
                 <Mail />

@@ -12,6 +12,9 @@
   --primary: #10213b;
   --primary-foreground: #fff;
   --primary-hover: #1b3557;
+  --brand-panel: #10213b;
+  --brand-panel-foreground: #fff;
+  --brand-panel-muted: #c9d3df;
   --secondary: #e7ecf1;
   --secondary-foreground: #132033;
   --accent: #e85d2a;
@@ -52,6 +55,9 @@
   --primary: #e7edf5;
   --primary-foreground: #0b1422;
   --primary-hover: #cbd6e3;
+  --brand-panel: #10213b;
+  --brand-panel-foreground: #fff;
+  --brand-panel-muted: #c9d3df;
   --secondary: #1b2a3e;
   --secondary-foreground: #e7edf5;
   --accent: #f47747;
@@ -78,6 +84,9 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand-panel: var(--brand-panel);
+  --color-brand-panel-foreground: var(--brand-panel-foreground);
+  --color-brand-panel-muted: var(--brand-panel-muted);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-accent: var(--accent);

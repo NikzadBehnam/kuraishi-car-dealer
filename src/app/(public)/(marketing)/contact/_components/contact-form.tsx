@@ -71,7 +71,6 @@ export function ContactForm() {
                   {[
                     "Probefahrt",
                     "Beratung",
-                    "Finanzierung",
                     "Fahrzeugbewertung",
                     "Werkstatt",
                     "Rückruf",

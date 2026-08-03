@@ -15,7 +15,7 @@ export function QuickSearchForm() {
   const router = useRouter();
   return (
     <form
-      className="bg-surface text-foreground mt-8 grid gap-2 rounded-xl p-3 shadow-lg sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]"
+      className="hero-search mt-8 grid w-full max-w-5xl gap-2 rounded-[var(--radius-md)] border p-3 sm:grid-cols-2 lg:mt-10 lg:grid-cols-[1fr_1fr_1fr_auto]"
       onSubmit={(event) => {
         event.preventDefault();
         const values = new FormData(event.currentTarget);
@@ -60,7 +60,7 @@ export function QuickSearchForm() {
           <SelectItem value="50000">50.000 €</SelectItem>
         </SelectContent>
       </Select>
-      <Button variant="accent" type="submit" className="rounded-[15px]">
+      <Button variant="accent" type="submit">
         <Search />
         Suchen
       </Button>

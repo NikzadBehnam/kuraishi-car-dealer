@@ -1,6 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CarFront, Check, ShieldCheck } from "lucide-react";
+import { ArrowRight, CarFront, Check, MapPin, ShieldCheck } from "lucide-react";
 import { homePageContent } from "@/content/de/home-page";
 import { vehicles } from "@/data/vehicles";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
@@ -20,33 +19,73 @@ export const metadata = createPublicMetadata(
 export default function HomePage() {
   return (
     <>
-      <section className="bg-primary relative min-h-[42rem] overflow-hidden text-white">
-        <Image
-          priority
-          fill
-          sizes="100vw"
-          className="object-cover opacity-50"
-          src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2000&q=86"
-          alt="Premiumfahrzeug auf einer Landstraße"
+      <section className="hero-shell relative isolate flex min-h-[calc(100svh-var(--header-height))] overflow-hidden">
+        <div
+          className="hero-poster absolute inset-0 -z-30 bg-cover bg-center"
+          aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#08172b] via-[#08172bcc] to-transparent" />
-        <div className="site-container relative flex min-h-[42rem] items-center py-16">
-          <div className="max-w-3xl">
-            <p className="eyebrow text-[#ff9a75]">{homePageContent.eyebrow}</p>
-            <h1 className="display-title mt-4">{homePageContent.title}</h1>
-            <p className="mt-6 max-w-2xl text-lg text-[#dce5ee]">
-              {homePageContent.description}
+        <video
+          className="hero-video absolute inset-0 -z-20 size-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2000&q=82"
+          aria-hidden="true"
+        >
+          <source
+            src="https://videos.pexels.com/video-files/5309381/5309381-hd_1920_1080_25fps.mp4"
+            type="video/mp4"
+          />
+        </video>
+        <div className="hero-overlay absolute inset-0 -z-10" />
+
+        <div className="site-container flex w-full flex-col justify-center py-10 sm:py-14 lg:py-16">
+          <div className="hero-content max-w-[49rem]">
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="eyebrow">{homePageContent.eyebrow}</p>
+              <span className="hero-location inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold">
+                <MapPin className="size-3.5" aria-hidden="true" /> Wien
+              </span>
+            </div>
+            <h1 className="hero-title mt-5 text-[clamp(2.65rem,6.2vw,5.75rem)] leading-[0.94] font-extrabold tracking-[-0.065em]">
+              Mobilität, die zu
+              <span className="text-accent block">Ihrem Leben passt.</span>
+            </h1>
+            <p className="hero-description mt-6 max-w-2xl text-base leading-7 sm:text-lg">
+              Entdecken Sie sorgfältig ausgewählte Gebrauchtwagen mit klarer
+              Historie, fairen Konditionen und persönlicher Beratung in Wien.
             </p>
-            <QuickSearchForm />
-            <div className="mt-6 flex flex-wrap gap-5 text-sm font-semibold">
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Button asChild variant="accent" className="group">
+                <Link href={publicRoutes.vehicles}>
+                  <CarFront /> Fahrzeuge entdecken
+                  <ArrowRight className="transition-transform duration-300 group-hover:translate-x-0.5" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="hero-secondary-action"
+              >
+                <Link href={publicRoutes.contact}>
+                  Persönlich beraten lassen
+                </Link>
+              </Button>
+            </div>
+            <div className="hero-trust mt-8 flex flex-wrap gap-x-6 gap-y-3 border-t pt-5 text-xs font-semibold sm:text-sm">
               {homePageContent.trust.map((item) => (
                 <span className="flex items-center gap-2" key={item}>
-                  <Check className="size-4 text-[#ff9a75]" />
+                  <span className="hero-check grid size-5 place-items-center rounded-full">
+                    <Check className="size-3" aria-hidden="true" />
+                  </span>
                   {item}
                 </span>
               ))}
             </div>
           </div>
+          <QuickSearchForm />
         </div>
       </section>
       <section className="section-space">

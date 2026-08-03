@@ -270,6 +270,96 @@ textarea.control {
   box-shadow: 0 0 0.55rem var(--accent);
   animation: footer-qr-scan 3.4s ease-in-out infinite;
 }
+.hero-poster {
+  background-image: url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2000&q=82");
+}
+.hero-video {
+  animation: hero-video-settle 1.2s var(--ease-out) both;
+}
+.hero-overlay {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(244 246 248 / 0.98) 0%,
+      rgb(244 246 248 / 0.88) 42%,
+      rgb(244 246 248 / 0.18) 76%
+    ),
+    linear-gradient(0deg, rgb(244 246 248 / 0.72), transparent 45%);
+}
+.hero-title {
+  color: #132033;
+  text-wrap: balance;
+}
+.hero-description,
+.hero-trust,
+.hero-location {
+  color: #3f5064;
+}
+.hero-location,
+.hero-trust {
+  border-color: rgb(19 32 51 / 0.16);
+}
+.hero-check {
+  background: rgb(232 93 42 / 0.12);
+  color: var(--accent);
+}
+.hero-search {
+  border-color: rgb(19 32 51 / 0.12);
+  background: rgb(255 255 255 / 0.86);
+  box-shadow: 0 1rem 3rem rgb(16 33 59 / 0.12);
+  backdrop-filter: blur(18px);
+}
+.hero-secondary-action {
+  border-color: rgb(19 32 51 / 0.2);
+  background: rgb(255 255 255 / 0.68);
+  color: #132033;
+  backdrop-filter: blur(12px);
+}
+.dark .hero-overlay {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(9 17 30 / 0.98) 0%,
+      rgb(9 17 30 / 0.9) 43%,
+      rgb(9 17 30 / 0.24) 78%
+    ),
+    linear-gradient(0deg, rgb(9 17 30 / 0.72), transparent 45%);
+}
+.dark .hero-title {
+  color: #f4f7fb;
+}
+.dark .hero-description,
+.dark .hero-trust,
+.dark .hero-location {
+  color: #c9d3df;
+}
+.dark .hero-location,
+.dark .hero-trust {
+  border-color: rgb(255 255 255 / 0.16);
+}
+.dark .hero-check {
+  background: rgb(244 119 71 / 0.15);
+}
+.dark .hero-search {
+  border-color: rgb(255 255 255 / 0.12);
+  background: rgb(12 25 43 / 0.84);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 0.28);
+}
+.dark .hero-secondary-action {
+  border-color: rgb(255 255 255 / 0.2);
+  background: rgb(12 25 43 / 0.62);
+  color: #f4f7fb;
+}
+@keyframes hero-video-settle {
+  from {
+    opacity: 0;
+    transform: scale(1.025);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -277,5 +367,8 @@ textarea.control {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  .hero-video {
+    display: none;
   }
 }

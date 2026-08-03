@@ -16,6 +16,7 @@ import { publicRoutes } from "@/config/routes.config";
 import { QuickSearchForm } from "./_components/quick-search-form";
 import { AnimatedSection } from "@/components/motion/animated-section";
 import { createPublicMetadata } from "@/lib/metadata";
+import { VehicleDiscoverySearch } from "./_components/vehicle-discovery-search";
 
 export const metadata = createPublicMetadata(
   "Startseite",
@@ -56,31 +57,7 @@ export default function HomePage() {
       </section>
       <section className="section-space">
         <AnimatedSection>
-          <div className="site-container">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="eyebrow">Direkt einsteigen</p>
-                <h2 className="section-title mt-3">Welcher Typ sind Sie?</h2>
-              </div>
-              <p className="text-muted-foreground max-w-xl">
-                Vom wendigen Stadtwagen bis zum souveränen Reisefahrzeug:
-                Entdecken Sie unsere Auswahl.
-              </p>
-            </div>
-            <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {homePageContent.categories.map((category) => (
-                <Link
-                  href={`${publicRoutes.vehicles}?bodyType=${category.toLowerCase()}`}
-                  key={category}
-                >
-                  <Card className="flex min-h-28 items-end justify-between p-5 text-lg font-extrabold transition hover:-translate-y-1 hover:shadow-md">
-                    <span>{category}</span>
-                    <ArrowRight className="text-accent size-5" />
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <VehicleDiscoverySearch />
         </AnimatedSection>
       </section>
       <section className="section-space bg-surface">

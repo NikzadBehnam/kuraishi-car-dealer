@@ -19,8 +19,10 @@ export default async function VehiclesPage({
   const params = await searchParams;
   const initialFilters: VehicleFilters = {
     make: typeof params.make === "string" ? params.make : undefined,
+    model: typeof params.model === "string" ? params.model : undefined,
     bodyType: typeof params.bodyType === "string" ? params.bodyType : undefined,
     fuelType: typeof params.fuelType === "string" ? params.fuelType : undefined,
+    location: typeof params.location === "string" ? params.location : undefined,
     maximumPrice:
       typeof params.maximumPrice === "string"
         ? Number(params.maximumPrice)

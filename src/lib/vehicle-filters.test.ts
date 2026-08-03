@@ -12,4 +12,15 @@ describe("filterVehicles", () => {
     assert.ok(result[0].price <= result.at(-1)!.price);
     assert.equal(vehicles.length, 24);
   });
+
+  it("filters by the homepage make, model, and location criteria", () => {
+    const result = filterVehicles(vehicles, {
+      make: "Volkswagen",
+      model: "Tiguan",
+      location: "Düsseldorf",
+    });
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].model, "Tiguan");
+  });
 });

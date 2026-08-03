@@ -28,8 +28,8 @@
   --warning: #c27803;
   --destructive: #b42318;
   --info: #1769aa;
-  --font-sans: var(--font-source-sans);
-  --font-heading: var(--font-archivo);
+  --font-sans: var(--font-jetbrains-mono);
+  --font-heading: var(--font-jetbrains-mono);
   --radius-sm: 0.65rem;
   --radius-md: 0.85rem;
   --radius-lg: 1.15rem;
@@ -163,7 +163,6 @@ textarea:focus-visible {
   line-height: 0.98;
   letter-spacing: -0.055em;
   font-weight: 800;
-  font-variation-settings: "wdth" 94;
 }
 .page-title {
   font-family: var(--font-heading);
@@ -171,7 +170,6 @@ textarea:focus-visible {
   line-height: 1.02;
   letter-spacing: -0.045em;
   font-weight: 800;
-  font-variation-settings: "wdth" 96;
 }
 .section-title {
   font-family: var(--font-heading);
@@ -179,7 +177,6 @@ textarea:focus-visible {
   line-height: 1.06;
   letter-spacing: -0.04em;
   font-weight: 750;
-  font-variation-settings: "wdth" 98;
 }
 .eyebrow {
   text-transform: uppercase;

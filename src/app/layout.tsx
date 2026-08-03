@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
-import { Archivo, Source_Sans_3 } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { siteConfig } from "@/config/site.config";
 import { VehicleStateProvider } from "@/components/providers/vehicle-state-provider";
 import { ThemeProvider } from "@/components/theme-provider";
-const sourceSans = Source_Sans_3({
+const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-source-sans",
-  display: "swap",
-});
-const archivo = Archivo({
-  subsets: ["latin"],
-  variable: "--font-archivo",
+  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 export const metadata: Metadata = {
@@ -34,7 +29,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de" suppressHydrationWarning>
-      <body className={`${sourceSans.variable} ${archivo.variable}`}>
+      <body className={jetBrainsMono.variable}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

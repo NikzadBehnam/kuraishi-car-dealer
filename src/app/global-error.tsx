@@ -8,7 +8,8 @@ export default function GlobalError({ reset }: { reset: () => void }) {
         <main
           style={{
             padding: "4rem",
-            fontFamily: "sans-serif",
+            fontFamily:
+              '"JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace',
             textAlign: "center",
           }}
         >

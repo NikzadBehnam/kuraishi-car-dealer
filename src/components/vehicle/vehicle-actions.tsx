@@ -27,7 +27,7 @@ export function VehicleActions({
         {!compact && "Merken"}
       </Button>
       <Button
-        variant={comparison.has(vehicleId) ? "secondary" : "outline"}
+        variant={comparison.has(vehicleId) ? "accent" : "outline"}
         size={compact ? "icon" : "default"}
         aria-label={
           comparison.has(vehicleId)

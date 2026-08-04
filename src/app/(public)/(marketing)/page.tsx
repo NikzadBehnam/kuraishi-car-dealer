@@ -97,7 +97,7 @@ export default function HomePage() {
           <QuickSearchForm />
         </div>
       </section>
-      <section className="section-space">
+      <section className="py-12 sm:py-14 lg:py-16">
         <AnimatedSection>
           <VehicleDiscoverySearch />
         </AnimatedSection>

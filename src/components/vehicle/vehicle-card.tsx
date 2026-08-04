@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Fuel, Gauge, Settings2, Zap } from "lucide-react";
+import { ArrowRight, Fuel, Gauge, Settings2, Zap } from "lucide-react";
 import type { Vehicle } from "@/types/vehicle";
 import {
   formatCurrency,
@@ -10,6 +10,7 @@ import {
   formatTransmission,
 } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VehicleActions } from "./vehicle-actions";
 import { routeBuilders } from "@/config/routes.config";
@@ -20,15 +21,21 @@ export function VehicleCard({
   vehicle: Vehicle;
   variant?: "grid" | "list" | "compact";
 }) {
+  const detailsHref = routeBuilders.vehicleDetails(vehicle.slug);
+
   return (
     <Card
       className={
         variant === "list"
-          ? "grid overflow-hidden rounded-[var(--radius-sm)] md:grid-cols-[18rem_1fr]"
-          : "group overflow-hidden rounded-[var(--radius-sm)]"
+          ? "group grid h-full overflow-hidden rounded-[var(--radius-sm)] md:grid-cols-[18rem_1fr]"
+          : "group flex h-full flex-col overflow-hidden rounded-[var(--radius-sm)]"
       }
     >
-      <div className="bg-secondary relative aspect-16/10 overflow-hidden">
+      <Link
+        className="bg-secondary relative block aspect-[21/10] overflow-hidden focus-visible:outline-none"
+        href={detailsHref}
+        aria-label={`${vehicle.make} ${vehicle.model} Details ansehen`}
+      >
         <Image
           className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           fill
@@ -36,42 +43,69 @@ export function VehicleCard({
           src={vehicle.images[0]}
           alt={`${vehicle.make} ${vehicle.model} ${vehicle.variant}`}
         />
-        <div className="absolute top-3 right-3">
-          <VehicleActions vehicleId={vehicle.id} compact />
-        </div>
-      </div>
-      <div className="p-5">
-        {vehicle.labels.map((label) => (
-          <Badge key={label}>{label}</Badge>
-        ))}
-        <Link href={routeBuilders.vehicleDetails(vehicle.slug)}>
-          <h2 className="font-heading mt-2 text-xl font-extrabold tracking-tight">
+        {vehicle.labels.length > 0 && (
+          <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+            {vehicle.labels.map((label) => (
+              <Badge key={label}>{label}</Badge>
+            ))}
+          </div>
+        )}
+      </Link>
+      <div className="flex flex-1 flex-col p-4">
+        <Link className="min-w-0" href={detailsHref}>
+          <h2 className="font-heading truncate text-lg font-extrabold tracking-tight">
             {vehicle.make} {vehicle.model}
           </h2>
-          <p className="text-muted-foreground text-sm">{vehicle.variant}</p>
-          <p className="mt-4 text-2xl font-black tracking-tight">
+          <p className="text-muted-foreground mt-0.5 truncate text-sm">
+            {vehicle.variant}
+          </p>
+        </Link>
+
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <p className="text-2xl font-black tracking-tight">
             {formatCurrency(vehicle.price)}
           </p>
-          <div className="text-muted-foreground mt-4 grid grid-cols-2 gap-2 text-xs">
-            <span className="flex items-center gap-1">
-              <Gauge className="size-4" />
-              {formatMileage(vehicle.mileage)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Fuel className="size-4" />
-              {formatFuelType(vehicle.fuelType)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Settings2 className="size-4" />
+          <span className="text-success shrink-0 text-[0.68rem] font-extrabold uppercase">
+            Sofort
+          </span>
+        </div>
+
+        <div className="text-muted-foreground mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+          <span className="flex min-w-0 items-center gap-1">
+            <Gauge className="size-4" />
+            <span className="truncate">{formatMileage(vehicle.mileage)}</span>
+          </span>
+          <span className="flex min-w-0 items-center gap-1">
+            <Fuel className="size-4" />
+            <span className="truncate">{formatFuelType(vehicle.fuelType)}</span>
+          </span>
+          <span className="flex min-w-0 items-center gap-1">
+            <Settings2 className="size-4" />
+            <span className="truncate">
               {formatTransmission(vehicle.transmissionType)}
             </span>
-            <span className="flex items-center gap-1">
-              <Zap className="size-4" />
+          </span>
+          <span className="flex min-w-0 items-center gap-1">
+            <Zap className="size-4" />
+            <span className="truncate">
               {vehicle.powerKw} kW ·{" "}
               {formatRegistration(vehicle.firstRegistration)}
             </span>
-          </div>
-        </Link>
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 border-t p-3">
+        <VehicleActions vehicleId={vehicle.id} compact />
+        <Button
+          asChild
+          variant="accent"
+          className="min-w-0 flex-1 rounded-[var(--radius-sm)]"
+        >
+          <Link href={detailsHref}>
+            Details
+            <ArrowRight />
+          </Link>
+        </Button>
       </div>
     </Card>
   );

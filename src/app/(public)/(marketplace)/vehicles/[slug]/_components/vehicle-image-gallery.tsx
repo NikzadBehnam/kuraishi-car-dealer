@@ -35,7 +35,7 @@ export function VehicleImageGallery({
       <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
         <button
           type="button"
-          className="group relative aspect-[16/10] overflow-hidden rounded-xl focus-visible:outline-none"
+          className="group relative aspect-[16/10] overflow-hidden rounded-[var(--radius-sm)] focus-visible:outline-none"
           aria-label={`${title} Bild 1 vergrößern`}
           onClick={() => openPreview(0)}
         >
@@ -53,7 +53,7 @@ export function VehicleImageGallery({
           {images.slice(1, 3).map((image, index) => (
             <button
               type="button"
-              className="group relative aspect-[16/10] overflow-hidden rounded-xl focus-visible:outline-none md:aspect-auto"
+              className="group relative aspect-[16/10] overflow-hidden rounded-[var(--radius-sm)] focus-visible:outline-none md:aspect-auto"
               key={image}
               aria-label={`${title} Bild ${index + 2} vergrößern`}
               onClick={() => openPreview(index + 1)}

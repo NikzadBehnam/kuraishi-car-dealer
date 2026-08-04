@@ -97,6 +97,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-destructive: var(--destructive);
   --font-sans: var(--font-sans);
   --font-heading: var(--font-heading);

@@ -35,14 +35,14 @@ export default function AboutPage() {
               ["Fahrzeuge jährlich", "über 800"],
               ["Team", "32 Fachleute"],
             ].map(([label, value]) => (
-              <Card className="rounded-[15px] p-4" key={label}>
+              <Card className="rounded-[var(--radius-sm)] p-4" key={label}>
                 <span className="text-muted-foreground text-xs">{label}</span>
                 <strong className="block">{value}</strong>
               </Card>
             ))}
           </div>
         </div>
-        <div className="relative min-h-112 overflow-hidden rounded-[15px]">
+        <div className="relative min-h-112 overflow-hidden rounded-[var(--radius-sm)]">
           <Image
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"

@@ -24,8 +24,8 @@ export function VehicleCard({
     <Card
       className={
         variant === "list"
-          ? "grid overflow-hidden rounded md:grid-cols-[18rem_1fr]"
-          : "group overflow-hidden rounded"
+          ? "grid overflow-hidden rounded-[var(--radius-sm)] md:grid-cols-[18rem_1fr]"
+          : "group overflow-hidden rounded-[var(--radius-sm)]"
       }
     >
       <div className="bg-secondary relative aspect-16/10 overflow-hidden">

@@ -39,7 +39,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-20 border-t border-white/10 bg-[#0c192b] text-[#c9d3df]">
       <div className="site-container py-10 sm:py-14">
-        <section className="footer-reveal grid gap-7 rounded-[var(--radius-lg)] border border-white/10 bg-white/[0.045] p-5 sm:p-7 lg:grid-cols-[minmax(0,0.85fr)_minmax(24rem,1.15fr)] lg:items-center">
+        <section className="footer-reveal grid gap-7 rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.045] p-5 sm:p-7 lg:grid-cols-[minmax(0,0.85fr)_minmax(24rem,1.15fr)] lg:items-center">
           <div>
             <p className="text-accent text-xs font-extrabold tracking-[0.16em] uppercase">
               Kuraishi Newsletter

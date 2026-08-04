@@ -14,7 +14,11 @@ export function EmptyState({
       <SearchX className="text-muted-foreground size-12" />
       <h2 className="section-title mt-5 text-3xl">{title}</h2>
       <p className="text-muted-foreground mt-3">{description}</p>
-      <Button asChild variant="accent" className="mt-6 rounded-[15px]">
+      <Button
+        asChild
+        variant="accent"
+        className="mt-6 rounded-[var(--radius-sm)]"
+      >
         <Link href={routes.vehicles}>
           <CarFront />
           Fahrzeuge entdecken

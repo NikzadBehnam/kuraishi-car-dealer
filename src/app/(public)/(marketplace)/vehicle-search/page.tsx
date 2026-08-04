@@ -64,11 +64,19 @@ export default function AdvancedSearchPage() {
             ))}
           </div>
           <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Button variant="outline" type="reset" className="rounded-[15px]">
+            <Button
+              variant="outline"
+              type="reset"
+              className="rounded-[var(--radius-sm)]"
+            >
               <RotateCcw />
               Alles zurücksetzen
             </Button>
-            <Button asChild variant="accent" className="rounded-[15px]">
+            <Button
+              asChild
+              variant="accent"
+              className="rounded-[var(--radius-sm)]"
+            >
               <Link href={publicRoutes.vehicles}>
                 <CarFront />
                 {vehicles.length} Fahrzeuge anzeigen

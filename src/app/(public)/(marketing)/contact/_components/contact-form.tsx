@@ -157,7 +157,7 @@ export function ContactForm() {
       <Button
         variant="accent"
         disabled={isSubmitting}
-        className="w-full justify-center rounded-[15px] focus-visible:outline-none!"
+        className="w-full justify-center rounded-[var(--radius-sm)] focus-visible:outline-none!"
       >
         {isSubmitting ? <LoaderCircle className="animate-spin" /> : <Send />}
         {isSubmitting ? "Wird gesendet …" : "Anfrage senden"}

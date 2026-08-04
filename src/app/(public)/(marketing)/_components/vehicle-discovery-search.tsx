@@ -86,7 +86,7 @@ export function VehicleDiscoverySearch() {
         </p>
       </div>
 
-      <Card className="overflow-hidden rounded border shadow-none">
+      <Card className="overflow-hidden rounded-[var(--radius-sm)] border shadow-none">
         <div className="border-b px-5 pt-5 sm:px-7">
           <div
             className="flex gap-1 overflow-x-auto"
@@ -176,7 +176,7 @@ export function VehicleDiscoverySearch() {
             <Button
               type="submit"
               variant="accent"
-              className="rounded-[15px] px-6"
+              className="rounded-[var(--radius-sm)] px-6"
             >
               <Search />
               {resultCount} Fahrzeuge

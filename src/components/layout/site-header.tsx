@@ -52,7 +52,7 @@ export function SiteHeader() {
           <Button
             asChild
             variant="accent"
-            className="hidden rounded-[15px] sm:inline-flex"
+            className="hidden rounded-[var(--radius-sm)] sm:inline-flex"
           >
             <Link href={routes.vehicles}>
               <CarFront />

@@ -46,7 +46,7 @@ export function ComparisonTable() {
       ["Verfügbarkeit", () => "Sofort verfügbar"],
     ];
   return (
-    <div className="bg-surface overflow-hidden rounded border">
+    <div className="bg-surface overflow-hidden rounded-[var(--radius-sm)] border">
       <Table className="border-collapse text-left">
         <TableCaption className="sr-only">
           Vergleich ausgewählter Fahrzeuge

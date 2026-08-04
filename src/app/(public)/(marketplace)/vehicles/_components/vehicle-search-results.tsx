@@ -95,7 +95,7 @@ export function VehicleSearchResults({
           ]}
         />
         <Button
-          className="w-full rounded-[15px]"
+          className="w-full rounded-[var(--radius-sm)]"
           variant="outline"
           onClick={() => setFilters({})}
         >

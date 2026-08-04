@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="de" suppressHydrationWarning>
+    <html lang="de" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={jetBrainsMono.variable}>
         <ThemeProvider
           attribute="class"

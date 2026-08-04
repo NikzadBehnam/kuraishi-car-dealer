@@ -53,7 +53,7 @@ export default function HomePage() {
           <div className="hero-content max-w-[49rem]">
             <div className="flex flex-wrap items-center gap-3">
               <p className="eyebrow">{homePageContent.eyebrow}</p>
-              <span className="hero-location rounded-[var(--radius-sm)]-full inline-flex items-center gap-1.5 border px-3 py-1 text-xs font-semibold">
+              <span className="hero-location inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-3 py-1 text-xs font-semibold">
                 <MapPin className="size-3.5" aria-hidden="true" /> Wien
               </span>
             </div>
@@ -86,7 +86,7 @@ export default function HomePage() {
             <div className="hero-trust mt-8 flex flex-wrap gap-x-6 gap-y-3 border-t pt-5 text-xs font-semibold sm:text-sm">
               {homePageContent.trust.map((item) => (
                 <span className="flex items-center gap-2" key={item}>
-                  <span className="hero-check rounded-[var(--radius-sm)]-full grid size-5 place-items-center">
+                  <span className="hero-check grid size-5 place-items-center rounded-[var(--radius-sm)]">
                     <Check className="size-3" aria-hidden="true" />
                   </span>
                   {item}
@@ -144,7 +144,7 @@ export default function HomePage() {
 
                 return (
                   <Card
-                    className="rounded-[var(--radius-sm)]-[var(--radius-sm)] grid gap-4 p-5 sm:grid-cols-[auto_1fr] sm:p-6"
+                    className="grid gap-4 rounded-[var(--radius-sm)] p-5 sm:grid-cols-[auto_1fr] sm:p-6"
                     key={benefit.title}
                   >
                     <span className="bg-success/10 text-success grid size-11 shrink-0 place-items-center rounded-[var(--radius-sm)]">
@@ -181,7 +181,7 @@ export default function HomePage() {
                 {["Fahrzeugdaten eingeben", "Bewertung erhalten"].map(
                   (step, index) => (
                     <span className="flex items-center gap-3" key={step}>
-                      <span className="rounded-[var(--radius-sm)]-full grid size-7 place-items-center bg-white/10 text-xs font-extrabold text-white">
+                      <span className="grid size-7 place-items-center rounded-[var(--radius-sm)] bg-white/10 text-xs font-extrabold text-white">
                         {index + 1}
                       </span>
                       {step}

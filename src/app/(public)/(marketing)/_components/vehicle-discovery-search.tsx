@@ -76,14 +76,14 @@ export function VehicleDiscoverySearch() {
   return (
     <div className="site-container">
       <div className="mb-7 max-w-2xl">
-        <p className="eyebrow">Direkt einsteigen</p>
-        <h2 className="section-title mt-3">
+        {/* <p className="eyebrow">Direkt einsteigen</p> */}
+        {/* <h2 className="section-title mt-3">
           Finden Sie Ihr nächstes Fahrzeug.
-        </h2>
-        <p className="text-muted-foreground mt-4 text-lg">
+        </h2> */}
+        {/* <p className="text-muted-foreground mt-4 text-lg">
           Durchsuchen Sie unseren geprüften Bestand oder starten Sie direkt über
           die passende Fahrzeugklasse.
-        </p>
+        </p> */}
       </div>
 
       <Card className="overflow-hidden rounded-[var(--radius-sm)] border shadow-none">

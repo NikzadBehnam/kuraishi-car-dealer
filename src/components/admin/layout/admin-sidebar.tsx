@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CarFront } from "lucide-react";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import {
   adminNavigation,
   adminRoutes,
@@ -17,7 +19,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
     <aside className="hidden lg:block">
       <div className="sticky top-[5.25rem] grid gap-3">
         <div className="rounded-[var(--radius-sm)] border bg-surface p-3">
-        <div className="mb-3 flex items-center gap-3 border-b pb-3">
+          <div className="mb-3 flex items-center gap-3 border-b pb-3">
             <span className="grid size-10 place-items-center rounded-[var(--radius-sm)] bg-primary text-primary-foreground">
               <CarFront className="size-5" aria-hidden="true" />
             </span>
@@ -111,9 +113,11 @@ function AdminIdentityCard({ compact = false }: { compact?: boolean }) {
       )}
     >
       <div className="flex items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-sm font-extrabold text-accent-foreground">
-          KA
-        </span>
+        <Avatar className="size-10">
+          <AvatarFallback className="bg-accent text-sm text-accent-foreground">
+            KA
+          </AvatarFallback>
+        </Avatar>
         <span className="min-w-0">
           <span className="block truncate text-sm font-extrabold">
             Kuraishi Admin
@@ -123,6 +127,13 @@ function AdminIdentityCard({ compact = false }: { compact?: boolean }) {
           </span>
         </span>
       </div>
+      {!compact && <Separator className="my-3" />}
+      {!compact && (
+        <p className="text-xs leading-5 text-muted-foreground">
+          Mocked identity for the admin UI phase. Authentication will be added
+          later.
+        </p>
+      )}
     </section>
   );
 }

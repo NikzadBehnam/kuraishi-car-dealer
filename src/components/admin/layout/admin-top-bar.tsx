@@ -1,14 +1,35 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
-import { Bell, CarFront, Menu, Search, X } from "lucide-react";
+import { Bell, CarFront, Menu, Search } from "lucide-react";
 import { useState } from "react";
 
 import { AdminMobileSidebar } from "@/components/admin/layout/admin-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { adminRoutes } from "@/config/admin-routes.config";
 
 export function AdminTopBar() {
@@ -17,8 +38,8 @@ export function AdminTopBar() {
   return (
     <header className="sticky top-0 z-50 border-b bg-surface/95 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-[92rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
-        <Dialog.Root open={open} onOpenChange={setOpen}>
-          <Dialog.Trigger asChild>
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
             <Button
               type="button"
               variant="outline"
@@ -28,29 +49,15 @@ export function AdminTopBar() {
             >
               <Menu />
             </Button>
-          </Dialog.Trigger>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-[80] bg-[#06101f]/50 backdrop-blur-sm data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-            <Dialog.Content className="fixed inset-y-0 left-0 z-[90] w-[min(22rem,calc(100vw-2rem))] border-r bg-surface p-4 shadow-2xl outline-none data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left">
-              <Dialog.Title className="sr-only">Admin navigation</Dialog.Title>
-              <Dialog.Description className="sr-only">
-                Navigate between admin workspace sections.
-              </Dialog.Description>
-              <Dialog.Close asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-3 right-3 rounded-[var(--radius-sm)]"
-                  aria-label="Close admin navigation"
-                >
-                  <X />
-                </Button>
-              </Dialog.Close>
-              <AdminMobileSidebar onNavigate={() => setOpen(false)} />
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+          </SheetTrigger>
+          <SheetContent side="left">
+            <SheetTitle className="sr-only">Admin navigation</SheetTitle>
+            <SheetDescription className="sr-only">
+              Navigate between admin workspace sections.
+            </SheetDescription>
+            <AdminMobileSidebar onNavigate={() => setOpen(false)} />
+          </SheetContent>
+        </Sheet>
 
         <Link
           href={adminRoutes.dashboard}
@@ -83,27 +90,61 @@ export function AdminTopBar() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 md:ml-0">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="rounded-[var(--radius-sm)]"
-            aria-label="Notifications"
-          >
-            <Bell />
-          </Button>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="rounded-[var(--radius-sm)]"
+                  aria-label="Notifications"
+                >
+                  <Bell />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Notifications</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <ThemeToggle />
-          <div className="hidden items-center gap-2 rounded-[var(--radius-sm)] border bg-background px-2.5 py-1.5 lg:flex">
-            <span className="grid size-7 place-items-center rounded-full bg-accent text-xs font-extrabold text-accent-foreground">
-              KA
-            </span>
-            <span className="grid leading-tight">
-              <span className="text-xs font-extrabold">Kuraishi Admin</span>
-              <span className="text-[0.68rem] text-muted-foreground">
-                Operations Manager
-              </span>
-            </span>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="hidden items-center gap-2 rounded-[var(--radius-sm)] border bg-background px-2.5 py-1.5 transition-colors hover:bg-surface-muted focus-visible:outline-none lg:flex"
+                aria-label="Open admin account menu"
+              >
+                <Avatar className="size-7">
+                  <AvatarFallback className="bg-accent text-xs text-accent-foreground">
+                    KA
+                  </AvatarFallback>
+                </Avatar>
+                <span className="grid text-left leading-tight">
+                  <span className="text-xs font-extrabold">
+                    Kuraishi Admin
+                  </span>
+                  <span className="text-[0.68rem] text-muted-foreground">
+                    Operations Manager
+                  </span>
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <span className="block text-foreground">Kuraishi Admin</span>
+                <span className="mt-1 block font-semibold">
+                  UI-only account menu
+                </span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Profile preview</DropdownMenuItem>
+              <DropdownMenuItem>Admin preferences</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                Sign out unavailable in UI phase
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

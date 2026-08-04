@@ -12,18 +12,6 @@ const dashboardStats = [
 export default function AdminDashboardPage() {
   return (
     <div className="grid gap-6">
-      <section className="rounded-[var(--radius-sm)] border bg-surface p-5">
-        <p className="eyebrow">Admin</p>
-        <h1 className="mt-3 text-3xl leading-tight font-extrabold tracking-tight">
-          Dashboard foundation
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          UI-only admin area for inventory, leads, appointments, users,
-          activity, media, and settings. Backend, authentication, and
-          persistence will be connected in a later phase.
-        </p>
-      </section>
-
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {dashboardStats.map(({ label, value, Icon }) => (
           <Card

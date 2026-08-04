@@ -37,7 +37,7 @@ export function AdminTopBar() {
 
   return (
     <header className="sticky top-0 z-50 border-b bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-[92rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 min-w-0 w-full max-w-[92rem] items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button
@@ -89,7 +89,7 @@ export function AdminTopBar() {
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-2 md:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>

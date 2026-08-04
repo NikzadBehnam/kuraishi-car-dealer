@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarCheck, Check, Mail, MapPin, Phone } from "lucide-react";
@@ -19,6 +18,7 @@ import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { publicRoutes, routeBuilders } from "@/config/routes.config";
+import { VehicleImageGallery } from "./_components/vehicle-image-gallery";
 export function generateStaticParams() {
   return vehicles.map((vehicle) => ({ slug: vehicle.slug }));
 }
@@ -81,34 +81,10 @@ export default async function VehicleDetailPage({
       </div>
       <div className="site-container grid gap-7 py-8 lg:grid-cols-[1.4fr_.75fr]">
         <div>
-          <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
-            <div className="relative aspect-[16/10] overflow-hidden rounded-xl">
-              <Image
-                priority
-                fill
-                sizes="(max-width: 1024px) 100vw, 60vw"
-                className="object-cover"
-                src={vehicle.images[0]}
-                alt={`${vehicle.make} ${vehicle.model} Frontansicht`}
-              />
-            </div>
-            <div className="hidden gap-3 md:grid">
-              {vehicle.images.slice(1, 3).map((image, index) => (
-                <div
-                  className="relative overflow-hidden rounded-xl"
-                  key={image}
-                >
-                  <Image
-                    fill
-                    sizes="25vw"
-                    className="object-cover"
-                    src={image}
-                    alt={`${vehicle.make} ${vehicle.model} Ansicht ${index + 2}`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          <VehicleImageGallery
+            images={vehicle.images}
+            title={`${vehicle.make} ${vehicle.model}`}
+          />
           <section className="section-space">
             <h2 className="section-title">Fahrzeugdetails</h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

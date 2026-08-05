@@ -150,7 +150,7 @@ export function DashboardOverview() {
     .slice(0, 5);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid min-w-0 gap-5">
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {stats.map(({ label, value, helper, Icon, tone }) => (
           <Card
@@ -225,21 +225,21 @@ function QuickActions() {
   ];
 
   return (
-    <Card className="rounded-[var(--radius-sm)] p-4">
+    <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-base font-extrabold">Quick actions</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             UI-only shortcuts for the upcoming admin workflows.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">
           {actions.map(({ label, href, Icon, variant }) => (
             <Button
               key={label}
               asChild
               variant={variant}
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
             >
               <Link href={href}>
                 <Icon />
@@ -255,7 +255,7 @@ function QuickActions() {
 
 function RecentActivity({ events }: { events: AdminActivityEvent[] }) {
   return (
-    <Card className="rounded-[var(--radius-sm)] p-4">
+    <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
       <SectionHeading
         title="Recent activity"
         description="Latest mocked client and staff events."
@@ -301,13 +301,13 @@ function RecentActivity({ events }: { events: AdminActivityEvent[] }) {
 
 function RecentLeads({ leads }: { leads: AdminLead[] }) {
   return (
-    <Card className="rounded-[var(--radius-sm)] p-4">
+    <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
       <SectionHeading
         title="Recent leads"
         description="Newest inquiries from the UI-only intake mock."
         href={adminRoutes.leads}
       />
-      <div className="mt-4 overflow-hidden rounded-[var(--radius-sm)] border">
+      <div className="mt-4 min-w-0 overflow-hidden rounded-[var(--radius-sm)] border">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -361,7 +361,7 @@ function InventorySummary() {
   const total = adminVehicles.length;
 
   return (
-    <Card className="rounded-[var(--radius-sm)] p-4">
+    <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
       <SectionHeading
         title="Inventory status summary"
         description="Admin-only inventory lifecycle distribution."

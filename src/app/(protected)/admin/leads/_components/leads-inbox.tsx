@@ -62,6 +62,9 @@ const leadTabs: Array<{ value: LeadTab; label: string }> = [
   { value: "lost", label: "Lost" },
 ];
 
+const leadTabClassName =
+  "min-h-9 flex-1 basis-[7rem] bg-secondary px-3 text-xs sm:flex-none sm:text-sm";
+
 const statusLabels: Record<AdminLeadStatus, string> = {
   new: "New",
   contacted: "Contacted",
@@ -135,10 +138,10 @@ export function LeadsInbox({
     leads.find((lead) => lead.id === selectedLeadId) ?? null;
 
   return (
-    <div className="grid gap-4">
-      <Card className="rounded-[var(--radius-sm)] p-4">
+    <div className="grid min-w-0 gap-4">
+      <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-base font-extrabold">Leads inbox</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               UI-only intake board for contact, valuation, and test-drive
@@ -148,7 +151,7 @@ export function LeadsInbox({
           <Button
             asChild
             variant="accent"
-            className="rounded-[var(--radius-sm)]"
+            className="w-full rounded-[var(--radius-sm)] sm:w-auto"
           >
             <Link href={adminRoutes.appointments}>
               <CalendarPlus />
@@ -171,10 +174,18 @@ export function LeadsInbox({
               className="bg-background pl-9"
             />
           </div>
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as LeadTab)}>
-            <TabsList className="max-w-full overflow-x-auto">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as LeadTab)}
+            className="min-w-0"
+          >
+            <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0 lg:w-auto">
               {leadTabs.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value}>
+                <TabsTrigger
+                  key={tab.value}
+                  className={leadTabClassName}
+                  value={tab.value}
+                >
                   {tab.label}
                   <span className="ml-2 rounded-full bg-background px-1.5 py-0.5 text-[0.65rem]">
                     {countLeads(leads, tab.value)}
@@ -186,7 +197,7 @@ export function LeadsInbox({
         </div>
       </Card>
 
-      <Card className="overflow-hidden rounded-[var(--radius-sm)]">
+      <Card className="min-w-0 overflow-hidden rounded-[var(--radius-sm)]">
         {filteredLeads.length ? (
           <>
             <div className="hidden md:block">
@@ -217,7 +228,7 @@ export function LeadsInbox({
               </Table>
             </div>
 
-            <div className="grid md:hidden">
+            <div className="grid min-w-0 md:hidden">
               {filteredLeads.map((lead) => (
                 <LeadCard
                   key={lead.id}
@@ -360,7 +371,7 @@ function LeadDetailSheet({
         className="w-[min(44rem,calc(100vw-1rem))] overflow-hidden p-0"
       >
         <ScrollArea className="h-full">
-          <div className="grid gap-5 p-5 pr-12">
+          <div className="grid min-w-0 gap-5 p-4 pt-12 sm:p-5 sm:pr-12">
             <SheetHeader>
               <div className="flex flex-wrap gap-2">
                 <SourceBadge source={lead.source} />
@@ -374,11 +385,11 @@ function LeadDetailSheet({
               </SheetDescription>
             </SheetHeader>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-2 sm:grid-cols-2">
               <Button
                 asChild
                 variant="outline"
-                className="rounded-[var(--radius-sm)]"
+                className="w-full rounded-[var(--radius-sm)]"
               >
                 <a href={lead.customerPhone ? `tel:${lead.customerPhone}` : "#"}>
                   <Phone />
@@ -388,7 +399,7 @@ function LeadDetailSheet({
               <Button
                 asChild
                 variant="outline"
-                className="rounded-[var(--radius-sm)]"
+                className="w-full rounded-[var(--radius-sm)]"
               >
                 <a href={`mailto:${lead.customerEmail}`}>
                   <Mail />
@@ -398,7 +409,7 @@ function LeadDetailSheet({
               <Button
                 asChild
                 variant="outline"
-                className="rounded-[var(--radius-sm)]"
+                className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
               >
                 <Link href={adminRoutes.appointments}>
                   <CalendarPlus />
@@ -408,7 +419,7 @@ function LeadDetailSheet({
               <Button
                 type="button"
                 variant="accent"
-                className="rounded-[var(--radius-sm)]"
+                className="w-full rounded-[var(--radius-sm)]"
                 onClick={() => toast.info("Mark contacted is UI-only.")}
               >
                 <CheckCircle2 />
@@ -417,7 +428,7 @@ function LeadDetailSheet({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[var(--radius-sm)] sm:col-span-2"
+                className="w-full rounded-[var(--radius-sm)] sm:col-span-2"
                 onClick={() => toast.info("Close lead is UI-only.")}
               >
                 <XCircle />
@@ -507,7 +518,7 @@ function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[var(--radius-sm)] border bg-background p-4">
+    <section className="min-w-0 rounded-[var(--radius-sm)] border bg-background p-4">
       <h3 className="text-sm font-extrabold">{title}</h3>
       <Separator className="my-3" />
       {children}

@@ -88,14 +88,14 @@ function AdminNavigationList({
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-10 items-center gap-2 rounded-[var(--radius-sm)] px-3 text-sm font-bold transition-colors",
+              "flex min-h-10 min-w-0 items-center gap-2 rounded-[var(--radius-sm)] px-3 text-sm font-bold transition-colors",
               active
                 ? "bg-secondary text-foreground"
                 : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
             )}
           >
-            <Icon className="size-4" aria-hidden="true" />
-            {label}
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">{label}</span>
           </Link>
         );
       })}

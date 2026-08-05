@@ -151,10 +151,10 @@ export function ActivityAudit({ events }: { events: AdminActivityEvent[] }) {
   };
 
   return (
-    <div className="grid gap-4">
-      <Card className="rounded-[var(--radius-sm)] p-4">
+    <div className="grid min-w-0 gap-4">
+      <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-base font-extrabold">Activity audit</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Search and filter mocked user, lead, vehicle, and admin events.
@@ -163,7 +163,7 @@ export function ActivityAudit({ events }: { events: AdminActivityEvent[] }) {
           <Button
             type="button"
             variant="outline"
-            className="rounded-[var(--radius-sm)]"
+            className="w-full rounded-[var(--radius-sm)] sm:w-auto"
             onClick={resetFilters}
           >
             <ListFilter />
@@ -252,7 +252,7 @@ export function ActivityAudit({ events }: { events: AdminActivityEvent[] }) {
         </div>
       </Card>
 
-      <Card className="overflow-hidden rounded-[var(--radius-sm)]">
+      <Card className="min-w-0 overflow-hidden rounded-[var(--radius-sm)]">
         {filteredEvents.length ? (
           <Table>
             <TableHeader>
@@ -397,12 +397,14 @@ function ActivityMetadataDialog({
               {Object.entries(event.metadata).map(([key, value]) => (
                 <div
                   key={key}
-                  className="grid gap-2 rounded-[var(--radius-sm)] border bg-surface p-3 sm:grid-cols-[12rem_1fr]"
+                  className="grid min-w-0 gap-2 rounded-[var(--radius-sm)] border bg-surface p-3 sm:grid-cols-[12rem_minmax(0,1fr)]"
                 >
                   <span className="text-xs font-bold text-muted-foreground">
                     {key}
                   </span>
-                  <span className="text-sm font-semibold">{String(value)}</span>
+                  <span className="break-words text-sm font-semibold">
+                    {String(value)}
+                  </span>
                 </div>
               ))}
             </div>

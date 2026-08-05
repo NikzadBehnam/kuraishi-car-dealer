@@ -12,7 +12,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <AdminSidebar />
         <main className="min-w-0 overflow-x-hidden">
           <AdminBreadcrumbs />
-          <div className="mt-5 min-w-0">{children}</div>
+          <div className="admin-content-enter mt-5 min-w-0">{children}</div>
         </main>
       </div>
     </div>

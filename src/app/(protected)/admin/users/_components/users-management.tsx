@@ -77,6 +77,9 @@ const statusLabels: Record<AdminUserStatus, string> = {
   invited: "Invited",
 };
 
+const userTabClassName =
+  "min-h-9 flex-1 basis-[7.5rem] bg-secondary px-3 text-xs sm:flex-none sm:text-sm";
+
 const date = new Intl.DateTimeFormat("en-GB", {
   month: "short",
   day: "2-digit",
@@ -131,10 +134,10 @@ export function UsersManagement({
     users.find((user) => user.id === selectedUserId) ?? null;
 
   return (
-    <div className="grid gap-4">
-      <Card className="rounded-[var(--radius-sm)] p-4">
+    <div className="grid min-w-0 gap-4">
+      <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-base font-extrabold">User management</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               UI-only account overview for clients, staff, and admins.
@@ -143,7 +146,7 @@ export function UsersManagement({
           <Button
             type="button"
             variant="accent"
-            className="rounded-[var(--radius-sm)]"
+            className="w-full rounded-[var(--radius-sm)] sm:w-auto"
             onClick={() => toast.info("Invite user is UI-only.")}
           >
             <Users />
@@ -200,7 +203,7 @@ export function UsersManagement({
         </div>
       </Card>
 
-      <Card className="overflow-hidden rounded-[var(--radius-sm)]">
+      <Card className="min-w-0 overflow-hidden rounded-[var(--radius-sm)]">
         {filteredUsers.length ? (
           <>
             <div className="hidden lg:block">
@@ -234,7 +237,7 @@ export function UsersManagement({
               </Table>
             </div>
 
-            <div className="grid lg:hidden">
+            <div className="grid min-w-0 lg:hidden">
               {filteredUsers.map((user) => (
                 <UserCard
                   key={user.id}
@@ -364,7 +367,7 @@ function UserDetailSheet({
         className="w-[min(46rem,calc(100vw-1rem))] overflow-hidden p-0"
       >
         <ScrollArea className="h-full">
-          <div className="grid gap-5 p-5 pr-12">
+          <div className="grid min-w-0 gap-5 p-4 pt-12 sm:p-5 sm:pr-12">
             <SheetHeader>
               <div className="flex flex-wrap gap-2">
                 <RoleBadge role={user.role} />
@@ -379,11 +382,11 @@ function UserDetailSheet({
               </SheetDescription>
             </SheetHeader>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-2 sm:grid-cols-2">
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[var(--radius-sm)]"
+                className="w-full rounded-[var(--radius-sm)]"
                 onClick={() => toast.info("View profile is UI-only.")}
               >
                 <Eye />
@@ -392,7 +395,7 @@ function UserDetailSheet({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[var(--radius-sm)]"
+                className="w-full rounded-[var(--radius-sm)]"
                 onClick={() => toast.info("Reset password is UI-only.")}
               >
                 <KeyRound />
@@ -401,7 +404,7 @@ function UserDetailSheet({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[var(--radius-sm)]"
+                className="w-full rounded-[var(--radius-sm)]"
                 onClick={() => toast.info("Change role is UI-only.")}
               >
                 <UserCog />
@@ -410,7 +413,7 @@ function UserDetailSheet({
               <Button
                 type="button"
                 variant="destructive"
-                className="rounded-[var(--radius-sm)]"
+                className="w-full rounded-[var(--radius-sm)]"
                 onClick={() => toast.info("Disable account is UI-only.")}
               >
                 <Ban />
@@ -418,14 +421,24 @@ function UserDetailSheet({
               </Button>
             </div>
 
-            <Tabs defaultValue="profile">
-              <div className="overflow-x-auto rounded-[var(--radius-sm)] border bg-surface p-2">
-                <TabsList className="w-max">
-                  <TabsTrigger value="profile">Profile</TabsTrigger>
-                  <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-                  <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
-                  <TabsTrigger value="valuations">Valuations</TabsTrigger>
-                  <TabsTrigger value="activity">Activity</TabsTrigger>
+            <Tabs defaultValue="profile" className="min-w-0">
+              <div className="min-w-0 rounded-[var(--radius-sm)] border bg-surface p-2">
+                <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0">
+                  <TabsTrigger className={userTabClassName} value="profile">
+                    Profile
+                  </TabsTrigger>
+                  <TabsTrigger className={userTabClassName} value="vehicles">
+                    Vehicles
+                  </TabsTrigger>
+                  <TabsTrigger className={userTabClassName} value="inquiries">
+                    Inquiries
+                  </TabsTrigger>
+                  <TabsTrigger className={userTabClassName} value="valuations">
+                    Valuations
+                  </TabsTrigger>
+                  <TabsTrigger className={userTabClassName} value="activity">
+                    Activity
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -652,7 +665,7 @@ function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[var(--radius-sm)] border bg-background p-4">
+    <section className="min-w-0 rounded-[var(--radius-sm)] border bg-background p-4">
       <h3 className="text-sm font-extrabold">{title}</h3>
       <Separator className="my-3" />
       {children}

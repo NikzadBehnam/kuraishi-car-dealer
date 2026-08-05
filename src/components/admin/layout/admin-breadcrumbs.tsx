@@ -14,7 +14,7 @@ export function AdminBreadcrumbs() {
   const activeItem = getAdminNavigationItem(pathname);
 
   return (
-    <section className="rounded-[var(--radius-sm)] border bg-surface px-4 py-3 sm:px-5">
+    <section className="min-w-0 rounded-[var(--radius-sm)] border bg-surface px-4 py-3 sm:px-5">
       <nav
         aria-label="Admin breadcrumb"
         className="flex flex-wrap items-center gap-1 text-xs font-bold text-muted-foreground"
@@ -35,9 +35,9 @@ export function AdminBreadcrumbs() {
           </>
         )}
       </nav>
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
+      <div className="mt-3 flex min-w-0 flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
             {activeItem.label}
           </h1>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">

@@ -197,10 +197,10 @@ export function VehicleInventoryTable({
   };
 
   return (
-    <div className="grid gap-4">
-      <section className="rounded-[var(--radius-sm)] border bg-surface p-4">
+    <div className="grid min-w-0 gap-4">
+      <section className="min-w-0 rounded-[var(--radius-sm)] border bg-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-base font-extrabold">Inventory table</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Mocked admin inventory with client-side controls for UI review.
@@ -209,7 +209,7 @@ export function VehicleInventoryTable({
           <Button
             asChild
             variant="accent"
-            className="rounded-[var(--radius-sm)]"
+            className="w-full rounded-[var(--radius-sm)] sm:w-auto"
           >
             <Link href={`${adminRoutes.vehicles}/new`}>
               <Plus />
@@ -249,15 +249,15 @@ export function VehicleInventoryTable({
       </section>
 
       {selectedCount > 0 && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border bg-surface p-3">
+        <section className="grid min-w-0 gap-3 rounded-[var(--radius-sm)] border bg-surface p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm font-bold">
             {selectedCount} vehicle{selectedCount === 1 ? "" : "s"} selected
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               onClick={() => mockBulkAction("Archive", selectedCount)}
             >
               <Archive />
@@ -266,7 +266,7 @@ export function VehicleInventoryTable({
             <Button
               type="button"
               variant="outline"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               onClick={() => mockBulkAction("Mark sold", selectedCount)}
             >
               <BadgeCheck />
@@ -275,7 +275,7 @@ export function VehicleInventoryTable({
             <Button
               type="button"
               variant="ghost"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               onClick={() => setSelectedIds(new Set())}
             >
               <Trash2 />
@@ -285,7 +285,7 @@ export function VehicleInventoryTable({
         </section>
       )}
 
-      <section className="overflow-hidden rounded-[var(--radius-sm)] border bg-surface">
+      <section className="min-w-0 overflow-hidden rounded-[var(--radius-sm)] border bg-surface">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -435,7 +435,7 @@ export function VehicleInventoryTable({
           </TableBody>
         </Table>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t p-3">
+        <div className="grid gap-3 border-t p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Showing{" "}
             <strong className="text-foreground">
@@ -447,7 +447,7 @@ export function VehicleInventoryTable({
             </strong>{" "}
             vehicles
           </p>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
             <Button
               type="button"
               variant="outline"
@@ -457,7 +457,7 @@ export function VehicleInventoryTable({
             >
               Previous
             </Button>
-            <span className="text-sm font-bold">
+            <span className="text-center text-sm font-bold">
               Page {currentPage} of {pageCount}
             </span>
             <Button

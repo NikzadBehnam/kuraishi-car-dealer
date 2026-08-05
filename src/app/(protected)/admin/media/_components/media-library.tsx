@@ -124,10 +124,10 @@ export function MediaLibrary({
   };
 
   return (
-    <div className="grid gap-4">
-      <Card className="rounded-[var(--radius-sm)] p-4">
+    <div className="grid min-w-0 gap-4">
+      <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-base font-extrabold">Media library</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               UI-only asset management for vehicle images, brand files, and
@@ -137,7 +137,7 @@ export function MediaLibrary({
           <Button
             type="button"
             variant="accent"
-            className="rounded-[var(--radius-sm)]"
+            className="w-full rounded-[var(--radius-sm)] sm:w-auto"
             onClick={() => toast.info("Upload is UI-only in this phase.")}
           >
             <Upload />
@@ -213,15 +213,15 @@ export function MediaLibrary({
       </button>
 
       {selectedCount > 0 && (
-        <Card className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] p-3">
+        <Card className="grid min-w-0 gap-3 rounded-[var(--radius-sm)] p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm font-bold">
             {selectedCount} asset{selectedCount === 1 ? "" : "s"} selected
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               onClick={() => toast.info("Bulk download is UI-only.")}
             >
               <Download />
@@ -230,7 +230,7 @@ export function MediaLibrary({
             <Button
               type="button"
               variant="outline"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               onClick={() => toast.info("Bulk delete is UI-only.")}
             >
               <Trash2 />
@@ -239,7 +239,7 @@ export function MediaLibrary({
             <Button
               type="button"
               variant="ghost"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               onClick={() => setSelectedIds(new Set())}
             >
               Clear
@@ -249,7 +249,7 @@ export function MediaLibrary({
       )}
 
       {filteredAssets.length ? (
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {filteredAssets.map((asset) => (
             <MediaAssetCard
               key={asset.id}
@@ -399,7 +399,7 @@ function MediaAssetDialog({
           </section>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="[&>button]:w-full sm:[&>button]:w-auto">
           <Button
             type="button"
             variant="outline"

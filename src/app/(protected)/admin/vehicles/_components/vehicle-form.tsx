@@ -70,6 +70,9 @@ const defaultValues: VehicleFormValues = {
   isAvailable: true,
 };
 
+const formTabClassName =
+  "min-h-9 flex-1 basis-[8.5rem] bg-secondary px-3 text-xs sm:flex-none sm:text-sm";
+
 export function VehicleForm({
   mode,
   vehicle,
@@ -97,12 +100,17 @@ export function VehicleForm({
   const title = mode === "create" ? "Add vehicle" : "Edit vehicle";
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="grid gap-4">
-      <Card className="rounded-[var(--radius-sm)] p-4">
+    <form onSubmit={handleSubmit(submit)} className="grid min-w-0 gap-4">
+      <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <Button asChild variant="outline" size="sm">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="rounded-[var(--radius-sm)]"
+              >
                 <Link href={adminRoutes.vehicles}>
                   <ArrowLeft />
                   Back
@@ -117,11 +125,11 @@ export function VehicleForm({
               Complete inventory form ready for later backend integration.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid w-full gap-2 sm:w-auto sm:grid-flow-col">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               onClick={() => toast.info("Preview is UI-only in this phase.")}
             >
               <Eye />
@@ -130,7 +138,7 @@ export function VehicleForm({
             <Button
               type="button"
               variant="outline"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               onClick={() => toast.info("Draft save is UI-only in this phase.")}
             >
               <Save />
@@ -139,7 +147,7 @@ export function VehicleForm({
             <Button
               type="submit"
               variant="accent"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -154,20 +162,32 @@ export function VehicleForm({
       </Card>
 
       <Tabs defaultValue="basics" className="min-w-0">
-        <div className="overflow-x-auto rounded-[var(--radius-sm)] border bg-surface p-2">
-          <TabsList className="w-max">
-            <TabsTrigger value="basics">Basics</TabsTrigger>
-            <TabsTrigger value="pricing">Pricing</TabsTrigger>
-            <TabsTrigger value="technical">Technical details</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
-            <TabsTrigger value="media">Media</TabsTrigger>
-            <TabsTrigger value="publishing">Publishing</TabsTrigger>
+        <div className="min-w-0 rounded-[var(--radius-sm)] border bg-surface p-2">
+          <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0">
+            <TabsTrigger className={formTabClassName} value="basics">
+              Basics
+            </TabsTrigger>
+            <TabsTrigger className={formTabClassName} value="pricing">
+              Pricing
+            </TabsTrigger>
+            <TabsTrigger className={formTabClassName} value="technical">
+              Technical details
+            </TabsTrigger>
+            <TabsTrigger className={formTabClassName} value="features">
+              Features
+            </TabsTrigger>
+            <TabsTrigger className={formTabClassName} value="media">
+              Media
+            </TabsTrigger>
+            <TabsTrigger className={formTabClassName} value="publishing">
+              Publishing
+            </TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="basics">
           <Panel title="Basics" description="Core listing identity and copy.">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Field label="Make" error={errors.make?.message}>
                 <Input {...register("make")} />
               </Field>
@@ -209,7 +229,7 @@ export function VehicleForm({
 
         <TabsContent value="pricing">
           <Panel title="Pricing" description="Commercial values for admin review.">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <Field label="Price" error={errors.price?.message}>
                 <Input type="number" {...register("price", { valueAsNumber: true })} />
               </Field>
@@ -225,7 +245,7 @@ export function VehicleForm({
 
         <TabsContent value="technical">
           <Panel title="Technical details" description="Specifications shown in vehicle detail views.">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Field label="First registration" error={errors.firstRegistration?.message}>
                 <Input placeholder="2024-01" {...register("firstRegistration")} />
               </Field>
@@ -299,7 +319,7 @@ export function VehicleForm({
 
         <TabsContent value="features">
           <Panel title="Features" description="One feature or label per line.">
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-2">
               <Field label="Features" error={errors.featuresText?.message}>
                 <Textarea rows={9} {...register("featuresText")} />
               </Field>
@@ -312,7 +332,7 @@ export function VehicleForm({
 
         <TabsContent value="media">
           <Panel title="Media" description="Mock image upload and ordering UI.">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
               <button
                 type="button"
                 className="grid min-h-56 place-items-center rounded-[var(--radius-sm)] border border-dashed bg-background p-6 text-center transition-colors hover:bg-surface-muted focus-visible:outline-none"
@@ -330,7 +350,7 @@ export function VehicleForm({
                   </span>
                 </span>
               </button>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {(vehicle?.images ?? []).map((image, index) => (
                   <div
                     key={image}
@@ -389,7 +409,7 @@ export function VehicleForm({
 
         <TabsContent value="publishing">
           <Panel title="Publishing" description="Visibility, workflow state, and quality gates.">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <SelectField
                 label="Status"
                 name="status"
@@ -457,13 +477,13 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-[var(--radius-sm)] p-4">
+    <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
       <div>
         <h3 className="text-base font-extrabold">{title}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
       <Separator className="my-4" />
-      <div className="grid gap-4">{children}</div>
+      <div className="grid min-w-0 gap-4">{children}</div>
     </Card>
   );
 }
@@ -478,7 +498,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       <Label>{label}</Label>
       {children}
       {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
@@ -535,9 +555,13 @@ function CheckboxField({
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex min-h-24 items-start gap-3 rounded-[var(--radius-sm)] border bg-background p-4">
-      <Checkbox checked={checked} onCheckedChange={onCheckedChange} />
-      <span>
+    <label className="flex min-h-24 min-w-0 items-start gap-3 rounded-[var(--radius-sm)] border bg-background p-4">
+      <Checkbox
+        checked={checked}
+        className="shrink-0"
+        onCheckedChange={onCheckedChange}
+      />
+      <span className="min-w-0">
         <span className="block text-sm font-extrabold">{label}</span>
         <span className="mt-1 block text-sm leading-6 text-muted-foreground">
           {description}

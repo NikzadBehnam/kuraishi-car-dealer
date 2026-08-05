@@ -126,9 +126,9 @@ export function AppointmentsBoard({
     null;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 gap-4">
       <section className="grid gap-4 xl:grid-cols-[19rem_minmax(0,1fr)]">
-        <Card className="rounded-[var(--radius-sm)] p-4">
+        <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
           <div>
             <h2 className="text-base font-extrabold">Calendar</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -146,9 +146,9 @@ export function AppointmentsBoard({
           </div>
         </Card>
 
-        <Card className="rounded-[var(--radius-sm)] p-4">
+        <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <h2 className="text-base font-extrabold">Daily agenda</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {selectedDate
@@ -159,7 +159,7 @@ export function AppointmentsBoard({
             <Button
               asChild
               variant="accent"
-              className="rounded-[var(--radius-sm)]"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
             >
               <Link href={adminRoutes.leads}>
                 <CalendarPlus />
@@ -189,9 +189,9 @@ export function AppointmentsBoard({
         </Card>
       </section>
 
-      <Card className="overflow-hidden rounded-[var(--radius-sm)]">
+      <Card className="min-w-0 overflow-hidden rounded-[var(--radius-sm)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-base font-extrabold">All appointments</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Mock list view for requested, confirmed, completed, and cancelled
@@ -288,7 +288,7 @@ function AppointmentAgendaCard({
   const Icon = typeIcons[appointment.type];
 
   return (
-    <article className="grid gap-3 rounded-[var(--radius-sm)] border bg-background p-3 md:grid-cols-[7rem_1fr_auto] md:items-center">
+    <article className="grid min-w-0 gap-3 rounded-[var(--radius-sm)] border bg-background p-3 md:grid-cols-[7rem_minmax(0,1fr)_auto] md:items-center">
       <div>
         <p className="text-lg font-extrabold">
           {time.format(new Date(appointment.startsAt))}
@@ -318,7 +318,7 @@ function AppointmentAgendaCard({
       <Button
         type="button"
         variant="outline"
-        className="rounded-[var(--radius-sm)]"
+        className="w-full rounded-[var(--radius-sm)] md:w-auto"
         onClick={onOpen}
       >
         Details
@@ -382,7 +382,7 @@ function AppointmentDetailDialog({
           </section>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="[&>button]:w-full sm:[&>button]:w-auto">
           <Button
             type="button"
             variant="outline"

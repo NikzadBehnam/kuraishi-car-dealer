@@ -162,7 +162,7 @@ export function RegisterForm() {
         type="submit"
         variant="accent"
         disabled={isSubmitting}
-        className="w-full rounded-[var(--radius-sm)]"
+        className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
       >
         {isSubmitting ? <LoaderCircle className="animate-spin" /> : <UserPlus />}
         {isSubmitting ? "Creating mock account" : "Create account"}

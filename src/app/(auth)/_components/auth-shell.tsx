@@ -89,7 +89,7 @@ export function AuthShell({
           </header>
 
           <div className="grid flex-1 place-items-center py-6">
-            <Card className="w-full min-w-0 max-w-[31rem] rounded-[var(--radius-sm)] p-5 sm:p-6">
+            <Card className="admin-content-enter w-full min-w-0 max-w-[31rem] rounded-[var(--radius-sm)] p-5 sm:p-6">
               <div className="mb-6">
                 <div className="mb-5 flex items-center gap-3 lg:hidden">
                   <span className="grid size-10 place-items-center rounded-[var(--radius-sm)] bg-primary text-primary-foreground">

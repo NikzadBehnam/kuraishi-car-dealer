@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { Trash2 } from "lucide-react";
 import { vehicles } from "@/data/vehicles";
 import { useVehicleState } from "@/components/providers/vehicle-state-provider";
@@ -53,16 +54,34 @@ export function ComparisonTable() {
         </TableCaption>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="bg-surface sticky left-0 z-10 h-auto min-w-40 p-4">
+            <TableHead className="bg-surface sticky left-0 z-10 h-auto min-w-40 p-4 align-top">
               Merkmal
             </TableHead>
             {selected.map((vehicle) => (
               <TableHead
-                className="h-auto min-w-60 border-l p-4"
+                className="h-auto min-w-72 border-l p-4 align-top"
                 scope="col"
                 key={vehicle.id}
               >
-                {vehicle.make} {vehicle.model}
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_6rem]">
+                  <div className="min-w-0">
+                    <p className="text-foreground truncate font-extrabold">
+                      {vehicle.make} {vehicle.model}
+                    </p>
+                    <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
+                      {vehicle.variant}
+                    </p>
+                  </div>
+                  <div className="bg-secondary relative h-16 w-24 overflow-hidden rounded-sm sm:justify-self-end">
+                    <Image
+                      fill
+                      sizes="6rem"
+                      src={vehicle.images[0]}
+                      alt={`${vehicle.make} ${vehicle.model}`}
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
                 <Button
                   className="mt-3 flex w-fit items-center justify-center"
                   size="sm"

@@ -5,3 +5,9 @@ outputs/
 .next/
 *.tsbuildinfo
 .DS_Store
+
+# Local environment files may contain database URLs, OAuth secrets, API keys,
+# and seed-admin passwords. Keep the checked-in example file only.
+.env
+.env.*
+!.env.example

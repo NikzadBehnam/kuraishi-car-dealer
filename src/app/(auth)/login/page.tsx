@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AuthShell } from "@/app/(auth)/_components/auth-shell";
+import { hasPasswordResetSuccess } from "@/app/(auth)/forgot-password/password-recovery-flow";
 import { LoginForm } from "@/app/(auth)/login/login-form";
 import { getSafeAuthCallbackPath } from "@/app/(auth)/login/login-flow";
 import { getServerAuthSession } from "@/lib/auth/session";
@@ -20,6 +21,7 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const callbackURL = getSafeAuthCallbackPath(params.callbackURL);
+  const passwordResetSuccess = hasPasswordResetSuccess(params);
   const session = await getServerAuthSession();
 
   if (session) {
@@ -40,7 +42,10 @@ export default async function LoginPage({
         </p>
       }
     >
-      <LoginForm callbackURL={callbackURL} />
+      <LoginForm
+        callbackURL={callbackURL}
+        passwordResetSuccess={passwordResetSuccess}
+      />
     </AuthShell>
   );
 }

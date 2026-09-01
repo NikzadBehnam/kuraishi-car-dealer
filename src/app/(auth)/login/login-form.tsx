@@ -17,6 +17,7 @@ import {
   loginSchema,
   type LoginFormValues,
 } from "@/app/(auth)/_schemas/auth.schema";
+import { forgotPasswordPath } from "@/app/(auth)/forgot-password/password-recovery-flow";
 import {
   buildCredentialLoginRequest,
   getCredentialLoginErrorState,
@@ -28,7 +29,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 
-export function LoginForm({ callbackURL }: { callbackURL: string }) {
+export function LoginForm({
+  callbackURL,
+  passwordResetSuccess = false,
+}: {
+  callbackURL: string;
+  passwordResetSuccess?: boolean;
+}) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] =
@@ -68,6 +75,12 @@ export function LoginForm({ callbackURL }: { callbackURL: string }) {
 
   return (
     <form noValidate className="grid gap-4" onSubmit={handleSubmit(submit)}>
+      {passwordResetSuccess ? (
+        <p role="status" className="text-sm font-semibold text-success">
+          Password updated. Log in with your new password.
+        </p>
+      ) : null}
+
       <GoogleAuthButton callbackURL={callbackURL} />
       <AuthMethodDivider />
 
@@ -126,13 +139,12 @@ export function LoginForm({ callbackURL }: { callbackURL: string }) {
             </label>
           )}
         />
-        <button
-          type="button"
+        <Link
           className="shrink-0 font-bold text-primary hover:underline"
-          onClick={() => toast.info("Password reset will be added later.")}
+          href={forgotPasswordPath}
         >
           Forgot?
-        </button>
+        </Link>
       </div>
 
       <Button

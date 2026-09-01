@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LoaderCircle, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Controller,
@@ -15,12 +16,21 @@ import {
   registerSchema,
   type RegisterFormValues,
 } from "@/app/(auth)/_schemas/auth.schema";
+import {
+  buildCredentialRegistrationRequest,
+  buildVerificationPendingURL,
+  getBrowserPreferredLanguage,
+  getCredentialRegistrationErrorMessage,
+} from "@/app/(auth)/register/registration-flow";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
 
 export function RegisterForm() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     control,
@@ -39,9 +49,28 @@ export function RegisterForm() {
     },
   });
 
-  const submit = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 650));
-    toast.success("Registration is UI-only. No account was created.");
+  const submit = async (values: RegisterFormValues) => {
+    setSubmitError(null);
+
+    const request = buildCredentialRegistrationRequest(values);
+    const preferredLanguage = getBrowserPreferredLanguage();
+    const { error } = await authClient.signUp.email(request, {
+      headers: preferredLanguage
+        ? {
+            "accept-language": preferredLanguage,
+          }
+        : undefined,
+    });
+
+    if (error) {
+      const message = getCredentialRegistrationErrorMessage(error);
+      setSubmitError(message);
+      toast.error(message);
+      return;
+    }
+
+    toast.success("Check your email for a verification link.");
+    router.push(buildVerificationPendingURL(request.email));
   };
 
   return (
@@ -145,8 +174,8 @@ export function RegisterForm() {
                 onCheckedChange={(checked) => field.onChange(checked === true)}
               />
               <span className="min-w-0 text-muted-foreground">
-                I agree that this mock account can be represented in the future
-                client area UI.
+                I agree to create a client account and accept the terms for
+                storing my profile details.
               </span>
             </label>
             {errors.consent ? (
@@ -162,11 +191,17 @@ export function RegisterForm() {
         type="submit"
         variant="accent"
         disabled={isSubmitting}
+        aria-disabled={isSubmitting}
         className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
       >
         {isSubmitting ? <LoaderCircle className="animate-spin" /> : <UserPlus />}
-        {isSubmitting ? "Creating mock account" : "Create account"}
+        {isSubmitting ? "Creating account" : "Create account"}
       </Button>
+      {submitError ? (
+        <p role="alert" className="text-sm font-semibold text-destructive">
+          {submitError}
+        </p>
+      ) : null}
     </form>
   );
 }

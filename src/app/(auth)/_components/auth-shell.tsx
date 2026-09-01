@@ -56,15 +56,15 @@ export function AuthShell({
               Manage saved vehicles, comparisons, and inquiries from one place.
             </h1>
             <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              This is a UI-only authentication surface prepared for the later
-              client and admin auth phase. No credentials are checked yet.
+              Use your account to keep inquiries, saved vehicles, and profile
+              details connected to your showroom experience.
             </p>
           </div>
 
           <div className="grid gap-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-success" />
-              Mock forms only
+              Email verification
             </div>
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-info" />

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, CarFront, Menu, Search } from "lucide-react";
+import { Bell, CarFront, LoaderCircle, LogOut, Menu, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { AdminMobileSidebar } from "@/components/admin/layout/admin-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -31,9 +33,36 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { adminRoutes } from "@/config/admin-routes.config";
+import { authClient } from "@/lib/auth-client";
+import {
+  getInitials,
+  getSessionDisplayName,
+  getSessionSubtitle,
+} from "@/lib/auth/session-display";
 
 export function AdminTopBar() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const { data: session } = authClient.useSession();
+  const displayName = getSessionDisplayName(session?.user);
+  const subtitle = getSessionSubtitle(session?.user);
+  const initials = getInitials(displayName);
+
+  const signOut = async () => {
+    setIsSigningOut(true);
+    const { error } = await authClient.signOut();
+    setIsSigningOut(false);
+
+    if (error) {
+      toast.error("We could not sign you out. Try again.");
+      return;
+    }
+
+    toast.success("Signed out.");
+    router.refresh();
+    router.push("/login");
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b bg-surface/95 backdrop-blur">
@@ -116,32 +145,39 @@ export function AdminTopBar() {
               >
                 <Avatar className="size-7">
                   <AvatarFallback className="bg-accent text-xs text-accent-foreground">
-                    KA
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <span className="grid text-left leading-tight">
                   <span className="text-xs font-extrabold">
-                    Kuraishi Admin
+                    {displayName}
                   </span>
                   <span className="text-[0.68rem] text-muted-foreground">
-                    Operations Manager
+                    {subtitle}
                   </span>
                 </span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
-                <span className="block text-foreground">Kuraishi Admin</span>
-                <span className="mt-1 block font-semibold">
-                  UI-only account menu
+                <span className="block truncate text-foreground">
+                  {displayName}
+                </span>
+                <span className="mt-1 block truncate font-semibold">
+                  {subtitle}
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile preview</DropdownMenuItem>
               <DropdownMenuItem>Admin preferences</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>
-                Sign out unavailable in UI phase
+              <DropdownMenuItem disabled={isSigningOut} onSelect={signOut}>
+                {isSigningOut ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  <LogOut />
+                )}
+                Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

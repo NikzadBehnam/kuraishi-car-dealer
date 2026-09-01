@@ -6,10 +6,13 @@ import { CarFront } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { adminNavigation, adminRoutes } from "@/config/admin-routes.config";
+import { authClient } from "@/lib/auth-client";
 import {
-  adminNavigation,
-  adminRoutes,
-} from "@/config/admin-routes.config";
+  getInitials,
+  getSessionDisplayName,
+  getSessionSubtitle,
+} from "@/lib/auth/session-display";
 import { cn } from "@/lib/utils";
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -104,6 +107,10 @@ function AdminNavigationList({
 }
 
 function AdminIdentityCard({ compact = false }: { compact?: boolean }) {
+  const { data: session } = authClient.useSession();
+  const displayName = getSessionDisplayName(session?.user);
+  const subtitle = getSessionSubtitle(session?.user);
+
   return (
     <section
       aria-label="Current admin"
@@ -115,23 +122,23 @@ function AdminIdentityCard({ compact = false }: { compact?: boolean }) {
       <div className="flex items-center gap-3">
         <Avatar className="size-10">
           <AvatarFallback className="bg-accent text-sm text-accent-foreground">
-            KA
+            {getInitials(displayName)}
           </AvatarFallback>
         </Avatar>
         <span className="min-w-0">
           <span className="block truncate text-sm font-extrabold">
-            Kuraishi Admin
+            {displayName}
           </span>
           <span className="block truncate text-xs text-muted-foreground">
-            Operations Manager
+            {subtitle}
           </span>
         </span>
       </div>
       {!compact && <Separator className="my-3" />}
       {!compact && (
         <p className="text-xs leading-5 text-muted-foreground">
-          Mocked identity for the admin UI phase. Authentication will be added
-          later.
+          Session identity is shown here. Admin authorization will be enforced
+          server-side in the admin protection step.
         </p>
       )}
     </section>

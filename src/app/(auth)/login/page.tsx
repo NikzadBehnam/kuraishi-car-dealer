@@ -1,14 +1,31 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { AuthShell } from "@/app/(auth)/_components/auth-shell";
 import { LoginForm } from "@/app/(auth)/login/login-form";
+import { getSafeAuthCallbackPath } from "@/app/(auth)/login/login-flow";
+import { getServerAuthSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Login",
 };
 
-export default function LoginPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const callbackURL = getSafeAuthCallbackPath(params.callbackURL);
+  const session = await getServerAuthSession();
+
+  if (session) {
+    redirect(callbackURL);
+  }
+
   return (
     <AuthShell
       eyebrow="Login"
@@ -23,7 +40,7 @@ export default function LoginPage() {
         </p>
       }
     >
-      <LoginForm />
+      <LoginForm callbackURL={callbackURL} />
     </AuthShell>
   );
 }

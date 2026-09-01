@@ -2,6 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LoaderCircle, LogIn } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -11,15 +13,26 @@ import {
   loginSchema,
   type LoginFormValues,
 } from "@/app/(auth)/_schemas/auth.schema";
+import {
+  buildCredentialLoginRequest,
+  getCredentialLoginErrorState,
+  type CredentialLoginErrorState,
+} from "@/app/(auth)/login/login-flow";
+import { buildVerificationPendingURL } from "@/app/(auth)/register/registration-flow";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
 
-export function LoginForm() {
+export function LoginForm({ callbackURL }: { callbackURL: string }) {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [submitError, setSubmitError] =
+    useState<CredentialLoginErrorState | null>(null);
   const {
     register,
     control,
+    getValues,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
@@ -31,9 +44,22 @@ export function LoginForm() {
     },
   });
 
-  const submit = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    toast.success("Login is UI-only. No session was created.");
+  const submit = async (values: LoginFormValues) => {
+    setSubmitError(null);
+
+    const request = buildCredentialLoginRequest(values, callbackURL);
+    const { error } = await authClient.signIn.email(request);
+
+    if (error) {
+      const nextError = getCredentialLoginErrorState(error);
+      setSubmitError(nextError);
+      toast.error(nextError.message);
+      return;
+    }
+
+    toast.success("Signed in.");
+    router.refresh();
+    router.push(request.callbackURL);
   };
 
   return (
@@ -96,7 +122,7 @@ export function LoginForm() {
         <button
           type="button"
           className="shrink-0 font-bold text-primary hover:underline"
-          onClick={() => toast.info("Password reset is UI-only.")}
+          onClick={() => toast.info("Password reset will be added later.")}
         >
           Forgot?
         </button>
@@ -106,11 +132,27 @@ export function LoginForm() {
         type="submit"
         variant="accent"
         disabled={isSubmitting}
+        aria-disabled={isSubmitting}
         className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
       >
         {isSubmitting ? <LoaderCircle className="animate-spin" /> : <LogIn />}
-        {isSubmitting ? "Checking mock credentials" : "Login"}
+        {isSubmitting ? "Signing in" : "Login"}
       </Button>
+      {submitError ? (
+        <div role="alert" className="grid gap-2 text-sm">
+          <p className="font-semibold text-destructive">
+            {submitError.message}
+          </p>
+          {submitError.canResendVerification ? (
+            <Link
+              className="w-fit font-bold text-primary hover:underline"
+              href={buildVerificationPendingURL(getValues("email"))}
+            >
+              Resend verification email
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </form>
   );
 }

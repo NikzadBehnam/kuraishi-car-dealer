@@ -16,10 +16,12 @@ import {
   productionAuthOrigin,
 } from "./options.ts";
 
+const betterAuthBaseURL = getBetterAuthBaseURL();
+
 export const auth = betterAuth(
   createKuraishiAuthOptions({
     backgroundTaskHandler: scheduleAfterResponse,
-    baseURL: getBetterAuthBaseURL(),
+    baseURL: betterAuthBaseURL,
     database: prismaAdapter(prisma, {
       provider: "postgresql",
     }),
@@ -34,7 +36,7 @@ export const auth = betterAuth(
     googleClientId: getRequiredServerEnv("GOOGLE_CLIENT_ID"),
     googleClientSecret: getRequiredServerEnv("GOOGLE_CLIENT_SECRET"),
     secret: getRequiredServerEnv("BETTER_AUTH_SECRET"),
-    useSecureCookies: process.env.NODE_ENV === "production",
+    useSecureCookies: shouldUseSecureCookies(betterAuthBaseURL),
   }),
 );
 
@@ -64,8 +66,15 @@ function getRequiredServerEnv(name: string) {
 
 function normalizeAuthOrigin(value: string, name: string) {
   const url = new URL(value);
+  const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(
+    url.hostname,
+  );
 
-  if (process.env.NODE_ENV === "production" && url.protocol !== "https:") {
+  if (
+    process.env.NODE_ENV === "production" &&
+    url.protocol !== "https:" &&
+    !isLocalhost
+  ) {
     throw new Error(`${name} must use https in production.`);
   }
 
@@ -74,4 +83,8 @@ function normalizeAuthOrigin(value: string, name: string) {
   }
 
   return url.origin;
+}
+
+function shouldUseSecureCookies(baseURL: string) {
+  return new URL(baseURL).protocol === "https:";
 }

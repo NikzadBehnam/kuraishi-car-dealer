@@ -10,6 +10,10 @@ import { toast } from "sonner";
 
 import { AuthField } from "@/app/(auth)/_components/auth-field";
 import {
+  AuthMethodDivider,
+  GoogleAuthButton,
+} from "@/app/(auth)/_components/google-auth-button";
+import {
   loginSchema,
   type LoginFormValues,
 } from "@/app/(auth)/_schemas/auth.schema";
@@ -64,6 +68,9 @@ export function LoginForm({ callbackURL }: { callbackURL: string }) {
 
   return (
     <form noValidate className="grid gap-4" onSubmit={handleSubmit(submit)}>
+      <GoogleAuthButton callbackURL={callbackURL} />
+      <AuthMethodDivider />
+
       <AuthField id="login-email" label="Email" error={errors.email?.message}>
         <Input
           id="login-email"

@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { authRoles } from "./roles.ts";
 import {
   applyPublicCredentialSignupUserDefaults,
+  applyPublicUserAccessDefaults,
   currentTermsVersion,
   preparePublicCredentialSignupBody,
 } from "./signup-policy.ts";
@@ -72,5 +73,21 @@ describe("public credential signup policy", () => {
     assert.equal(result.banExpires, null);
     assert.equal(result.termsAcceptedAt, acceptedAt);
     assert.equal(result.termsVersion, currentTermsVersion);
+  });
+
+  it("stamps social users with access defaults without consent metadata", () => {
+    const result = applyPublicUserAccessDefaults({
+      email: "ada@example.com",
+      emailVerified: true,
+      role: authRoles.admin,
+    });
+
+    assert.equal(result.role, authRoles.customer);
+    assert.equal(result.banned, false);
+    assert.equal(result.banReason, null);
+    assert.equal(result.banExpires, null);
+    assert.equal(result.emailVerified, true);
+    assert.equal("termsAcceptedAt" in result, false);
+    assert.equal("termsVersion" in result, false);
   });
 });

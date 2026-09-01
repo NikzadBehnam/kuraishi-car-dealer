@@ -2,13 +2,25 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AuthShell } from "@/app/(auth)/_components/auth-shell";
+import {
+  AuthMethodDivider,
+  GoogleAuthButton,
+} from "@/app/(auth)/_components/google-auth-button";
+import { getSafeAuthCallbackPath } from "@/app/(auth)/login/login-flow";
 import { RegisterForm } from "@/app/(auth)/register/register-form";
 
 export const metadata: Metadata = {
   title: "Register",
 };
 
-export default function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const callbackURL = getSafeAuthCallbackPath(params.callbackURL);
+
   return (
     <AuthShell
       eyebrow="Register"
@@ -23,6 +35,10 @@ export default function RegisterPage() {
         </p>
       }
     >
+      <div className="mb-4 grid gap-4">
+        <GoogleAuthButton callbackURL={callbackURL} />
+        <AuthMethodDivider />
+      </div>
       <RegisterForm />
     </AuthShell>
   );

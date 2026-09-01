@@ -7,6 +7,7 @@ import { authRoles } from "./roles.ts";
 import { authUserAdditionalFields } from "./schema-fields.ts";
 import {
   applyPublicCredentialSignupUserDefaults,
+  applyPublicUserAccessDefaults,
   preparePublicCredentialSignupBody,
 } from "./signup-policy.ts";
 
@@ -59,7 +60,6 @@ export function createKuraishiAuthOptions({
         allowDifferentEmails: false,
         allowUnlinkingAll: false,
         enabled: true,
-        trustedProviders: ["google"],
         updateUserInfoOnLink: false,
       },
       encryptOAuthTokens: true,
@@ -83,7 +83,9 @@ export function createKuraishiAuthOptions({
         create: {
           before: async (user, context) => {
             if (context?.path !== "/sign-up/email") {
-              return;
+              return {
+                data: applyPublicUserAccessDefaults(user),
+              };
             }
 
             return {

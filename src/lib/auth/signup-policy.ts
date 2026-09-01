@@ -28,6 +28,22 @@ type SignupPolicyResult =
       ok: false;
     };
 
+type PublicUserAccessDefaults<T extends Record<string, unknown>> = Omit<
+  T,
+  "banExpires" | "banReason" | "banned" | "role"
+> & {
+  banExpires: null;
+  banReason: null;
+  banned: boolean;
+  role: typeof authRoles.customer;
+};
+
+type PublicCredentialSignupDefaults<T extends Record<string, unknown>> =
+  PublicUserAccessDefaults<T> & {
+    termsAcceptedAt: Date;
+    termsVersion: string;
+  };
+
 export function preparePublicCredentialSignupBody(
   body: unknown,
   acceptedAt = new Date(),
@@ -82,19 +98,29 @@ export function preparePublicCredentialSignupBody(
   };
 }
 
-export function applyPublicCredentialSignupUserDefaults(
-  user: Record<string, unknown>,
+export function applyPublicCredentialSignupUserDefaults<
+  T extends Record<string, unknown>,
+>(
+  user: T,
   acceptedAt = new Date(),
-) {
+): PublicCredentialSignupDefaults<T> {
+  return {
+    ...applyPublicUserAccessDefaults(user),
+    termsAcceptedAt: acceptedAt,
+    termsVersion: currentTermsVersion,
+  };
+}
+
+export function applyPublicUserAccessDefaults<T extends Record<string, unknown>>(
+  user: T,
+): PublicUserAccessDefaults<T> {
   return {
     ...user,
     role: authRoles.customer,
     banned: false,
     banReason: null,
     banExpires: null,
-    termsAcceptedAt: acceptedAt,
-    termsVersion: currentTermsVersion,
-  };
+  } as PublicUserAccessDefaults<T>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

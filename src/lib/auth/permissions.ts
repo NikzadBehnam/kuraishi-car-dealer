@@ -1,7 +1,11 @@
 import { createAccessControl } from "better-auth/plugins/access";
-import { adminAc, defaultStatements, userAc } from "better-auth/plugins/admin/access";
+import {
+  adminAc,
+  defaultStatements,
+  userAc,
+} from "better-auth/plugins/admin/access";
 
-import { authRoles } from "./roles";
+import { authRoles } from "./roles.ts";
 
 export const authAccessControl = createAccessControl(defaultStatements);
 

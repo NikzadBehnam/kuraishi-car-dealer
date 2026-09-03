@@ -5,9 +5,27 @@ import {
   localizedRouteMappings,
   publicRoutes,
 } from "@/config/routes.config";
+import {
+  adminRequestPathHeader,
+  isAdminPath,
+} from "@/lib/auth/admin-route-policy";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (isAdminPath(pathname)) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(
+      adminRequestPathHeader,
+      `${pathname}${request.nextUrl.search}`,
+    );
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  }
 
   if (pathname.startsWith(`${publicRoutes.vehicles}/`)) {
     const slug = pathname.slice(publicRoutes.vehicles.length + 1);

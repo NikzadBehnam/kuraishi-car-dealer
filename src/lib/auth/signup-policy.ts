@@ -100,10 +100,7 @@ export function preparePublicCredentialSignupBody(
 
 export function applyPublicCredentialSignupUserDefaults<
   T extends Record<string, unknown>,
->(
-  user: T,
-  acceptedAt = new Date(),
-): PublicCredentialSignupDefaults<T> {
+>(user: T, acceptedAt = new Date()): PublicCredentialSignupDefaults<T> {
   return {
     ...applyPublicUserAccessDefaults(user),
     termsAcceptedAt: acceptedAt,
@@ -111,9 +108,9 @@ export function applyPublicCredentialSignupUserDefaults<
   };
 }
 
-export function applyPublicUserAccessDefaults<T extends Record<string, unknown>>(
-  user: T,
-): PublicUserAccessDefaults<T> {
+export function applyPublicUserAccessDefaults<
+  T extends Record<string, unknown>,
+>(user: T): PublicUserAccessDefaults<T> {
   return {
     ...user,
     role: authRoles.customer,
@@ -121,6 +118,16 @@ export function applyPublicUserAccessDefaults<T extends Record<string, unknown>>
     banReason: null,
     banExpires: null,
   } as PublicUserAccessDefaults<T>;
+}
+
+export function applyTrustedOrPublicUserAccessDefaults<
+  T extends Record<string, unknown>,
+>(user: T): T | PublicUserAccessDefaults<T> {
+  if (isAuthRole(user.role)) {
+    return user;
+  }
+
+  return applyPublicUserAccessDefaults(user);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -145,4 +152,12 @@ function normalizeOptionalText(value: unknown) {
   const normalized = value.replace(/\s+/g, " ").trim();
 
   return normalized || null;
+}
+
+function isAuthRole(value: unknown) {
+  return (
+    value === authRoles.admin ||
+    value === authRoles.staff ||
+    value === authRoles.customer
+  );
 }

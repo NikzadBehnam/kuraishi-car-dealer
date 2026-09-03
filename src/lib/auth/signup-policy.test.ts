@@ -5,6 +5,7 @@ import { authRoles } from "./roles.ts";
 import {
   applyPublicCredentialSignupUserDefaults,
   applyPublicUserAccessDefaults,
+  applyTrustedOrPublicUserAccessDefaults,
   currentTermsVersion,
   preparePublicCredentialSignupBody,
 } from "./signup-policy.ts";
@@ -89,5 +90,21 @@ describe("public credential signup policy", () => {
     assert.equal(result.emailVerified, true);
     assert.equal("termsAcceptedAt" in result, false);
     assert.equal("termsVersion" in result, false);
+  });
+
+  it("preserves trusted admin-created roles while defaulting public users", () => {
+    const trustedAdmin = applyTrustedOrPublicUserAccessDefaults({
+      email: "admin@example.com",
+      role: authRoles.admin,
+    });
+    const publicUser = applyTrustedOrPublicUserAccessDefaults({
+      email: "customer@example.com",
+    });
+
+    assert.equal(trustedAdmin.role, authRoles.admin);
+    assert.equal(
+      (publicUser as { role: typeof authRoles.customer }).role,
+      authRoles.customer,
+    );
   });
 });

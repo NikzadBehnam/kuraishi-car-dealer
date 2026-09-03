@@ -7,7 +7,7 @@ import { authRoles } from "./roles.ts";
 import { authUserAdditionalFields } from "./schema-fields.ts";
 import {
   applyPublicCredentialSignupUserDefaults,
-  applyPublicUserAccessDefaults,
+  applyTrustedOrPublicUserAccessDefaults,
   preparePublicCredentialSignupBody,
 } from "./signup-policy.ts";
 
@@ -84,7 +84,7 @@ export function createKuraishiAuthOptions({
           before: async (user, context) => {
             if (context?.path !== "/sign-up/email") {
               return {
-                data: applyPublicUserAccessDefaults(user),
+                data: applyTrustedOrPublicUserAccessDefaults(user),
               };
             }
 

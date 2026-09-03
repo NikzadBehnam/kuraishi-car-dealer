@@ -16,6 +16,7 @@
     "prisma:validate": "prisma validate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "seed:first-admin": "node --experimental-strip-types scripts/seed-first-admin.ts",
     "test": "node --test --test-isolation=none --experimental-strip-types src/**/*.test.ts",
     "test:watch": "node --test --watch --test-isolation=none --experimental-strip-types src/**/*.test.ts"
   },

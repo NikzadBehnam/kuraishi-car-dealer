@@ -13,7 +13,7 @@ import {
 
 export const localAuthOrigin = "http://localhost:3000";
 export const productionAuthOrigin = "https://kuraishi-car-dealer.vercel.app";
-export const authTrustedOrigins = [localAuthOrigin, productionAuthOrigin];
+export const authTrustedOrigins = getAuthTrustedOrigins("development");
 
 type GoogleProfile = {
   family_name?: string;
@@ -42,6 +42,7 @@ type CreateKuraishiAuthOptionsInput = {
   secret: string;
   useSecureCookies: boolean;
   backgroundTaskHandler?: (promise: Promise<unknown>) => void;
+  trustedOrigins?: string[];
 };
 
 export function createKuraishiAuthOptions({
@@ -52,6 +53,7 @@ export function createKuraishiAuthOptions({
   googleClientId,
   googleClientSecret,
   secret,
+  trustedOrigins = getAuthTrustedOrigins(),
   useSecureCookies,
 }: CreateKuraishiAuthOptionsInput) {
   return {
@@ -180,7 +182,7 @@ export function createKuraishiAuthOptions({
         },
       },
     },
-    trustedOrigins: authTrustedOrigins,
+    trustedOrigins,
     user: {
       additionalFields: authUserAdditionalFields,
     },
@@ -188,4 +190,12 @@ export function createKuraishiAuthOptions({
       storeIdentifier: "hashed",
     },
   } satisfies BetterAuthOptions;
+}
+
+export function getAuthTrustedOrigins(nodeEnv = process.env.NODE_ENV) {
+  if (nodeEnv === "production") {
+    return [productionAuthOrigin];
+  }
+
+  return [localAuthOrigin, productionAuthOrigin];
 }

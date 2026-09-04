@@ -43,6 +43,8 @@ Server Components are the default. Client Components are limited to filters, loc
 
 The localized App Router strategy is documented in [`docs/routing-architecture.md`](docs/routing-architecture.md).
 
+Deployment requirements for Vercel, Better Auth, Prisma 7, Neon, Resend, and Google OAuth are documented in [`docs/deployment.md`](docs/deployment.md).
+
 ## Customization
 
 - Brand colors, radii, shadows and layout tokens: `src/app/globals.css`

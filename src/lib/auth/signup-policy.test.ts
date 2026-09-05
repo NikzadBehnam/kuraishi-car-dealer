@@ -24,25 +24,21 @@ describe("public credential signup policy", () => {
   });
 
   it("normalizes public signup fields and strips privileged fields", () => {
-    const acceptedAt = new Date("2026-09-01T10:00:00.000Z");
-    const result = preparePublicCredentialSignupBody(
-      {
-        banned: true,
-        banReason: "self-assigned",
-        confirmPassword: "correct-horse-battery-staple",
-        consent: true,
-        email: "ada@example.com",
-        emailVerified: true,
-        firstName: "  Ada  ",
-        lastName: "  Lovelace  ",
-        password: "correct-horse-battery-staple",
-        phone: "  +43 664 123 45 67  ",
-        role: authRoles.admin,
-        termsAcceptedAt: new Date("2000-01-01T00:00:00.000Z"),
-        termsVersion: "attacker-version",
-      },
-      acceptedAt,
-    );
+    const result = preparePublicCredentialSignupBody({
+      banned: true,
+      banReason: "self-assigned",
+      confirmPassword: "correct-horse-battery-staple",
+      consent: true,
+      email: "ada@example.com",
+      emailVerified: true,
+      firstName: "  Ada  ",
+      lastName: "  Lovelace  ",
+      password: "correct-horse-battery-staple",
+      phone: "  +43 664 123 45 67  ",
+      role: authRoles.admin,
+      termsAcceptedAt: new Date("2000-01-01T00:00:00.000Z"),
+      termsVersion: "attacker-version",
+    });
 
     assert.equal(result.ok, true);
     assert.equal(result.body.firstName, "Ada");
@@ -54,8 +50,8 @@ describe("public credential signup policy", () => {
     assert.equal(result.body.emailVerified, undefined);
     assert.equal(result.body.confirmPassword, undefined);
     assert.equal(result.body.consent, undefined);
-    assert.equal(result.body.termsAcceptedAt, acceptedAt);
-    assert.equal(result.body.termsVersion, currentTermsVersion);
+    assert.equal(result.body.termsAcceptedAt, undefined);
+    assert.equal(result.body.termsVersion, undefined);
   });
 
   it("stamps server-owned public signup defaults", () => {

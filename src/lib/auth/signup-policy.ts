@@ -46,7 +46,6 @@ type PublicCredentialSignupDefaults<T extends Record<string, unknown>> =
 
 export function preparePublicCredentialSignupBody(
   body: unknown,
-  acceptedAt = new Date(),
 ): SignupPolicyResult {
   if (!isRecord(body)) {
     return {
@@ -81,8 +80,6 @@ export function preparePublicCredentialSignupBody(
   sanitizedBody.firstName = firstName;
   sanitizedBody.lastName = lastName;
   sanitizedBody.name = `${firstName} ${lastName}`;
-  sanitizedBody.termsAcceptedAt = acceptedAt;
-  sanitizedBody.termsVersion = currentTermsVersion;
 
   const phone = normalizeOptionalText(body.phone);
 

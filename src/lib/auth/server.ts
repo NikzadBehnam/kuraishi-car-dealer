@@ -5,6 +5,7 @@ import { betterAuth } from "better-auth";
 import { after } from "next/server";
 
 import {
+  AuthEmailDeliveryError,
   sendPasswordResetEmail as deliverPasswordResetEmail,
   sendVerificationEmail as deliverVerificationEmail,
 } from "@/lib/email/resend-auth-emails";
@@ -27,10 +28,14 @@ export const auth = betterAuth(
     }),
     emailDelivery: {
       sendPasswordResetEmail: async (input) => {
-        scheduleAfterResponse(deliverPasswordResetEmail(input));
+        scheduleAuthEmailDelivery("password-reset", () =>
+          deliverPasswordResetEmail(input),
+        );
       },
       sendVerificationEmail: async (input) => {
-        scheduleAfterResponse(deliverVerificationEmail(input));
+        scheduleAuthEmailDelivery("verification", () =>
+          deliverVerificationEmail(input),
+        );
       },
     },
     googleClientId: getRequiredServerEnv("GOOGLE_CLIENT_ID"),
@@ -42,6 +47,59 @@ export const auth = betterAuth(
 
 function scheduleAfterResponse(promise: Promise<unknown>) {
   after(() => promise);
+}
+
+function scheduleAuthEmailDelivery(
+  kind: "password-reset" | "verification",
+  task: () => Promise<unknown>,
+) {
+  after(async () => {
+    try {
+      await task();
+    } catch (error) {
+      console.error(
+        "Auth email delivery failed.",
+        getSafeEmailDeliveryErrorMetadata(kind, error),
+      );
+    }
+  });
+}
+
+function getSafeEmailDeliveryErrorMetadata(
+  kind: "password-reset" | "verification",
+  error: unknown,
+) {
+  const metadata: {
+    kind: "password-reset" | "verification";
+    name?: string;
+    statusCode?: number | null;
+  } = { kind };
+
+  const cause =
+    error instanceof AuthEmailDeliveryError ? error.cause : undefined;
+  const source = cause && typeof cause === "object" ? cause : error;
+
+  if (source instanceof Error) {
+    metadata.name = source.name;
+  } else if (
+    source &&
+    typeof source === "object" &&
+    "name" in source &&
+    typeof source.name === "string"
+  ) {
+    metadata.name = source.name;
+  }
+
+  if (
+    source &&
+    typeof source === "object" &&
+    "statusCode" in source &&
+    (typeof source.statusCode === "number" || source.statusCode === null)
+  ) {
+    metadata.statusCode = source.statusCode;
+  }
+
+  return metadata;
 }
 
 function getBetterAuthBaseURL() {
@@ -66,9 +124,7 @@ function getRequiredServerEnv(name: string) {
 
 function normalizeAuthOrigin(value: string, name: string) {
   const url = new URL(value);
-  const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(
-    url.hostname,
-  );
+  const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
 
   if (
     process.env.NODE_ENV === "production" &&

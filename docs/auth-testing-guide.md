@@ -527,35 +527,162 @@ For `redirect_uri_mismatch`, compare the exact scheme, host, path, and port in t
 
 ## 14. Role And Admin Authorization
 
-Prepare one account per role. Use the seed script for the first `ADMIN`; assign `STAFF` only through trusted database/admin code.
+This section verifies the real security rule for the project:
 
-| User state | `/admin` expected result                | Nested `/admin/*` expected result    |
-| ---------- | --------------------------------------- | ------------------------------------ |
-| Logged out | Redirect to `/login?callbackURL=/admin` | Redirect to login with safe callback |
-| `CUSTOMER` | Unauthorized admin page                 | Unauthorized admin page              |
-| `STAFF`    | Unauthorized admin page                 | Unauthorized admin page              |
-| `ADMIN`    | Admin shell loads                       | Nested admin route loads             |
+- `ADMIN` can open `/admin`.
+- `CUSTOMER` and `STAFF` can sign in, but cannot open `/admin`.
+- Logged-out visitors are sent to login with a safe return path.
+- The server layout is the security boundary; hiding links in the UI is not enough.
+
+Google authentication can be skipped for this section. Use credential accounts.
+
+### 14.1 Prepare The Test Accounts
+
+Create or prepare three separate accounts:
+
+| Test account | How to prepare it                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADMIN`      | Use `pnpm seed:first-admin` with the local seed environment variables. Do not paste the password into chat or screenshots.                        |
+| `CUSTOMER`   | Register normally through `/register`, then verify the email so credential login works.                                                           |
+| `STAFF`      | Register a second normal account, verify it, then change only its `user.role` value to `STAFF` through trusted dev DB code or the Neon dashboard. |
+
+For local manual testing only, if email delivery is still being debugged, you may mark a test credential account as verified in the development database by setting `user.emailVerified = true`. Do not use that shortcut as proof that the email verification flow works.
+
+Before testing, confirm in the development database:
+
+| Account    | Expected `user.role` | Expected `user.emailVerified` |
+| ---------- | -------------------- | ----------------------------- |
+| `ADMIN`    | `ADMIN`              | `true`                        |
+| `CUSTOMER` | `CUSTOMER`           | `true`                        |
+| `STAFF`    | `STAFF`              | `true`                        |
+
+Important:
+
+- Use different email addresses for the three accounts.
+- Keep the role values uppercase: `ADMIN`, `STAFF`, `CUSTOMER`.
+- The admin UI's "Change role" controls are currently UI-only and must not be used for this test.
+- Restart the local server after changing environment variables, but database role changes only require signing out and signing back in.
+
+### 14.2 Test Logged-Out Access
+
+1. Open an incognito/private browser window, or log out completely.
+2. Open `http://localhost:3000/admin`.
+3. Check the final URL.
+4. Repeat with a nested route: `http://localhost:3000/admin/users`.
 
 Expected:
 
+- `/admin` redirects to `/login?callbackURL=%2Fadmin`.
+- `/admin/users` redirects to `/login?callbackURL=%2Fadmin%2Fusers`.
+- The callback URL is a local path, not a full external URL.
+- No admin dashboard content appears before the login page.
+
+Also test an unsafe callback manually:
+
+```text
+http://localhost:3000/login?callbackURL=https://example.com/admin
+```
+
+Expected:
+
+- After login, the app must not redirect to `https://example.com`.
+- Unsafe external callback URLs fall back to a safe local route.
+
+### 14.3 Test CUSTOMER Access
+
+1. Log in at `/login` with the verified `CUSTOMER` account.
+2. Open `http://localhost:3000/admin`.
+3. Open `http://localhost:3000/admin/users`.
+4. Refresh each page directly from the browser address bar.
+
+Expected:
+
+- The page shows `Administrator access required`.
+- The admin shell, dashboard cards, user table, vehicle table, and sidebar do not appear.
+- Refreshing or opening the URL in a new tab does not bypass the block.
+- The user remains signed in as `CUSTOMER`; they are not treated as logged out.
+
+### 14.4 Test STAFF Access
+
+1. Log out from the `CUSTOMER` account.
+2. Log in with the verified `STAFF` account.
+3. Open `http://localhost:3000/admin`.
+4. Open `http://localhost:3000/admin/users`.
+5. Refresh each page directly.
+
+Expected:
+
+- The result is the same as `CUSTOMER`: `Administrator access required`.
+- `STAFF` does not receive partial admin access.
+- No protected admin content appears briefly during loading.
+
+### 14.5 Test ADMIN Access
+
+1. Log out from the `STAFF` account.
+2. Log in with the seeded `ADMIN` account.
+3. Open `http://localhost:3000/admin`.
+4. Open these nested admin routes:
+   - `http://localhost:3000/admin/users`
+   - `http://localhost:3000/admin/vehicles`
+   - `http://localhost:3000/admin/activity`
+5. Refresh each route directly.
+
+Expected:
+
+- The admin shell loads.
+- Nested admin routes load inside the admin shell.
+- The browser stays on the requested `/admin/*` route.
+- No unauthorized page appears for the `ADMIN` account.
+
+### 14.6 Result Matrix
+
+| User state | `/admin` expected result                  | Nested `/admin/*` expected result            |
+| ---------- | ----------------------------------------- | -------------------------------------------- |
+| Logged out | Redirect to `/login?callbackURL=%2Fadmin` | Redirect to login with encoded safe callback |
+| `CUSTOMER` | `Administrator access required` page      | `Administrator access required` page         |
+| `STAFF`    | `Administrator access required` page      | `Administrator access required` page         |
+| `ADMIN`    | Admin shell loads                         | Nested admin route loads                     |
+
+Implementation checks:
+
 - Authorization is enforced in `src/app/(protected)/admin/layout.tsx`.
+- `src/proxy.ts` only forwards the requested admin path in a header so redirects can preserve a safe callback path.
 - Proxy is not the security boundary.
-- Server helpers validate the real Better Auth session and role.
+- Server helpers in `src/lib/auth/authorization.ts` validate the real Better Auth session and role.
 - `CUSTOMER` and `STAFF` do not briefly see protected content.
 - Hiding admin navigation is not treated as authorization.
 - Direct refresh and new-tab access do not bypass checks.
 
 ## 15. Direct Server Boundary Checks
 
-Current admin pages use static/mock data and do not expose admin route handlers or server actions. For any future admin mutation or sensitive read:
+The current admin pages are UI screens backed by static/mock data. There are no current admin route handlers or server actions that mutate sensitive data.
+
+Still, run the existing server-boundary test because it verifies the shared authorization policy:
+
+```powershell
+pnpm test
+```
+
+Expected:
+
+- The `admin-route-policy` test suite passes.
+- The suite covers anonymous, `CUSTOMER`, `STAFF`, and `ADMIN` outcomes.
+- The suite covers safe admin callback paths.
+- The suite confirms direct server-entry denial for non-admin sessions.
+
+For any future admin route handler or server action:
 
 - Import `requireAdmin` from `src/lib/auth/authorization.ts`.
 - Call it inside the route handler or server action before reading or mutating data.
 - Test anonymous, `CUSTOMER`, `STAFF`, and `ADMIN` access directly, not only through navigation.
 
-Expected for current implementation:
+Expected for future server entry points:
 
-- `admin-route-policy` tests cover anonymous, `CUSTOMER`, `STAFF`, `ADMIN`, comma-separated admin roles, safe callback paths, direct helper denial, and admin path detection.
+- Anonymous calls fail before reading or mutating data.
+- `CUSTOMER` calls fail before reading or mutating data.
+- `STAFF` calls fail before reading or mutating data.
+- `ADMIN` calls succeed only for the intended operation.
+- No protected data appears in the response body for rejected calls.
 
 ## 16. First Admin Seed
 

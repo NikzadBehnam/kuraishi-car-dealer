@@ -47,7 +47,10 @@ describe("credential login flow", () => {
     assert.equal(getSafeAuthCallbackPath("//evil.example/path"), "/");
     assert.equal(getSafeAuthCallbackPath("/api/auth/sign-out"), "/");
     assert.equal(getSafeAuthCallbackPath("/login"), "/");
-    assert.equal(getSafeAuthCallbackPath("/vehicles?make=bmw#results"), "/vehicles?make=bmw#results");
+    assert.equal(
+      getSafeAuthCallbackPath("/vehicles?make=bmw#results"),
+      "/vehicles?make=bmw#results",
+    );
   });
 
   it("uses non-enumerating invalid credential messaging", () => {
@@ -57,11 +60,21 @@ describe("credential login flow", () => {
     });
   });
 
-  it("shows a verification path for unverified credential accounts", () => {
-    assert.deepEqual(getCredentialLoginErrorState({ status: 403 }), {
-      canResendVerification: true,
-      message: "Please verify your email address before logging in.",
-    });
+  it("shows a verification path only for unverified credential accounts", () => {
+    assert.deepEqual(
+      getCredentialLoginErrorState({ code: "EMAIL_NOT_VERIFIED" }),
+      {
+        canResendVerification: true,
+        message: "Please verify your email address before logging in.",
+      },
+    );
+    assert.deepEqual(
+      getCredentialLoginErrorState({ code: "INVALID_ORIGIN", status: 403 }),
+      {
+        canResendVerification: false,
+        message: "We could not sign you in. Check your email and password.",
+      },
+    );
   });
 
   it("defines a stable logout destination", () => {

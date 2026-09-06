@@ -60,4 +60,19 @@ describe("auth options", () => {
       productionAuthOrigin,
     ]);
   });
+
+  it("trusts Vercel deployment origins exposed by system environment variables", () => {
+    assert.deepEqual(
+      getAuthTrustedOrigins("production", {
+        VERCEL_BRANCH_URL: "kuraishi-car-dealer-git-auth-test.vercel.app",
+        VERCEL_PROJECT_PRODUCTION_URL: "kuraishi-car-dealer.vercel.app",
+        VERCEL_URL: "kuraishi-car-dealer-abc123.vercel.app",
+      }),
+      [
+        productionAuthOrigin,
+        "https://kuraishi-car-dealer-abc123.vercel.app",
+        "https://kuraishi-car-dealer-git-auth-test.vercel.app",
+      ],
+    );
+  });
 });

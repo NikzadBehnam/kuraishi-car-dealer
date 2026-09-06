@@ -72,7 +72,7 @@ export function getSafeAuthCallbackPath(
 export function getCredentialLoginErrorState(
   error: AuthClientError,
 ): CredentialLoginErrorState {
-  if (error.status === 403) {
+  if (isUnverifiedEmailError(error)) {
     return {
       canResendVerification: true,
       message: "Please verify your email address before logging in.",
@@ -90,4 +90,11 @@ export function getCredentialLoginErrorState(
     canResendVerification: false,
     message: "We could not sign you in. Check your email and password.",
   };
+}
+
+function isUnverifiedEmailError(error: AuthClientError) {
+  return (
+    error.code === "EMAIL_NOT_VERIFIED" ||
+    error.message === "Email not verified"
+  );
 }

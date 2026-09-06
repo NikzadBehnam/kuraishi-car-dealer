@@ -13,6 +13,11 @@ import {
 
 export const localAuthOrigin = "http://localhost:3000";
 export const productionAuthOrigin = "https://kuraishi-car-dealer.vercel.app";
+const vercelSystemUrlEnvNames = [
+  "VERCEL_URL",
+  "VERCEL_BRANCH_URL",
+  "VERCEL_PROJECT_PRODUCTION_URL",
+] as const;
 export const authTrustedOrigins = getAuthTrustedOrigins("development");
 
 type GoogleProfile = {
@@ -203,10 +208,36 @@ function getSocialProviders(
   };
 }
 
-export function getAuthTrustedOrigins(nodeEnv = process.env.NODE_ENV) {
-  if (nodeEnv === "production") {
-    return [productionAuthOrigin];
+export function getAuthTrustedOrigins(
+  nodeEnv = process.env.NODE_ENV,
+  env: Record<string, string | undefined> = process.env,
+) {
+  const origins =
+    nodeEnv === "production"
+      ? [productionAuthOrigin]
+      : [localAuthOrigin, productionAuthOrigin];
+
+  return Array.from(new Set([...origins, ...getVercelTrustedOrigins(env)]));
+}
+
+function getVercelTrustedOrigins(env: Record<string, string | undefined>) {
+  return vercelSystemUrlEnvNames.flatMap((name) => {
+    const origin = getVercelTrustedOrigin(env[name]);
+
+    return origin ? [origin] : [];
+  });
+}
+
+function getVercelTrustedOrigin(value: string | undefined) {
+  const host = value
+    ?.trim()
+    .replace(/^https?:\/\//u, "")
+    .split("/")[0]
+    ?.toLowerCase();
+
+  if (!host?.endsWith(".vercel.app")) {
+    return null;
   }
 
-  return [localAuthOrigin, productionAuthOrigin];
+  return `https://${host}`;
 }

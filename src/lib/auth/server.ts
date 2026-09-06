@@ -28,12 +28,12 @@ export const auth = betterAuth(
     }),
     emailDelivery: {
       sendPasswordResetEmail: async (input) => {
-        scheduleAuthEmailDelivery("password-reset", () =>
+        await deliverAuthEmail("password-reset", () =>
           deliverPasswordResetEmail(input),
         );
       },
       sendVerificationEmail: async (input) => {
-        scheduleAuthEmailDelivery("verification", () =>
+        await deliverAuthEmail("verification", () =>
           deliverVerificationEmail(input),
         );
       },
@@ -49,20 +49,54 @@ function scheduleAfterResponse(promise: Promise<unknown>) {
   after(() => promise);
 }
 
+async function deliverAuthEmail(
+  kind: "password-reset" | "verification",
+  task: () => Promise<unknown>,
+) {
+  if (process.env.NODE_ENV === "development") {
+    await runAuthEmailDelivery(kind, task);
+    return;
+  }
+
+  scheduleAuthEmailDelivery(kind, task);
+}
+
 function scheduleAuthEmailDelivery(
   kind: "password-reset" | "verification",
   task: () => Promise<unknown>,
 ) {
-  after(async () => {
-    try {
-      await task();
-    } catch (error) {
-      console.error(
-        "Auth email delivery failed.",
-        getSafeEmailDeliveryErrorMetadata(kind, error),
-      );
+  after(() => runAuthEmailDelivery(kind, task));
+}
+
+async function runAuthEmailDelivery(
+  kind: "password-reset" | "verification",
+  task: () => Promise<unknown>,
+) {
+  try {
+    const result = await task();
+
+    if (process.env.NODE_ENV === "development") {
+      console.info("Auth email accepted.", {
+        idPresent: hasEmailDeliveryId(result),
+        kind,
+      });
     }
-  });
+  } catch (error) {
+    console.error(
+      "Auth email delivery failed.",
+      getSafeEmailDeliveryErrorMetadata(kind, error),
+    );
+  }
+}
+
+function hasEmailDeliveryId(result: unknown) {
+  return (
+    result !== null &&
+    typeof result === "object" &&
+    "id" in result &&
+    typeof result.id === "string" &&
+    result.id.length > 0
+  );
 }
 
 function getSafeEmailDeliveryErrorMetadata(

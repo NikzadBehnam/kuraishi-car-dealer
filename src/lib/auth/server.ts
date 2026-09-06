@@ -38,8 +38,8 @@ export const auth = betterAuth(
         );
       },
     },
-    googleClientId: getRequiredServerEnv("GOOGLE_CLIENT_ID"),
-    googleClientSecret: getRequiredServerEnv("GOOGLE_CLIENT_SECRET"),
+    googleClientId: getOptionalServerEnv("GOOGLE_CLIENT_ID"),
+    googleClientSecret: getOptionalServerEnv("GOOGLE_CLIENT_SECRET"),
     secret: getRequiredServerEnv("BETTER_AUTH_SECRET"),
     useSecureCookies: shouldUseSecureCookies(betterAuthBaseURL),
   }),
@@ -147,13 +147,19 @@ function getBetterAuthBaseURL() {
 }
 
 function getRequiredServerEnv(name: string) {
-  const value = process.env[name]?.trim();
+  const value = getOptionalServerEnv(name);
 
   if (!value) {
     throw new Error(`${name} is not set.`);
   }
 
   return value;
+}
+
+function getOptionalServerEnv(name: string) {
+  const value = process.env[name]?.trim();
+
+  return value || undefined;
 }
 
 function normalizeAuthOrigin(value: string, name: string) {

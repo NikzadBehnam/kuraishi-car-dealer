@@ -37,8 +37,8 @@ type CreateKuraishiAuthOptionsInput = {
   baseURL: string;
   database?: BetterAuthOptions["database"];
   emailDelivery: AuthEmailDelivery;
-  googleClientId: string;
-  googleClientSecret: string;
+  googleClientId?: string;
+  googleClientSecret?: string;
   secret: string;
   useSecureCookies: boolean;
   backgroundTaskHandler?: (promise: Promise<unknown>) => void;
@@ -168,20 +168,7 @@ export function createKuraishiAuthOptions({
       freshAge: 60 * 60 * 24,
       updateAge: 60 * 60 * 24,
     },
-    socialProviders: {
-      google: {
-        clientId: googleClientId,
-        clientSecret: googleClientSecret,
-        mapProfileToUser: (profile) => {
-          const googleProfile = profile as GoogleProfile;
-
-          return {
-            firstName: googleProfile.given_name,
-            lastName: googleProfile.family_name,
-          };
-        },
-      },
-    },
+    socialProviders: getSocialProviders(googleClientId, googleClientSecret),
     trustedOrigins,
     user: {
       additionalFields: authUserAdditionalFields,
@@ -190,6 +177,30 @@ export function createKuraishiAuthOptions({
       storeIdentifier: "hashed",
     },
   } satisfies BetterAuthOptions;
+}
+
+function getSocialProviders(
+  googleClientId: string | undefined,
+  googleClientSecret: string | undefined,
+): BetterAuthOptions["socialProviders"] {
+  if (!googleClientId || !googleClientSecret) {
+    return undefined;
+  }
+
+  return {
+    google: {
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+      mapProfileToUser: (profile) => {
+        const googleProfile = profile as GoogleProfile;
+
+        return {
+          firstName: googleProfile.given_name,
+          lastName: googleProfile.family_name,
+        };
+      },
+    },
+  };
 }
 
 export function getAuthTrustedOrigins(nodeEnv = process.env.NODE_ENV) {

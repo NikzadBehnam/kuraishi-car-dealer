@@ -25,6 +25,32 @@ describe("auth options", () => {
     assert.equal(options.emailAndPassword.revokeSessionsOnPasswordReset, true);
   });
 
+  it("configures Google only when both OAuth credentials are present", () => {
+    const configuredOptions = createKuraishiAuthOptions({
+      baseURL: localAuthOrigin,
+      emailDelivery: {
+        sendPasswordResetEmail: async () => {},
+        sendVerificationEmail: async () => {},
+      },
+      googleClientId: "google-client-id",
+      googleClientSecret: "google-client-secret",
+      secret: "test-secret",
+      useSecureCookies: false,
+    });
+    const unconfiguredOptions = createKuraishiAuthOptions({
+      baseURL: localAuthOrigin,
+      emailDelivery: {
+        sendPasswordResetEmail: async () => {},
+        sendVerificationEmail: async () => {},
+      },
+      secret: "test-secret",
+      useSecureCookies: false,
+    });
+
+    assert.ok(configuredOptions.socialProviders?.google);
+    assert.equal(unconfiguredOptions.socialProviders, undefined);
+  });
+
   it("does not trust localhost in production auth config", () => {
     assert.deepEqual(getAuthTrustedOrigins("production"), [
       productionAuthOrigin,

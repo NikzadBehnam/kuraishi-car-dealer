@@ -1,10 +1,15 @@
 import { PageHeader } from "@/components/layout/page-header";
-import { VehicleSearchResults } from "./_components/vehicle-search-results";
-import { vehicleListingContent as content } from "@/content/de/vehicle-listing";
-import { vehicles } from "@/data/vehicles";
-import type { VehicleFilters } from "@/lib/vehicle-filters";
-import { createPublicMetadata } from "@/lib/metadata";
 import { publicRoutes } from "@/config/routes.config";
+import { vehicleListingContent as content } from "@/content/de/vehicle-listing";
+import {
+  buildPublicVehicleListingHref,
+  parsePublicVehicleListingSearchParams,
+} from "@/features/vehicles/listing-search-params.ts";
+import { listPublicVehicles } from "@/features/vehicles/server/public-queries.ts";
+import { createPublicMetadata } from "@/lib/metadata";
+import { redirect } from "next/navigation";
+
+import { VehicleSearchResults } from "./_components/vehicle-search-results";
 
 export const metadata = createPublicMetadata(
   "Fahrzeuge",
@@ -17,17 +22,14 @@ export default async function VehiclesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const initialFilters: VehicleFilters = {
-    make: typeof params.make === "string" ? params.make : undefined,
-    model: typeof params.model === "string" ? params.model : undefined,
-    bodyType: typeof params.bodyType === "string" ? params.bodyType : undefined,
-    fuelType: typeof params.fuelType === "string" ? params.fuelType : undefined,
-    location: typeof params.location === "string" ? params.location : undefined,
-    maximumPrice:
-      typeof params.maximumPrice === "string"
-        ? Number(params.maximumPrice)
-        : undefined,
-  };
+  const query = parsePublicVehicleListingSearchParams(params);
+  const result = await listPublicVehicles(query);
+  const lastPage = Math.max(1, result.totalPages);
+
+  if (query.page > lastPage) {
+    redirect(buildPublicVehicleListingHref(query, lastPage));
+  }
+
   return (
     <>
       <PageHeader
@@ -35,10 +37,7 @@ export default async function VehiclesPage({
         description={content.description}
         breadcrumb="Fahrzeuge"
       />
-      <VehicleSearchResults
-        vehicles={vehicles}
-        initialFilters={initialFilters}
-      />
+      <VehicleSearchResults query={query} result={result} />
     </>
   );
 }

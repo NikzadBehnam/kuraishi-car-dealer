@@ -1,7 +1,8 @@
 "use client";
 
 import { SlidersHorizontal, X, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,39 +13,65 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { vehicleListingContent as content } from "@/content/de/vehicle-listing";
-import type { VehicleFilters } from "@/lib/vehicle-filters";
-import type { Vehicle } from "@/types/vehicle";
+import { publicRoutes } from "@/config/routes.config";
+import { createPublicVehicleListingSearchParams } from "@/features/vehicles/listing-search-params.ts";
+import type { PublicVehicleListQuery } from "@/features/vehicles/schemas.ts";
+
+type VisibleFilterKey =
+  "bodyType" | "fuelType" | "make" | "maximumPrice" | "sort";
 
 interface VehicleFilterBarProps {
-  vehicles: Vehicle[];
-  filters: VehicleFilters;
+  query: PublicVehicleListQuery;
+  makeOptions: string[];
   resultCount: number;
-  onFilterChange: (key: keyof VehicleFilters, value: string) => void;
-  onReset: () => void;
 }
 
 export function VehicleFilterBar({
-  vehicles,
-  filters,
+  query,
+  makeOptions,
   resultCount,
-  onFilterChange,
-  onReset,
 }: VehicleFilterBarProps) {
+  const router = useRouter();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const makeOptions = [...new Set(vehicles.map((vehicle) => vehicle.make))]
-    .toSorted()
-    .map((value) => [value, value] as const);
+  const [isPending, startTransition] = useTransition();
   const activeFilterCount = [
-    filters.make,
-    filters.bodyType,
-    filters.fuelType,
-    filters.maximumPrice,
-  ].filter(Boolean).length;
+    query.make,
+    query.model,
+    query.bodyType,
+    query.condition,
+    query.featured,
+    query.fuelType,
+    query.maximumMileage,
+    query.maximumPriceCents,
+    query.minimumPriceCents,
+    query.search,
+    query.transmissionType,
+  ].filter((value) => value !== undefined && value !== "").length;
+
+  const updateFilter = (key: VisibleFilterKey, value: string) => {
+    const params = createPublicVehicleListingSearchParams(query);
+
+    params.delete("page");
+    if (value) params.set(key, value);
+    else params.delete(key);
+
+    startTransition(() => {
+      const queryString = params.toString();
+      router.push(
+        queryString
+          ? `${publicRoutes.vehicles}?${queryString}`
+          : publicRoutes.vehicles,
+      );
+    });
+  };
 
   return (
     <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-[var(--header-height)] z-40 border-y py-3 backdrop-blur lg:py-4">
       <div className="site-container">
-        <div className="flex items-center justify-between gap-3 lg:mb-3">
+        <div
+          className="flex items-center justify-between gap-3 lg:mb-3"
+          aria-busy={isPending}
+        >
           <div>
             <p className="font-extrabold">
               {resultCount} {content.results}
@@ -77,14 +104,16 @@ export function VehicleFilterBar({
         >
           <FilterSelect
             label={content.make}
-            value={filters.make}
-            onChange={(value) => onFilterChange("make", value)}
-            options={makeOptions}
+            value={query.make}
+            disabled={isPending}
+            onChange={(value) => updateFilter("make", value)}
+            options={makeOptions.map((value) => [value, value] as const)}
           />
           <FilterSelect
             label={content.bodyType}
-            value={filters.bodyType}
-            onChange={(value) => onFilterChange("bodyType", value)}
+            value={query.bodyType}
+            disabled={isPending}
+            onChange={(value) => updateFilter("bodyType", value)}
             options={[
               ["suv", "SUV"],
               ["compact", "Kleinwagen"],
@@ -96,8 +125,9 @@ export function VehicleFilterBar({
           />
           <FilterSelect
             label={content.fuelType}
-            value={filters.fuelType}
-            onChange={(value) => onFilterChange("fuelType", value)}
+            value={query.fuelType}
+            disabled={isPending}
+            onChange={(value) => updateFilter("fuelType", value)}
             options={[
               ["petrol", "Benzin"],
               ["diesel", "Diesel"],
@@ -107,8 +137,13 @@ export function VehicleFilterBar({
           />
           <FilterSelect
             label={content.maximumPrice}
-            value={String(filters.maximumPrice ?? "")}
-            onChange={(value) => onFilterChange("maximumPrice", value)}
+            value={
+              query.maximumPriceCents === undefined
+                ? undefined
+                : String(query.maximumPriceCents / 100)
+            }
+            disabled={isPending}
+            onChange={(value) => updateFilter("maximumPrice", value)}
             options={[
               ["30000", "30.000 €"],
               ["40000", "40.000 €"],
@@ -117,25 +152,29 @@ export function VehicleFilterBar({
           />
           <FilterSelect
             label={content.sort}
-            value={filters.sort ?? "relevance"}
+            value={query.sort === "featured" ? "relevance" : query.sort}
+            disabled={isPending}
             includeAllOption={false}
             onChange={(value) =>
-              onFilterChange("sort", value === "relevance" ? "" : value)
+              updateFilter("sort", value === "relevance" ? "" : value)
             }
             options={[
               ["relevance", "Relevanz"],
               ["price-asc", "Preis aufsteigend"],
               ["price-desc", "Preis absteigend"],
               ["newest", "Neueste Angebote"],
+              ["mileage-asc", "Kilometerstand aufsteigend"],
+              ["mileage-desc", "Kilometerstand absteigend"],
             ]}
           />
           <div className="grid min-w-0 content-end">
             <Button
               className="w-full rounded-[var(--radius-sm)] lg:w-auto"
               variant="outline"
+              disabled={isPending || activeFilterCount === 0}
               onClick={() => {
-                onReset();
                 setFiltersOpen(false);
+                startTransition(() => router.push(publicRoutes.vehicles));
               }}
             >
               <RotateCcw />
@@ -151,12 +190,14 @@ export function VehicleFilterBar({
 function FilterSelect({
   label,
   value,
+  disabled = false,
   includeAllOption = true,
   onChange,
   options,
 }: {
   label: string;
   value?: string;
+  disabled?: boolean;
   includeAllOption?: boolean;
   onChange: (value: string) => void;
   options: readonly (readonly [string, string])[];
@@ -165,6 +206,7 @@ function FilterSelect({
     <div className="grid min-w-0 gap-1.5">
       <span className="text-muted-foreground text-xs font-bold">{label}</span>
       <Select
+        disabled={disabled}
         value={value ?? "all"}
         onValueChange={(value) => onChange(value === "all" ? "" : value)}
       >

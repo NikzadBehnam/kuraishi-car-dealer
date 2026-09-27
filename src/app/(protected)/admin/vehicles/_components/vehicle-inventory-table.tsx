@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Archive,
@@ -20,9 +21,19 @@ import {
   Trash2,
 } from "lucide-react";
 
-import type { AdminVehicle, AdminVehicleStatus } from "@/types/admin";
 import { adminRoutes } from "@/config/admin-routes.config";
 import { routeBuilders } from "@/config/routes.config";
+import {
+  createAdminVehicleListingSearchParams,
+  buildAdminVehicleListingHref,
+} from "@/features/vehicles/admin-listing-search-params";
+import type {
+  AdminVehicleSortField,
+  VehicleStatus,
+} from "@/features/vehicles/constants";
+import type { AdminVehicleListItemDto } from "@/features/vehicles/dto";
+import type { AdminVehicleListQuery } from "@/features/vehicles/schemas";
+import type { PaginatedResult } from "@/features/shared/pagination";
 import {
   formatCurrency,
   formatFuelType,
@@ -57,24 +68,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type SortKey =
-  | "title"
-  | "price"
-  | "mileage"
-  | "status"
-  | "location"
-  | "lastUpdatedAt";
-
-type SortDirection = "asc" | "desc";
-
-interface SortState {
-  key: SortKey;
-  direction: SortDirection;
-}
-
-const statusLabels: Record<AdminVehicleStatus, string> = {
+const statusLabels: Record<VehicleStatus, string> = {
   draft: "Draft",
-  published: "Published",
+  available: "Available",
   reserved: "Reserved",
   sold: "Sold",
   archived: "Archived",
@@ -87,93 +83,69 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
-const pageSize = 8;
-
 export function VehicleInventoryTable({
-  vehicles,
+  query,
+  result,
 }: {
-  vehicles: AdminVehicle[];
+  query: AdminVehicleListQuery;
+  result: PaginatedResult<AdminVehicleListItemDto>;
 }) {
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | AdminVehicleStatus>(
-    "all",
-  );
-  const [sort, setSort] = useState<SortState>({
-    key: "lastUpdatedAt",
-    direction: "desc",
-  });
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [searchValue, setSearchValue] = useState(query.search ?? "");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const filteredVehicles = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("de");
-    const filtered = vehicles.filter((vehicle) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        [
-          vehicle.stockNumber,
-          vehicle.make,
-          vehicle.model,
-          vehicle.variant,
-          vehicle.location,
-        ]
-          .join(" ")
-          .toLocaleLowerCase("de")
-          .includes(normalizedQuery);
-      const matchesStatus =
-        statusFilter === "all" || vehicle.status === statusFilter;
-
-      return matchesQuery && matchesStatus;
-    });
-
-    return filtered.toSorted((a, b) => {
-      const direction = sort.direction === "asc" ? 1 : -1;
-      const valueA = getSortValue(a, sort.key);
-      const valueB = getSortValue(b, sort.key);
-
-      if (typeof valueA === "number" && typeof valueB === "number") {
-        return (valueA - valueB) * direction;
-      }
-
-      return String(valueA).localeCompare(String(valueB), "de") * direction;
-    });
-  }, [query, sort, statusFilter, vehicles]);
-
-  const pageCount = Math.max(1, Math.ceil(filteredVehicles.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const paginatedVehicles = filteredVehicles.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
-  const visibleIds = paginatedVehicles.map((vehicle) => vehicle.id);
+  const visibleIds = result.items.map((vehicle) => vehicle.id);
   const selectedVisibleCount = visibleIds.filter((id) =>
     selectedIds.has(id),
   ).length;
   const allVisibleSelected =
     visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
-
   const selectedCount = selectedIds.size;
 
-  const updateSearch = (value: string) => {
-    setQuery(value);
-    setPage(1);
+  const navigate = (params: URLSearchParams) => {
+    const queryString = params.toString();
+    const href = queryString
+      ? `${adminRoutes.vehicles}?${queryString}`
+      : adminRoutes.vehicles;
+
+    startTransition(() => router.push(href));
+  };
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const params = createAdminVehicleListingSearchParams(query);
+    const normalizedSearch = searchValue.trim();
+
+    if (normalizedSearch) params.set("search", normalizedSearch);
+    else params.delete("search");
+
+    params.delete("page");
+    navigate(params);
   };
 
   const updateStatusFilter = (value: string) => {
-    setStatusFilter(value as "all" | AdminVehicleStatus);
-    setPage(1);
+    const params = createAdminVehicleListingSearchParams(query);
+
+    if (value === "all") params.delete("status");
+    else params.set("status", value);
+
+    params.delete("page");
+    navigate(params);
   };
 
-  const toggleSort = (key: SortKey) => {
-    setSort((current) =>
-      current.key === key
-        ? {
-            key,
-            direction: current.direction === "asc" ? "desc" : "asc",
-          }
-        : { key, direction: "asc" },
-    );
+  const toggleSort = (sortField: AdminVehicleSortField) => {
+    const params = createAdminVehicleListingSearchParams(query);
+    const sortDirection =
+      query.sortField === sortField && query.sortDirection === "asc"
+        ? "desc"
+        : "asc";
+
+    params.set("sortField", sortField);
+    params.set("sortDirection", sortDirection);
+    params.delete("page");
+    navigate(params);
   };
 
   const toggleVehicle = (id: string, checked: boolean) => {
@@ -197,13 +169,13 @@ export function VehicleInventoryTable({
   };
 
   return (
-    <div className="grid min-w-0 gap-4">
-      <section className="min-w-0 rounded-[var(--radius-sm)] border bg-surface p-4">
+    <div className={cn("grid min-w-0 gap-4", isPending && "opacity-70")}>
+      <section className="bg-surface min-w-0 rounded-[var(--radius-sm)] border p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-base font-extrabold">Inventory table</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Mocked admin inventory with client-side controls for UI review.
+            <p className="text-muted-foreground mt-1 text-sm">
+              Search and review the current inventory from the vehicle database.
             </p>
           </div>
           <Button
@@ -219,20 +191,34 @@ export function VehicleInventoryTable({
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem]">
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              value={query}
-              onChange={(event) => updateSearch(event.target.value)}
-              placeholder="Search title, stock number, location"
-              aria-label="Search vehicles"
-              className="bg-background pl-9"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={updateStatusFilter}>
+          <form className="flex min-w-0 gap-2" onSubmit={submitSearch}>
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                aria-hidden="true"
+              />
+              <Input
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                placeholder="Search vehicle or stock number"
+                aria-label="Search vehicles"
+                className="bg-background pl-9"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="outline"
+              className="rounded-[var(--radius-sm)]"
+              disabled={isPending}
+            >
+              Search
+            </Button>
+          </form>
+          <Select
+            value={query.status ?? "all"}
+            onValueChange={updateStatusFilter}
+            disabled={isPending}
+          >
             <SelectTrigger aria-label="Filter by vehicle status">
               <SelectValue />
             </SelectTrigger>
@@ -249,7 +235,7 @@ export function VehicleInventoryTable({
       </section>
 
       {selectedCount > 0 && (
-        <section className="grid min-w-0 gap-3 rounded-[var(--radius-sm)] border bg-surface p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+        <section className="bg-surface grid min-w-0 gap-3 rounded-[var(--radius-sm)] border p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm font-bold">
             {selectedCount} vehicle{selectedCount === 1 ? "" : "s"} selected
           </p>
@@ -285,7 +271,7 @@ export function VehicleInventoryTable({
         </section>
       )}
 
-      <section className="min-w-0 overflow-hidden rounded-[var(--radius-sm)] border bg-surface">
+      <section className="bg-surface min-w-0 overflow-hidden rounded-[var(--radius-sm)] border">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -304,50 +290,44 @@ export function VehicleInventoryTable({
               </TableHead>
               <TableHead className="w-20 px-3">Image</TableHead>
               <SortableHead
-                label="Title"
-                sortKey="title"
-                currentSort={sort}
+                label="Vehicle"
+                sortField="make"
+                query={query}
                 onSort={toggleSort}
               />
               <SortableHead
                 label="Price"
-                sortKey="price"
-                currentSort={sort}
+                sortField="priceCents"
+                query={query}
                 onSort={toggleSort}
                 align="right"
               />
               <SortableHead
                 label="Mileage"
-                sortKey="mileage"
-                currentSort={sort}
+                sortField="mileage"
+                query={query}
                 onSort={toggleSort}
               />
               <TableHead className="px-3">Fuel</TableHead>
               <SortableHead
                 label="Status"
-                sortKey="status"
-                currentSort={sort}
+                sortField="status"
+                query={query}
                 onSort={toggleSort}
               />
               <TableHead className="px-3">Featured</TableHead>
               <SortableHead
-                label="Location"
-                sortKey="location"
-                currentSort={sort}
-                onSort={toggleSort}
-              />
-              <SortableHead
                 label="Updated"
-                sortKey="lastUpdatedAt"
-                currentSort={sort}
+                sortField="updatedAt"
+                query={query}
                 onSort={toggleSort}
               />
               <TableHead className="w-12 px-3 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedVehicles.length ? (
-              paginatedVehicles.map((vehicle) => (
+            {result.items.length ? (
+              result.items.map((vehicle) => (
                 <TableRow
                   key={vehicle.id}
                   data-state={selectedIds.has(vehicle.id) ? "selected" : ""}
@@ -362,28 +342,20 @@ export function VehicleInventoryTable({
                     />
                   </TableCell>
                   <TableCell className="px-3">
-                    <div className="relative h-12 w-16 overflow-hidden rounded-[var(--radius-sm)] bg-secondary">
-                      <Image
-                        fill
-                        sizes="4rem"
-                        src={vehicle.images[0]}
-                        alt=""
-                        className="object-cover"
-                      />
-                    </div>
+                    <VehicleCoverImage vehicle={vehicle} />
                   </TableCell>
                   <TableCell className="min-w-64 px-3">
                     <div className="min-w-0">
                       <p className="truncate font-extrabold">
                         {vehicle.make} {vehicle.model}
                       </p>
-                      <p className="truncate text-xs text-muted-foreground">
+                      <p className="text-muted-foreground truncate text-xs">
                         {vehicle.stockNumber} - {vehicle.variant}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell className="px-3 text-right font-extrabold">
-                    {formatCurrency(vehicle.price)}
+                    {formatCurrency(vehicle.priceCents / 100)}
                   </TableCell>
                   <TableCell className="px-3">
                     {formatMileage(vehicle.mileage)}
@@ -400,14 +372,13 @@ export function VehicleInventoryTable({
                         Featured
                       </Badge>
                     ) : (
-                      <span className="text-xs font-bold text-muted-foreground">
+                      <span className="text-muted-foreground text-xs font-bold">
                         No
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="px-3">{vehicle.location}</TableCell>
-                  <TableCell className="whitespace-nowrap px-3 text-xs font-bold text-muted-foreground">
-                    {formatDateTime(vehicle.lastUpdatedAt)}
+                  <TableCell className="text-muted-foreground px-3 text-xs font-bold whitespace-nowrap">
+                    {formatDateTime(vehicle.updatedAt)}
                   </TableCell>
                   <TableCell className="px-3 text-right">
                     <VehicleRowActions vehicle={vehicle} />
@@ -416,15 +387,15 @@ export function VehicleInventoryTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={11} className="p-8 text-center">
+                <TableCell colSpan={10} className="p-8 text-center">
                   <div className="mx-auto grid max-w-sm justify-items-center gap-3">
-                    <span className="grid size-12 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
+                    <span className="bg-secondary text-primary grid size-12 place-items-center rounded-[var(--radius-sm)]">
                       <CarFront className="size-6" aria-hidden="true" />
                     </span>
                     <div>
                       <p className="font-extrabold">No vehicles found</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Adjust the search or status filter to show more mock
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        Adjust the search or status filter to show more
                         inventory records.
                       </p>
                     </div>
@@ -436,41 +407,60 @@ export function VehicleInventoryTable({
         </Table>
 
         <div className="grid gap-3 border-t p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Showing{" "}
-            <strong className="text-foreground">
-              {paginatedVehicles.length}
-            </strong>{" "}
-            of{" "}
-            <strong className="text-foreground">
-              {filteredVehicles.length}
-            </strong>{" "}
+            <strong className="text-foreground">{result.items.length}</strong>{" "}
+            of <strong className="text-foreground">{result.total}</strong>{" "}
             vehicles
           </p>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[var(--radius-sm)]"
-              disabled={currentPage === 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-            >
-              Previous
-            </Button>
+            {result.hasPreviousPage ? (
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-[var(--radius-sm)]"
+              >
+                <Link
+                  href={buildAdminVehicleListingHref(query, query.page - 1)}
+                >
+                  Previous
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[var(--radius-sm)]"
+                disabled
+              >
+                Previous
+              </Button>
+            )}
             <span className="text-center text-sm font-bold">
-              Page {currentPage} of {pageCount}
+              Page {result.page} of {Math.max(1, result.totalPages)}
             </span>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[var(--radius-sm)]"
-              disabled={currentPage === pageCount}
-              onClick={() =>
-                setPage((value) => Math.min(pageCount, value + 1))
-              }
-            >
-              Next
-            </Button>
+            {result.hasNextPage ? (
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-[var(--radius-sm)]"
+              >
+                <Link
+                  href={buildAdminVehicleListingHref(query, query.page + 1)}
+                >
+                  Next
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[var(--radius-sm)]"
+                disabled
+              >
+                Next
+              </Button>
+            )}
           </div>
         </div>
       </section>
@@ -480,20 +470,20 @@ export function VehicleInventoryTable({
 
 function SortableHead({
   label,
-  sortKey,
-  currentSort,
+  sortField,
+  query,
   onSort,
   align = "left",
 }: {
   label: string;
-  sortKey: SortKey;
-  currentSort: SortState;
-  onSort: (key: SortKey) => void;
+  sortField: AdminVehicleSortField;
+  query: AdminVehicleListQuery;
+  onSort: (sortField: AdminVehicleSortField) => void;
   align?: "left" | "right";
 }) {
-  const active = currentSort.key === sortKey;
+  const active = query.sortField === sortField;
   const Icon = active
-    ? currentSort.direction === "asc"
+    ? query.sortDirection === "asc"
       ? ArrowUp
       : ArrowDown
     : ArrowUpDown;
@@ -503,10 +493,10 @@ function SortableHead({
       <button
         type="button"
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] font-bold hover:text-foreground focus-visible:outline-none",
+          "hover:text-foreground inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] font-bold focus-visible:outline-none",
           align === "right" && "justify-end",
         )}
-        onClick={() => onSort(sortKey)}
+        onClick={() => onSort(sortField)}
       >
         {label}
         <Icon className="size-3.5" aria-hidden="true" />
@@ -515,8 +505,28 @@ function SortableHead({
   );
 }
 
-function VehicleRowActions({ vehicle }: { vehicle: AdminVehicle }) {
+function VehicleCoverImage({ vehicle }: { vehicle: AdminVehicleListItemDto }) {
+  return (
+    <div className="bg-secondary text-muted-foreground relative grid h-12 w-16 place-items-center overflow-hidden rounded-[var(--radius-sm)]">
+      {vehicle.coverImage ? (
+        <Image
+          fill
+          sizes="4rem"
+          src={vehicle.coverImage.url}
+          alt={vehicle.coverImage.altText}
+          className="object-cover"
+        />
+      ) : (
+        <CarFront className="size-5" aria-hidden="true" />
+      )}
+    </div>
+  );
+}
+
+function VehicleRowActions({ vehicle }: { vehicle: AdminVehicleListItemDto }) {
   const title = `${vehicle.make} ${vehicle.model}`;
+  const hasPublicPage =
+    vehicle.status === "available" || vehicle.status === "reserved";
 
   return (
     <DropdownMenu>
@@ -531,15 +541,22 @@ function VehicleRowActions({ vehicle }: { vehicle: AdminVehicle }) {
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel>{vehicle.stockNumber}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={routeBuilders.vehicleDetails(vehicle.slug)}>
+        {hasPublicPage ? (
+          <DropdownMenuItem asChild>
+            <Link href={routeBuilders.vehicleDetails(vehicle.slug)}>
+              <Eye />
+              View public page
+            </Link>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem disabled>
             <Eye />
-            View public page
-          </Link>
-        </DropdownMenuItem>
+            Public page unavailable
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link href={`${adminRoutes.vehicles}/${vehicle.id}/edit`}>
             <FilePenLine />
@@ -563,31 +580,21 @@ function VehicleRowActions({ vehicle }: { vehicle: AdminVehicle }) {
   );
 }
 
-function StatusBadge({ status }: { status: AdminVehicleStatus }) {
+function StatusBadge({ status }: { status: VehicleStatus }) {
   return (
     <Badge
       className={cn(
         "bg-secondary text-secondary-foreground dark:bg-secondary",
-        status === "published" && "bg-success/10 text-success",
+        status === "available" && "bg-success/10 text-success",
         status === "reserved" && "bg-warning/10 text-warning",
         status === "sold" && "bg-info/10 text-info",
         status === "draft" && "bg-accent/10 text-accent",
-        status === "archived" &&
-          "bg-muted text-muted-foreground dark:bg-muted",
+        status === "archived" && "bg-muted text-muted-foreground dark:bg-muted",
       )}
     >
       {statusLabels[status]}
     </Badge>
   );
-}
-
-function getSortValue(vehicle: AdminVehicle, key: SortKey) {
-  if (key === "title") return `${vehicle.make} ${vehicle.model}`;
-  if (key === "price") return vehicle.price;
-  if (key === "mileage") return vehicle.mileage;
-  if (key === "status") return vehicle.status;
-  if (key === "location") return vehicle.location;
-  return vehicle.lastUpdatedAt;
 }
 
 function formatDateTime(value: string) {

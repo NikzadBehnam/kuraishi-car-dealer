@@ -61,3 +61,48 @@ export type Account = Prisma.AccountModel
  * 
  */
 export type Verification = Prisma.VerificationModel
+/**
+ * Model Vehicle
+ * 
+ */
+export type Vehicle = Prisma.VehicleModel
+/**
+ * Model MediaAsset
+ * 
+ */
+export type MediaAsset = Prisma.MediaAssetModel
+/**
+ * Model Lead
+ * 
+ */
+export type Lead = Prisma.LeadModel
+/**
+ * Model ValuationRequest
+ * 
+ */
+export type ValuationRequest = Prisma.ValuationRequestModel
+/**
+ * Model LeadNote
+ * 
+ */
+export type LeadNote = Prisma.LeadNoteModel
+/**
+ * Model Appointment
+ * 
+ */
+export type Appointment = Prisma.AppointmentModel
+/**
+ * Model Favourite
+ * 
+ */
+export type Favourite = Prisma.FavouriteModel
+/**
+ * Model ComparisonSelection
+ * 
+ */
+export type ComparisonSelection = Prisma.ComparisonSelectionModel
+/**
+ * Model ActivityEvent
+ * 
+ */
+export type ActivityEvent = Prisma.ActivityEventModel

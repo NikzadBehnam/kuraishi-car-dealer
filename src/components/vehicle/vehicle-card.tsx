@@ -1,6 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Fuel, Gauge, Settings2, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  CarFront,
+  Fuel,
+  Gauge,
+  Settings2,
+  Zap,
+} from "lucide-react";
+import type { PublicVehicleCardDto } from "@/features/vehicles/dto.ts";
 import type { Vehicle } from "@/types/vehicle";
 import {
   formatCurrency,
@@ -18,10 +26,29 @@ export function VehicleCard({
   vehicle,
   variant = "grid",
 }: {
-  vehicle: Vehicle;
+  vehicle: Vehicle | PublicVehicleCardDto;
   variant?: "grid" | "list" | "compact";
 }) {
   const detailsHref = routeBuilders.vehicleDetails(vehicle.slug);
+  const price =
+    "priceCents" in vehicle ? vehicle.priceCents / 100 : vehicle.price;
+  const coverImage =
+    "coverImage" in vehicle
+      ? vehicle.coverImage
+      : vehicle.images[0]
+        ? {
+            url: vehicle.images[0],
+            altText: `${vehicle.make} ${vehicle.model} ${vehicle.variant}`,
+          }
+        : null;
+  const availabilityLabel =
+    "status" in vehicle
+      ? vehicle.status === "reserved"
+        ? "Reserviert"
+        : "Sofort"
+      : vehicle.isAvailable
+        ? "Sofort"
+        : "Anfragen";
 
   return (
     <Card
@@ -36,13 +63,19 @@ export function VehicleCard({
         href={detailsHref}
         aria-label={`${vehicle.make} ${vehicle.model} Details ansehen`}
       >
-        <Image
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          src={vehicle.images[0]}
-          alt={`${vehicle.make} ${vehicle.model} ${vehicle.variant}`}
-        />
+        {coverImage ? (
+          <Image
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            src={coverImage.url}
+            alt={coverImage.altText}
+          />
+        ) : (
+          <span className="text-muted-foreground grid size-full place-items-center">
+            <CarFront className="size-12" aria-hidden="true" />
+          </span>
+        )}
         {vehicle.labels.length > 0 && (
           <div className="absolute top-3 left-3 flex flex-wrap gap-2">
             {vehicle.labels.map((label) => (
@@ -63,10 +96,10 @@ export function VehicleCard({
 
         <div className="mt-3 flex items-end justify-between gap-3">
           <p className="text-2xl font-black tracking-tight">
-            {formatCurrency(vehicle.price)}
+            {formatCurrency(price)}
           </p>
           <span className="text-success shrink-0 text-[0.68rem] font-extrabold uppercase">
-            Sofort
+            {availabilityLabel}
           </span>
         </div>
 

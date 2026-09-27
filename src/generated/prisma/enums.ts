@@ -9,7 +9,123 @@
 * 🟢 You can import this file directly.
 */
 
+export const VehicleFuelType = {
+  petrol: 'petrol',
+  diesel: 'diesel',
+  electric: 'electric',
+  hybrid: 'hybrid'
+} as const
+
+export type VehicleFuelType = (typeof VehicleFuelType)[keyof typeof VehicleFuelType]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const VehicleTransmissionType = {
+  automatic: 'automatic',
+  manual: 'manual'
+} as const
+
+export type VehicleTransmissionType = (typeof VehicleTransmissionType)[keyof typeof VehicleTransmissionType]
+
+
+export const VehicleBodyType = {
+  suv: 'suv',
+  compact: 'compact',
+  sedan: 'sedan',
+  wagon: 'wagon',
+  van: 'van',
+  sports: 'sports'
+} as const
+
+export type VehicleBodyType = (typeof VehicleBodyType)[keyof typeof VehicleBodyType]
+
+
+export const VehicleCondition = {
+  used: 'used',
+  demonstrator: 'demonstrator',
+  annual: 'annual'
+} as const
+
+export type VehicleCondition = (typeof VehicleCondition)[keyof typeof VehicleCondition]
+
+
+export const VehicleStatus = {
+  draft: 'draft',
+  available: 'available',
+  reserved: 'reserved',
+  sold: 'sold',
+  archived: 'archived'
+} as const
+
+export type VehicleStatus = (typeof VehicleStatus)[keyof typeof VehicleStatus]
+
+
+export const VehicleInspectionStatus = {
+  pending: 'pending',
+  in_progress: 'in_progress',
+  passed: 'passed',
+  failed: 'failed'
+} as const
+
+export type VehicleInspectionStatus = (typeof VehicleInspectionStatus)[keyof typeof VehicleInspectionStatus]
+
+
+export const LeadSource = {
+  contact: 'contact',
+  valuation: 'valuation',
+  test_drive: 'test_drive',
+  callback: 'callback'
+} as const
+
+export type LeadSource = (typeof LeadSource)[keyof typeof LeadSource]
+
+
+export const LeadStatus = {
+  new: 'new',
+  contacted: 'contacted',
+  qualified: 'qualified',
+  closed: 'closed',
+  lost: 'lost'
+} as const
+
+export type LeadStatus = (typeof LeadStatus)[keyof typeof LeadStatus]
+
+
+export const LeadPriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+  urgent: 'urgent'
+} as const
+
+export type LeadPriority = (typeof LeadPriority)[keyof typeof LeadPriority]
+
+
+export const AppointmentType = {
+  test_drive: 'test_drive',
+  consultation: 'consultation',
+  valuation: 'valuation',
+  workshop: 'workshop',
+  callback: 'callback'
+} as const
+
+export type AppointmentType = (typeof AppointmentType)[keyof typeof AppointmentType]
+
+
+export const AppointmentStatus = {
+  requested: 'requested',
+  confirmed: 'confirmed',
+  completed: 'completed',
+  cancelled: 'cancelled'
+} as const
+
+export type AppointmentStatus = (typeof AppointmentStatus)[keyof typeof AppointmentStatus]
+
+
+export const ActivitySeverity = {
+  info: 'info',
+  success: 'success',
+  warning: 'warning',
+  risk: 'risk'
+} as const
+
+export type ActivitySeverity = (typeof ActivitySeverity)[keyof typeof ActivitySeverity]

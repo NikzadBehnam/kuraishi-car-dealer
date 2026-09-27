@@ -1,17 +1,19 @@
 import type { MetadataRoute } from "next";
 import { publicRoutes, routeBuilders } from "@/config/routes.config";
-import { vehicles } from "@/data/vehicles";
 import { siteConfig } from "@/config/site.config";
-export default function sitemap(): MetadataRoute.Sitemap {
+import { listPublicVehicleSitemapEntries } from "@/features/vehicles/server/public-queries.ts";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteConfig.url;
+  const vehicles = await listPublicVehicleSitemapEntries();
+
   return [
     ...Object.values(publicRoutes).map((route) => ({
       url: `${base}${route}`,
-      lastModified: new Date(),
     })),
     ...vehicles.map((vehicle) => ({
       url: `${base}${routeBuilders.vehicleDetails(vehicle.slug)}`,
-      lastModified: new Date(),
+      lastModified: new Date(vehicle.updatedAt),
     })),
   ];
 }

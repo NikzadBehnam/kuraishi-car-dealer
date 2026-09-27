@@ -20,8 +20,11 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { vehicles } from "@/data/vehicles";
 import { dealers } from "@/data/dealers";
+import {
+  getPublicVehicleBySlug,
+  listSimilarPublicVehicles,
+} from "@/features/vehicles/server/public-queries.ts";
 import {
   formatBodyType,
   formatCurrency,
@@ -37,24 +40,38 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { publicRoutes, routeBuilders } from "@/config/routes.config";
 import { VehicleImageGallery } from "./_components/vehicle-image-gallery";
-export function generateStaticParams() {
-  return vehicles.map((vehicle) => ({ slug: vehicle.slug }));
-}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const vehicle = vehicles.find((item) => item.slug === slug);
+  const vehicle = await getPublicVehicleBySlug(slug);
+
   return vehicle
     ? {
         title: `${vehicle.make} ${vehicle.model}`,
-        description: `${vehicle.variant}, ${formatMileage(vehicle.mileage)}, ${formatCurrency(vehicle.price)}`,
+        description: `${vehicle.variant}, ${formatMileage(vehicle.mileage)}, ${formatCurrency(vehicle.priceCents / 100)}`,
         alternates: { canonical: routeBuilders.vehicleDetails(vehicle.slug) },
-        openGraph: { url: routeBuilders.vehicleDetails(vehicle.slug) },
+        openGraph: {
+          title: `${vehicle.make} ${vehicle.model}`,
+          description: `${vehicle.variant}, ${formatMileage(vehicle.mileage)}, ${formatCurrency(vehicle.priceCents / 100)}`,
+          url: routeBuilders.vehicleDetails(vehicle.slug),
+          images: vehicle.coverImage
+            ? [
+                {
+                  url: vehicle.coverImage.url,
+                  alt: vehicle.coverImage.altText,
+                },
+              ]
+            : undefined,
+        },
       }
-    : { title: "Fahrzeug nicht gefunden" };
+    : {
+        title: "Fahrzeug nicht gefunden",
+        robots: { index: false, follow: false },
+      };
 }
 export default async function VehicleDetailPage({
   params,
@@ -62,10 +79,18 @@ export default async function VehicleDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const vehicle = vehicles.find((item) => item.slug === slug);
+  const vehicle = await getPublicVehicleBySlug(slug);
   if (!vehicle) notFound();
-  const dealer = dealers.find((item) => item.id === vehicle.dealerId)!;
+
+  const similarVehicles = await listSimilarPublicVehicles(vehicle);
+  const dealer = dealers[0];
+
+  if (!dealer) {
+    throw new Error("Public dealership configuration is missing.");
+  }
+
   const vehicleTitle = `${vehicle.make} ${vehicle.model}`;
+  const vehiclePrice = vehicle.priceCents / 100;
   const facts: Array<{
     label: string;
     value: string;
@@ -81,7 +106,11 @@ export default async function VehicleDetailPage({
       value: formatMileage(vehicle.mileage),
       Icon: Gauge,
     },
-    { label: "Kraftstoff", value: formatFuelType(vehicle.fuelType), Icon: Fuel },
+    {
+      label: "Kraftstoff",
+      value: formatFuelType(vehicle.fuelType),
+      Icon: Fuel,
+    },
     {
       label: "Getriebe",
       value: formatTransmission(vehicle.transmissionType),
@@ -98,7 +127,11 @@ export default async function VehicleDetailPage({
       Icon: CarFront,
     },
     { label: "Farbe", value: vehicle.exteriorColor, Icon: Palette },
-    { label: "Vorbesitzer", value: "1", Icon: UserRound },
+    {
+      label: "Vorbesitzer",
+      value: String(vehicle.ownerCount),
+      Icon: UserRound,
+    },
   ];
   return (
     <>
@@ -112,7 +145,10 @@ export default async function VehicleDetailPage({
               Startseite
             </Link>
             <span aria-hidden="true"> / </span>
-            <Link className="hover:text-foreground" href={publicRoutes.vehicles}>
+            <Link
+              className="hover:text-foreground"
+              href={publicRoutes.vehicles}
+            >
               Fahrzeuge
             </Link>
             <span aria-hidden="true"> / </span>
@@ -123,11 +159,13 @@ export default async function VehicleDetailPage({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-success bg-success/10 inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-3 py-1 text-xs font-extrabold">
                   <BadgeCheck className="size-3.5" aria-hidden="true" />
-                  Sofort verfügbar
+                  {vehicle.status === "reserved"
+                    ? "Reserviert"
+                    : "Sofort verfügbar"}
                 </span>
                 <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-3 py-1 text-xs font-bold">
                   <MapPin className="size-3.5" aria-hidden="true" />
-                  {vehicle.location}
+                  {dealer.address}
                 </span>
               </div>
               <h1 className="page-title mt-4">{vehicleTitle}</h1>
@@ -135,12 +173,12 @@ export default async function VehicleDetailPage({
                 {vehicle.variant}
               </p>
             </div>
-            <div className="rounded-[var(--radius-sm)] border bg-background px-5 py-4 shadow-sm">
+            <div className="bg-background rounded-[var(--radius-sm)] border px-5 py-4 shadow-sm">
               <span className="text-muted-foreground text-xs font-bold">
                 Angebotspreis
               </span>
               <p className="text-3xl font-black tracking-tight">
-                {formatCurrency(vehicle.price)}
+                {formatCurrency(vehiclePrice)}
               </p>
             </div>
           </div>
@@ -204,7 +242,10 @@ export default async function VehicleDetailPage({
 
             <section>
               <div className="mb-5 flex items-center gap-2">
-                <ShieldCheck className="text-accent size-5" aria-hidden="true" />
+                <ShieldCheck
+                  className="text-accent size-5"
+                  aria-hidden="true"
+                />
                 <h2 className="text-2xl font-extrabold">Beschreibung</h2>
               </div>
               <Card className="rounded-[var(--radius-sm)] p-6">
@@ -225,7 +266,7 @@ export default async function VehicleDetailPage({
                 Direkt anfragen
               </p>
               <p className="mt-2 text-4xl font-black tracking-tight">
-                {formatCurrency(vehicle.price)}
+                {formatCurrency(vehiclePrice)}
               </p>
               <Button asChild variant="accent" className="mt-6 w-full">
                 <Link href={`${publicRoutes.contact}?vehicle=${vehicle.slug}`}>
@@ -242,7 +283,7 @@ export default async function VehicleDetailPage({
                 ★ {dealer.rating} ({dealer.reviewCount} Bewertungen)
               </p>
               <p className="mt-4 flex gap-2 text-sm">
-                <MapPin className="size-4 shrink-0 text-accent" />
+                <MapPin className="text-accent size-4 shrink-0" />
                 {dealer.address}
               </p>
               <Button asChild variant="outline" className="mt-4 w-full">
@@ -281,17 +322,17 @@ export default async function VehicleDetailPage({
               <Link href={publicRoutes.vehicles}>Alle Fahrzeuge ansehen</Link>
             </Button>
           </div>
-          <div className="mt-7 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {vehicles
-              .filter(
-                (item) =>
-                  item.id !== vehicle.id && item.bodyType === vehicle.bodyType,
-              )
-              .slice(0, 3)
-              .map((item) => (
+          {similarVehicles.length ? (
+            <div className="mt-7 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {similarVehicles.map((item) => (
                 <VehicleCard key={item.id} vehicle={item} />
               ))}
-          </div>
+            </div>
+          ) : (
+            <Card className="text-muted-foreground mt-7 rounded-[var(--radius-sm)] p-6 text-center">
+              Derzeit sind keine ähnlichen Fahrzeuge verfügbar.
+            </Card>
+          )}
         </div>
       </section>
 
@@ -299,7 +340,7 @@ export default async function VehicleDetailPage({
         <div>
           <p className="text-muted-foreground text-xs">Angebotspreis</p>
           <p className="font-black tracking-tight">
-            {formatCurrency(vehicle.price)}
+            {formatCurrency(vehiclePrice)}
           </p>
         </div>
         <div className="flex gap-2">

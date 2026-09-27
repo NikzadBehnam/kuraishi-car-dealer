@@ -9,9 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { vehicles } from "@/data/vehicles";
+import type { PublicVehicleSearchFacetsDto } from "@/features/vehicles/dto.ts";
 import { routes } from "@/config/routes.config";
-export function QuickSearchForm() {
+
+export function QuickSearchForm({
+  facets,
+}: {
+  facets: PublicVehicleSearchFacetsDto;
+}) {
   const router = useRouter();
   return (
     <form
@@ -30,13 +35,11 @@ export function QuickSearchForm() {
           <SelectValue placeholder="Alle Marken" />
         </SelectTrigger>
         <SelectContent>
-          {[...new Set(vehicles.map((vehicle) => vehicle.make))]
-            .toSorted()
-            .map((make) => (
-              <SelectItem key={make} value={make}>
-                {make}
-              </SelectItem>
-            ))}
+          {facets.makes.map((make) => (
+            <SelectItem key={make.value} value={make.value}>
+              {make.value} ({make.count})
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
       <Select name="bodyType">
@@ -48,6 +51,8 @@ export function QuickSearchForm() {
           <SelectItem value="compact">Kleinwagen</SelectItem>
           <SelectItem value="sedan">Limousine</SelectItem>
           <SelectItem value="wagon">Kombi</SelectItem>
+          <SelectItem value="van">Van / Transporter</SelectItem>
+          <SelectItem value="sports">Sportwagen</SelectItem>
         </SelectContent>
       </Select>
       <Select name="maximumPrice">

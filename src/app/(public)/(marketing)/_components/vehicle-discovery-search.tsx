@@ -4,11 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CarFront, MapPin, Search } from "lucide-react";
+import { ArrowRight, CarFront, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -17,8 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { publicRoutes } from "@/config/routes.config";
-import { vehicles } from "@/data/vehicles";
-import { filterVehicles } from "@/lib/vehicle-filters";
+import type { VehicleBodyType } from "@/features/vehicles/constants.ts";
+import type { PublicVehicleSearchFacetsDto } from "@/features/vehicles/dto.ts";
 
 const vehicleKinds = [
   { label: "Auto", value: "car" },
@@ -33,44 +32,39 @@ const categories = [
   { label: "Limousine", image: "sedan", filter: "sedan" },
   { label: "Kombi", image: "wagon", filter: "wagon" },
   { label: "Kleinwagen", image: "compact", filter: "compact" },
-  { label: "Van", image: "minivan", filter: "van" },
+  { label: "Van / Transporter", image: "transporter", filter: "van" },
   { label: "Sportwagen", image: "coupe", filter: "sports" },
-  { label: "Cabriolet", image: "convertible", filter: "convertible" },
-  { label: "Transporter", image: "transporter", filter: "van" },
-] as const;
+] as const satisfies readonly {
+  label: string;
+  image: string;
+  filter: VehicleBodyType;
+}[];
 
-export function VehicleDiscoverySearch() {
+export function VehicleDiscoverySearch({
+  facets,
+}: {
+  facets: PublicVehicleSearchFacetsDto;
+}) {
   const router = useRouter();
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
-  const [location, setLocation] = useState("Wien");
 
-  const makes = useMemo(
-    () => [...new Set(vehicles.map((vehicle) => vehicle.make))].toSorted(),
-    [],
-  );
-  const models = useMemo(
-    () =>
-      [
-        ...new Set(
-          vehicles
-            .filter((vehicle) => !make || vehicle.make === make)
-            .map((vehicle) => vehicle.model),
-        ),
-      ].toSorted(),
-    [make],
-  );
+  const models = useMemo(() => getModelOptions(facets, make), [facets, make]);
   const resultCount = useMemo(
-    () => filterVehicles(vehicles, { make, model, location }).length,
-    [make, model, location],
+    () => getResultCount(facets, make, model),
+    [facets, make, model],
   );
 
   const submitSearch = () => {
     const params = new URLSearchParams();
     if (make) params.set("make", make);
     if (model) params.set("model", model);
-    params.set("location", location);
-    router.push(`${publicRoutes.vehicles}?${params}`);
+    const queryString = params.toString();
+    router.push(
+      queryString
+        ? `${publicRoutes.vehicles}?${queryString}`
+        : publicRoutes.vehicles,
+    );
   };
 
   return (
@@ -105,7 +99,7 @@ export function VehicleDiscoverySearch() {
 
         <div className="p-5 sm:p-7">
           <form
-            className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]"
+            className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]"
             onSubmit={(event) => {
               event.preventDefault();
               submitSearch();
@@ -123,9 +117,9 @@ export function VehicleDiscoverySearch() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Marken</SelectItem>
-                {makes.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {value}
+                {facets.makes.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.value} ({option.count})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -140,27 +134,13 @@ export function VehicleDiscoverySearch() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Modelle</SelectItem>
-                {models.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {value}
+                {models.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.value} ({option.count})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-
-            <div className="relative">
-              <MapPin
-                className="text-accent pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <Input
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                aria-label="Stadt oder Postleitzahl"
-                placeholder="Stadt oder PLZ"
-                className="focus-visible:border-input pl-9 focus-visible:ring-0! focus-visible:outline-none!"
-              />
-            </div>
 
             <Button
               type="submit"
@@ -185,7 +165,7 @@ export function VehicleDiscoverySearch() {
             <h3 className="font-extrabold">Fahrzeuge nach Typ entdecken</h3>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-4 lg:grid-cols-8">
+          <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
             {categories.map((category) => (
               <Link
                 key={category.label}
@@ -211,4 +191,56 @@ export function VehicleDiscoverySearch() {
       </Card>
     </div>
   );
+}
+
+function getModelOptions(
+  facets: PublicVehicleSearchFacetsDto,
+  selectedMake: string,
+) {
+  if (selectedMake) {
+    return (
+      facets.makes.find((make) => make.value === selectedMake)?.models ?? []
+    );
+  }
+
+  const counts = new Map<string, number>();
+
+  for (const make of facets.makes) {
+    for (const model of make.models) {
+      counts.set(model.value, (counts.get(model.value) ?? 0) + model.count);
+    }
+  }
+
+  return Array.from(counts, ([value, count]) => ({ value, count })).toSorted(
+    (left, right) => left.value.localeCompare(right.value, "de"),
+  );
+}
+
+function getResultCount(
+  facets: PublicVehicleSearchFacetsDto,
+  selectedMake: string,
+  selectedModel: string,
+) {
+  if (selectedMake) {
+    const make = facets.makes.find((option) => option.value === selectedMake);
+
+    if (!make) return 0;
+    if (!selectedModel) return make.count;
+
+    return (
+      make.models.find((model) => model.value === selectedModel)?.count ?? 0
+    );
+  }
+
+  if (selectedModel) {
+    return facets.makes.reduce(
+      (total, make) =>
+        total +
+        (make.models.find((model) => model.value === selectedModel)?.count ??
+          0),
+      0,
+    );
+  }
+
+  return facets.total;
 }

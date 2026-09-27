@@ -9,7 +9,6 @@ import {
   ReceiptText,
 } from "lucide-react";
 import { homePageContent } from "@/content/de/home-page";
-import { vehicles } from "@/data/vehicles";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,13 +17,22 @@ import { QuickSearchForm } from "./_components/quick-search-form";
 import { AnimatedSection } from "@/components/motion/animated-section";
 import { createPublicMetadata } from "@/lib/metadata";
 import { VehicleDiscoverySearch } from "./_components/vehicle-discovery-search";
+import {
+  getPublicVehicleSearchFacets,
+  listFeaturedPublicVehicles,
+} from "@/features/vehicles/server/public-queries.ts";
 
 export const metadata = createPublicMetadata(
   "Startseite",
   homePageContent.description,
   publicRoutes.home,
 );
-export default function HomePage() {
+export default async function HomePage() {
+  const [featuredVehicles, vehicleFacets] = await Promise.all([
+    listFeaturedPublicVehicles(),
+    getPublicVehicleSearchFacets(),
+  ]);
+
   return (
     <>
       <section className="hero-shell relative isolate flex min-h-[calc(100svh-var(--header-height))] overflow-hidden">
@@ -94,12 +102,12 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-          <QuickSearchForm />
+          <QuickSearchForm facets={vehicleFacets} />
         </div>
       </section>
       <section className="py-12 sm:py-14 lg:py-16">
         <AnimatedSection>
-          <VehicleDiscoverySearch />
+          <VehicleDiscoverySearch facets={vehicleFacets} />
         </AnimatedSection>
       </section>
       <section className="section-space bg-surface">
@@ -117,13 +125,17 @@ export default function HomePage() {
               </Link>
             </Button>
           </div>
-          <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {vehicles
-              .filter((vehicle) => vehicle.isFeatured)
-              .map((vehicle) => (
+          {featuredVehicles.length ? (
+            <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {featuredVehicles.map((vehicle) => (
                 <VehicleCard key={vehicle.id} vehicle={vehicle} />
               ))}
-          </div>
+            </div>
+          ) : (
+            <Card className="text-muted-foreground mt-8 rounded-[var(--radius-sm)] p-6 text-center">
+              Derzeit sind keine hervorgehobenen Fahrzeuge verfügbar.
+            </Card>
+          )}
         </div>
       </section>
       <section className="section-space">

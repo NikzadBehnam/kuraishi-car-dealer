@@ -272,6 +272,16 @@ export type UserWhereInput = {
   termsVersion?: Prisma.StringNullableFilter<"User"> | string | null
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
+  updatedVehicles?: Prisma.VehicleListRelationFilter
+  uploadedMedia?: Prisma.MediaAssetListRelationFilter
+  submittedLeads?: Prisma.LeadListRelationFilter
+  assignedLeads?: Prisma.LeadListRelationFilter
+  leadNotes?: Prisma.LeadNoteListRelationFilter
+  requestedAppointments?: Prisma.AppointmentListRelationFilter
+  assignedAppointments?: Prisma.AppointmentListRelationFilter
+  favourites?: Prisma.FavouriteListRelationFilter
+  comparisonSelections?: Prisma.ComparisonSelectionListRelationFilter
+  activityEvents?: Prisma.ActivityEventListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -293,6 +303,16 @@ export type UserOrderByWithRelationInput = {
   termsVersion?: Prisma.SortOrderInput | Prisma.SortOrder
   sessions?: Prisma.SessionOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
+  updatedVehicles?: Prisma.VehicleOrderByRelationAggregateInput
+  uploadedMedia?: Prisma.MediaAssetOrderByRelationAggregateInput
+  submittedLeads?: Prisma.LeadOrderByRelationAggregateInput
+  assignedLeads?: Prisma.LeadOrderByRelationAggregateInput
+  leadNotes?: Prisma.LeadNoteOrderByRelationAggregateInput
+  requestedAppointments?: Prisma.AppointmentOrderByRelationAggregateInput
+  assignedAppointments?: Prisma.AppointmentOrderByRelationAggregateInput
+  favourites?: Prisma.FavouriteOrderByRelationAggregateInput
+  comparisonSelections?: Prisma.ComparisonSelectionOrderByRelationAggregateInput
+  activityEvents?: Prisma.ActivityEventOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -317,6 +337,16 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   termsVersion?: Prisma.StringNullableFilter<"User"> | string | null
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
+  updatedVehicles?: Prisma.VehicleListRelationFilter
+  uploadedMedia?: Prisma.MediaAssetListRelationFilter
+  submittedLeads?: Prisma.LeadListRelationFilter
+  assignedLeads?: Prisma.LeadListRelationFilter
+  leadNotes?: Prisma.LeadNoteListRelationFilter
+  requestedAppointments?: Prisma.AppointmentListRelationFilter
+  assignedAppointments?: Prisma.AppointmentListRelationFilter
+  favourites?: Prisma.FavouriteListRelationFilter
+  comparisonSelections?: Prisma.ComparisonSelectionListRelationFilter
+  activityEvents?: Prisma.ActivityEventListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -382,6 +412,16 @@ export type UserCreateInput = {
   termsVersion?: string | null
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -403,6 +443,16 @@ export type UserUncheckedCreateInput = {
   termsVersion?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
 }
 
 export type UserUpdateInput = {
@@ -424,6 +474,16 @@ export type UserUpdateInput = {
   termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -445,6 +505,16 @@ export type UserUncheckedUpdateInput = {
   termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -566,6 +636,11 @@ export type UserScalarRelationFilter = {
   isNot?: Prisma.UserWhereInput
 }
 
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
+}
+
 export type StringFieldUpdateOperationsInput = {
   set?: string
 }
@@ -618,6 +693,162 @@ export type UserUpdateOneRequiredWithoutAccountsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAccountsInput, Prisma.UserUpdateWithoutAccountsInput>, Prisma.UserUncheckedUpdateWithoutAccountsInput>
 }
 
+export type UserCreateNestedOneWithoutUpdatedVehiclesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutUpdatedVehiclesInput, Prisma.UserUncheckedCreateWithoutUpdatedVehiclesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutUpdatedVehiclesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutUpdatedVehiclesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutUpdatedVehiclesInput, Prisma.UserUncheckedCreateWithoutUpdatedVehiclesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutUpdatedVehiclesInput
+  upsert?: Prisma.UserUpsertWithoutUpdatedVehiclesInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutUpdatedVehiclesInput, Prisma.UserUpdateWithoutUpdatedVehiclesInput>, Prisma.UserUncheckedUpdateWithoutUpdatedVehiclesInput>
+}
+
+export type UserCreateNestedOneWithoutUploadedMediaInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutUploadedMediaInput, Prisma.UserUncheckedCreateWithoutUploadedMediaInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutUploadedMediaInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutUploadedMediaNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutUploadedMediaInput, Prisma.UserUncheckedCreateWithoutUploadedMediaInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutUploadedMediaInput
+  upsert?: Prisma.UserUpsertWithoutUploadedMediaInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutUploadedMediaInput, Prisma.UserUpdateWithoutUploadedMediaInput>, Prisma.UserUncheckedUpdateWithoutUploadedMediaInput>
+}
+
+export type UserCreateNestedOneWithoutSubmittedLeadsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSubmittedLeadsInput, Prisma.UserUncheckedCreateWithoutSubmittedLeadsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSubmittedLeadsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutAssignedLeadsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAssignedLeadsInput, Prisma.UserUncheckedCreateWithoutAssignedLeadsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAssignedLeadsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutSubmittedLeadsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSubmittedLeadsInput, Prisma.UserUncheckedCreateWithoutSubmittedLeadsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSubmittedLeadsInput
+  upsert?: Prisma.UserUpsertWithoutSubmittedLeadsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSubmittedLeadsInput, Prisma.UserUpdateWithoutSubmittedLeadsInput>, Prisma.UserUncheckedUpdateWithoutSubmittedLeadsInput>
+}
+
+export type UserUpdateOneWithoutAssignedLeadsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAssignedLeadsInput, Prisma.UserUncheckedCreateWithoutAssignedLeadsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAssignedLeadsInput
+  upsert?: Prisma.UserUpsertWithoutAssignedLeadsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAssignedLeadsInput, Prisma.UserUpdateWithoutAssignedLeadsInput>, Prisma.UserUncheckedUpdateWithoutAssignedLeadsInput>
+}
+
+export type UserCreateNestedOneWithoutLeadNotesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLeadNotesInput, Prisma.UserUncheckedCreateWithoutLeadNotesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLeadNotesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutLeadNotesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLeadNotesInput, Prisma.UserUncheckedCreateWithoutLeadNotesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLeadNotesInput
+  upsert?: Prisma.UserUpsertWithoutLeadNotesInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutLeadNotesInput, Prisma.UserUpdateWithoutLeadNotesInput>, Prisma.UserUncheckedUpdateWithoutLeadNotesInput>
+}
+
+export type UserCreateNestedOneWithoutRequestedAppointmentsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutRequestedAppointmentsInput, Prisma.UserUncheckedCreateWithoutRequestedAppointmentsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRequestedAppointmentsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutAssignedAppointmentsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAssignedAppointmentsInput, Prisma.UserUncheckedCreateWithoutAssignedAppointmentsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAssignedAppointmentsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutRequestedAppointmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutRequestedAppointmentsInput, Prisma.UserUncheckedCreateWithoutRequestedAppointmentsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRequestedAppointmentsInput
+  upsert?: Prisma.UserUpsertWithoutRequestedAppointmentsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutRequestedAppointmentsInput, Prisma.UserUpdateWithoutRequestedAppointmentsInput>, Prisma.UserUncheckedUpdateWithoutRequestedAppointmentsInput>
+}
+
+export type UserUpdateOneWithoutAssignedAppointmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAssignedAppointmentsInput, Prisma.UserUncheckedCreateWithoutAssignedAppointmentsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAssignedAppointmentsInput
+  upsert?: Prisma.UserUpsertWithoutAssignedAppointmentsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAssignedAppointmentsInput, Prisma.UserUpdateWithoutAssignedAppointmentsInput>, Prisma.UserUncheckedUpdateWithoutAssignedAppointmentsInput>
+}
+
+export type UserCreateNestedOneWithoutFavouritesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutFavouritesInput, Prisma.UserUncheckedCreateWithoutFavouritesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutFavouritesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutFavouritesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutFavouritesInput, Prisma.UserUncheckedCreateWithoutFavouritesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutFavouritesInput
+  upsert?: Prisma.UserUpsertWithoutFavouritesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutFavouritesInput, Prisma.UserUpdateWithoutFavouritesInput>, Prisma.UserUncheckedUpdateWithoutFavouritesInput>
+}
+
+export type UserCreateNestedOneWithoutComparisonSelectionsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutComparisonSelectionsInput, Prisma.UserUncheckedCreateWithoutComparisonSelectionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutComparisonSelectionsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutComparisonSelectionsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutComparisonSelectionsInput, Prisma.UserUncheckedCreateWithoutComparisonSelectionsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutComparisonSelectionsInput
+  upsert?: Prisma.UserUpsertWithoutComparisonSelectionsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutComparisonSelectionsInput, Prisma.UserUpdateWithoutComparisonSelectionsInput>, Prisma.UserUncheckedUpdateWithoutComparisonSelectionsInput>
+}
+
+export type UserCreateNestedOneWithoutActivityEventsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutActivityEventsInput, Prisma.UserUncheckedCreateWithoutActivityEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutActivityEventsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutActivityEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutActivityEventsInput, Prisma.UserUncheckedCreateWithoutActivityEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutActivityEventsInput
+  upsert?: Prisma.UserUpsertWithoutActivityEventsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutActivityEventsInput, Prisma.UserUpdateWithoutActivityEventsInput>, Prisma.UserUncheckedUpdateWithoutActivityEventsInput>
+}
+
 export type UserCreateWithoutSessionsInput = {
   id: string
   name: string
@@ -636,6 +867,16 @@ export type UserCreateWithoutSessionsInput = {
   termsAcceptedAt?: Date | string | null
   termsVersion?: string | null
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -656,6 +897,16 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   termsAcceptedAt?: Date | string | null
   termsVersion?: string | null
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -692,6 +943,16 @@ export type UserUpdateWithoutSessionsInput = {
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -712,6 +973,16 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -732,6 +1003,16 @@ export type UserCreateWithoutAccountsInput = {
   termsAcceptedAt?: Date | string | null
   termsVersion?: string | null
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -752,6 +1033,16 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   termsAcceptedAt?: Date | string | null
   termsVersion?: string | null
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -788,6 +1079,16 @@ export type UserUpdateWithoutAccountsInput = {
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -808,6 +1109,1376 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserCreateWithoutUpdatedVehiclesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutUpdatedVehiclesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutUpdatedVehiclesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutUpdatedVehiclesInput, Prisma.UserUncheckedCreateWithoutUpdatedVehiclesInput>
+}
+
+export type UserUpsertWithoutUpdatedVehiclesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutUpdatedVehiclesInput, Prisma.UserUncheckedUpdateWithoutUpdatedVehiclesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutUpdatedVehiclesInput, Prisma.UserUncheckedCreateWithoutUpdatedVehiclesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutUpdatedVehiclesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutUpdatedVehiclesInput, Prisma.UserUncheckedUpdateWithoutUpdatedVehiclesInput>
+}
+
+export type UserUpdateWithoutUpdatedVehiclesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutUpdatedVehiclesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserCreateWithoutUploadedMediaInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutUploadedMediaInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutUploadedMediaInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutUploadedMediaInput, Prisma.UserUncheckedCreateWithoutUploadedMediaInput>
+}
+
+export type UserUpsertWithoutUploadedMediaInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutUploadedMediaInput, Prisma.UserUncheckedUpdateWithoutUploadedMediaInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutUploadedMediaInput, Prisma.UserUncheckedCreateWithoutUploadedMediaInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutUploadedMediaInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutUploadedMediaInput, Prisma.UserUncheckedUpdateWithoutUploadedMediaInput>
+}
+
+export type UserUpdateWithoutUploadedMediaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutUploadedMediaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserCreateWithoutSubmittedLeadsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutSubmittedLeadsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutSubmittedLeadsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSubmittedLeadsInput, Prisma.UserUncheckedCreateWithoutSubmittedLeadsInput>
+}
+
+export type UserCreateWithoutAssignedLeadsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutAssignedLeadsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutAssignedLeadsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAssignedLeadsInput, Prisma.UserUncheckedCreateWithoutAssignedLeadsInput>
+}
+
+export type UserUpsertWithoutSubmittedLeadsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSubmittedLeadsInput, Prisma.UserUncheckedUpdateWithoutSubmittedLeadsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSubmittedLeadsInput, Prisma.UserUncheckedCreateWithoutSubmittedLeadsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSubmittedLeadsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSubmittedLeadsInput, Prisma.UserUncheckedUpdateWithoutSubmittedLeadsInput>
+}
+
+export type UserUpdateWithoutSubmittedLeadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutSubmittedLeadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserUpsertWithoutAssignedLeadsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAssignedLeadsInput, Prisma.UserUncheckedUpdateWithoutAssignedLeadsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAssignedLeadsInput, Prisma.UserUncheckedCreateWithoutAssignedLeadsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAssignedLeadsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAssignedLeadsInput, Prisma.UserUncheckedUpdateWithoutAssignedLeadsInput>
+}
+
+export type UserUpdateWithoutAssignedLeadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAssignedLeadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserCreateWithoutLeadNotesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutLeadNotesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutLeadNotesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutLeadNotesInput, Prisma.UserUncheckedCreateWithoutLeadNotesInput>
+}
+
+export type UserUpsertWithoutLeadNotesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutLeadNotesInput, Prisma.UserUncheckedUpdateWithoutLeadNotesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutLeadNotesInput, Prisma.UserUncheckedCreateWithoutLeadNotesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutLeadNotesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutLeadNotesInput, Prisma.UserUncheckedUpdateWithoutLeadNotesInput>
+}
+
+export type UserUpdateWithoutLeadNotesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutLeadNotesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserCreateWithoutRequestedAppointmentsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutRequestedAppointmentsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutRequestedAppointmentsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutRequestedAppointmentsInput, Prisma.UserUncheckedCreateWithoutRequestedAppointmentsInput>
+}
+
+export type UserCreateWithoutAssignedAppointmentsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutAssignedAppointmentsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutAssignedAppointmentsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAssignedAppointmentsInput, Prisma.UserUncheckedCreateWithoutAssignedAppointmentsInput>
+}
+
+export type UserUpsertWithoutRequestedAppointmentsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutRequestedAppointmentsInput, Prisma.UserUncheckedUpdateWithoutRequestedAppointmentsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutRequestedAppointmentsInput, Prisma.UserUncheckedCreateWithoutRequestedAppointmentsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutRequestedAppointmentsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutRequestedAppointmentsInput, Prisma.UserUncheckedUpdateWithoutRequestedAppointmentsInput>
+}
+
+export type UserUpdateWithoutRequestedAppointmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutRequestedAppointmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserUpsertWithoutAssignedAppointmentsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAssignedAppointmentsInput, Prisma.UserUncheckedUpdateWithoutAssignedAppointmentsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAssignedAppointmentsInput, Prisma.UserUncheckedCreateWithoutAssignedAppointmentsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAssignedAppointmentsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAssignedAppointmentsInput, Prisma.UserUncheckedUpdateWithoutAssignedAppointmentsInput>
+}
+
+export type UserUpdateWithoutAssignedAppointmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAssignedAppointmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserCreateWithoutFavouritesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutFavouritesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutFavouritesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutFavouritesInput, Prisma.UserUncheckedCreateWithoutFavouritesInput>
+}
+
+export type UserUpsertWithoutFavouritesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutFavouritesInput, Prisma.UserUncheckedUpdateWithoutFavouritesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutFavouritesInput, Prisma.UserUncheckedCreateWithoutFavouritesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutFavouritesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutFavouritesInput, Prisma.UserUncheckedUpdateWithoutFavouritesInput>
+}
+
+export type UserUpdateWithoutFavouritesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutFavouritesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserCreateWithoutComparisonSelectionsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventCreateNestedManyWithoutActorInput
+}
+
+export type UserUncheckedCreateWithoutComparisonSelectionsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  activityEvents?: Prisma.ActivityEventUncheckedCreateNestedManyWithoutActorInput
+}
+
+export type UserCreateOrConnectWithoutComparisonSelectionsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutComparisonSelectionsInput, Prisma.UserUncheckedCreateWithoutComparisonSelectionsInput>
+}
+
+export type UserUpsertWithoutComparisonSelectionsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutComparisonSelectionsInput, Prisma.UserUncheckedUpdateWithoutComparisonSelectionsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutComparisonSelectionsInput, Prisma.UserUncheckedCreateWithoutComparisonSelectionsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutComparisonSelectionsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutComparisonSelectionsInput, Prisma.UserUncheckedUpdateWithoutComparisonSelectionsInput>
+}
+
+export type UserUpdateWithoutComparisonSelectionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUpdateManyWithoutActorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutComparisonSelectionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  activityEvents?: Prisma.ActivityEventUncheckedUpdateManyWithoutActorNestedInput
+}
+
+export type UserCreateWithoutActivityEventsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutActivityEventsInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  role?: string | null
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  firstName?: string | null
+  lastName?: string | null
+  phone?: string | null
+  termsAcceptedAt?: Date | string | null
+  termsVersion?: string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  updatedVehicles?: Prisma.VehicleUncheckedCreateNestedManyWithoutUpdatedByInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedCreateNestedManyWithoutUploadedByInput
+  submittedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutSubmittedByInput
+  assignedLeads?: Prisma.LeadUncheckedCreateNestedManyWithoutAssignedToInput
+  leadNotes?: Prisma.LeadNoteUncheckedCreateNestedManyWithoutAuthorInput
+  requestedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutRequestedByInput
+  assignedAppointments?: Prisma.AppointmentUncheckedCreateNestedManyWithoutAssignedToInput
+  favourites?: Prisma.FavouriteUncheckedCreateNestedManyWithoutUserInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutActivityEventsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutActivityEventsInput, Prisma.UserUncheckedCreateWithoutActivityEventsInput>
+}
+
+export type UserUpsertWithoutActivityEventsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutActivityEventsInput, Prisma.UserUncheckedUpdateWithoutActivityEventsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutActivityEventsInput, Prisma.UserUncheckedCreateWithoutActivityEventsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutActivityEventsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutActivityEventsInput, Prisma.UserUncheckedUpdateWithoutActivityEventsInput>
+}
+
+export type UserUpdateWithoutActivityEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutActivityEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  role?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsVersion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  updatedVehicles?: Prisma.VehicleUncheckedUpdateManyWithoutUpdatedByNestedInput
+  uploadedMedia?: Prisma.MediaAssetUncheckedUpdateManyWithoutUploadedByNestedInput
+  submittedLeads?: Prisma.LeadUncheckedUpdateManyWithoutSubmittedByNestedInput
+  assignedLeads?: Prisma.LeadUncheckedUpdateManyWithoutAssignedToNestedInput
+  leadNotes?: Prisma.LeadNoteUncheckedUpdateManyWithoutAuthorNestedInput
+  requestedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutRequestedByNestedInput
+  assignedAppointments?: Prisma.AppointmentUncheckedUpdateManyWithoutAssignedToNestedInput
+  favourites?: Prisma.FavouriteUncheckedUpdateManyWithoutUserNestedInput
+  comparisonSelections?: Prisma.ComparisonSelectionUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -818,11 +2489,31 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
 export type UserCountOutputType = {
   sessions: number
   accounts: number
+  updatedVehicles: number
+  uploadedMedia: number
+  submittedLeads: number
+  assignedLeads: number
+  leadNotes: number
+  requestedAppointments: number
+  assignedAppointments: number
+  favourites: number
+  comparisonSelections: number
+  activityEvents: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | UserCountOutputTypeCountSessionsArgs
   accounts?: boolean | UserCountOutputTypeCountAccountsArgs
+  updatedVehicles?: boolean | UserCountOutputTypeCountUpdatedVehiclesArgs
+  uploadedMedia?: boolean | UserCountOutputTypeCountUploadedMediaArgs
+  submittedLeads?: boolean | UserCountOutputTypeCountSubmittedLeadsArgs
+  assignedLeads?: boolean | UserCountOutputTypeCountAssignedLeadsArgs
+  leadNotes?: boolean | UserCountOutputTypeCountLeadNotesArgs
+  requestedAppointments?: boolean | UserCountOutputTypeCountRequestedAppointmentsArgs
+  assignedAppointments?: boolean | UserCountOutputTypeCountAssignedAppointmentsArgs
+  favourites?: boolean | UserCountOutputTypeCountFavouritesArgs
+  comparisonSelections?: boolean | UserCountOutputTypeCountComparisonSelectionsArgs
+  activityEvents?: boolean | UserCountOutputTypeCountActivityEventsArgs
 }
 
 /**
@@ -849,6 +2540,76 @@ export type UserCountOutputTypeCountAccountsArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.AccountWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountUpdatedVehiclesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.VehicleWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountUploadedMediaArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MediaAssetWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountSubmittedLeadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LeadWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAssignedLeadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LeadWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountLeadNotesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LeadNoteWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountRequestedAppointmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AppointmentWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAssignedAppointmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AppointmentWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountFavouritesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.FavouriteWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountComparisonSelectionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ComparisonSelectionWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountActivityEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ActivityEventWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -869,6 +2630,16 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   termsVersion?: boolean
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
+  updatedVehicles?: boolean | Prisma.User$updatedVehiclesArgs<ExtArgs>
+  uploadedMedia?: boolean | Prisma.User$uploadedMediaArgs<ExtArgs>
+  submittedLeads?: boolean | Prisma.User$submittedLeadsArgs<ExtArgs>
+  assignedLeads?: boolean | Prisma.User$assignedLeadsArgs<ExtArgs>
+  leadNotes?: boolean | Prisma.User$leadNotesArgs<ExtArgs>
+  requestedAppointments?: boolean | Prisma.User$requestedAppointmentsArgs<ExtArgs>
+  assignedAppointments?: boolean | Prisma.User$assignedAppointmentsArgs<ExtArgs>
+  favourites?: boolean | Prisma.User$favouritesArgs<ExtArgs>
+  comparisonSelections?: boolean | Prisma.User$comparisonSelectionsArgs<ExtArgs>
+  activityEvents?: boolean | Prisma.User$activityEventsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -933,6 +2704,16 @@ export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = run
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
+  updatedVehicles?: boolean | Prisma.User$updatedVehiclesArgs<ExtArgs>
+  uploadedMedia?: boolean | Prisma.User$uploadedMediaArgs<ExtArgs>
+  submittedLeads?: boolean | Prisma.User$submittedLeadsArgs<ExtArgs>
+  assignedLeads?: boolean | Prisma.User$assignedLeadsArgs<ExtArgs>
+  leadNotes?: boolean | Prisma.User$leadNotesArgs<ExtArgs>
+  requestedAppointments?: boolean | Prisma.User$requestedAppointmentsArgs<ExtArgs>
+  assignedAppointments?: boolean | Prisma.User$assignedAppointmentsArgs<ExtArgs>
+  favourites?: boolean | Prisma.User$favouritesArgs<ExtArgs>
+  comparisonSelections?: boolean | Prisma.User$comparisonSelectionsArgs<ExtArgs>
+  activityEvents?: boolean | Prisma.User$activityEventsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -943,6 +2724,16 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   objects: {
     sessions: Prisma.$SessionPayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
+    updatedVehicles: Prisma.$VehiclePayload<ExtArgs>[]
+    uploadedMedia: Prisma.$MediaAssetPayload<ExtArgs>[]
+    submittedLeads: Prisma.$LeadPayload<ExtArgs>[]
+    assignedLeads: Prisma.$LeadPayload<ExtArgs>[]
+    leadNotes: Prisma.$LeadNotePayload<ExtArgs>[]
+    requestedAppointments: Prisma.$AppointmentPayload<ExtArgs>[]
+    assignedAppointments: Prisma.$AppointmentPayload<ExtArgs>[]
+    favourites: Prisma.$FavouritePayload<ExtArgs>[]
+    comparisonSelections: Prisma.$ComparisonSelectionPayload<ExtArgs>[]
+    activityEvents: Prisma.$ActivityEventPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1357,6 +3148,16 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   readonly [Symbol.toStringTag]: "PrismaPromise"
   sessions<T extends Prisma.User$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.User$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  updatedVehicles<T extends Prisma.User$updatedVehiclesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$updatedVehiclesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VehiclePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  uploadedMedia<T extends Prisma.User$uploadedMediaArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$uploadedMediaArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MediaAssetPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  submittedLeads<T extends Prisma.User$submittedLeadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$submittedLeadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  assignedLeads<T extends Prisma.User$assignedLeadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$assignedLeadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  leadNotes<T extends Prisma.User$leadNotesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$leadNotesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeadNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  requestedAppointments<T extends Prisma.User$requestedAppointmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$requestedAppointmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AppointmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  assignedAppointments<T extends Prisma.User$assignedAppointmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$assignedAppointmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AppointmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  favourites<T extends Prisma.User$favouritesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$favouritesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FavouritePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  comparisonSelections<T extends Prisma.User$comparisonSelectionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$comparisonSelectionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ComparisonSelectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  activityEvents<T extends Prisma.User$activityEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$activityEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1840,6 +3641,246 @@ export type User$accountsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.AccountScalarFieldEnum | Prisma.AccountScalarFieldEnum[]
+}
+
+/**
+ * User.updatedVehicles
+ */
+export type User$updatedVehiclesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Vehicle
+   */
+  select?: Prisma.VehicleSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Vehicle
+   */
+  omit?: Prisma.VehicleOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VehicleInclude<ExtArgs> | null
+  where?: Prisma.VehicleWhereInput
+  orderBy?: Prisma.VehicleOrderByWithRelationInput | Prisma.VehicleOrderByWithRelationInput[]
+  cursor?: Prisma.VehicleWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.VehicleScalarFieldEnum | Prisma.VehicleScalarFieldEnum[]
+}
+
+/**
+ * User.uploadedMedia
+ */
+export type User$uploadedMediaArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MediaAsset
+   */
+  select?: Prisma.MediaAssetSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MediaAsset
+   */
+  omit?: Prisma.MediaAssetOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MediaAssetInclude<ExtArgs> | null
+  where?: Prisma.MediaAssetWhereInput
+  orderBy?: Prisma.MediaAssetOrderByWithRelationInput | Prisma.MediaAssetOrderByWithRelationInput[]
+  cursor?: Prisma.MediaAssetWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MediaAssetScalarFieldEnum | Prisma.MediaAssetScalarFieldEnum[]
+}
+
+/**
+ * User.submittedLeads
+ */
+export type User$submittedLeadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Lead
+   */
+  select?: Prisma.LeadSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Lead
+   */
+  omit?: Prisma.LeadOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadInclude<ExtArgs> | null
+  where?: Prisma.LeadWhereInput
+  orderBy?: Prisma.LeadOrderByWithRelationInput | Prisma.LeadOrderByWithRelationInput[]
+  cursor?: Prisma.LeadWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LeadScalarFieldEnum | Prisma.LeadScalarFieldEnum[]
+}
+
+/**
+ * User.assignedLeads
+ */
+export type User$assignedLeadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Lead
+   */
+  select?: Prisma.LeadSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Lead
+   */
+  omit?: Prisma.LeadOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadInclude<ExtArgs> | null
+  where?: Prisma.LeadWhereInput
+  orderBy?: Prisma.LeadOrderByWithRelationInput | Prisma.LeadOrderByWithRelationInput[]
+  cursor?: Prisma.LeadWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LeadScalarFieldEnum | Prisma.LeadScalarFieldEnum[]
+}
+
+/**
+ * User.leadNotes
+ */
+export type User$leadNotesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeadNote
+   */
+  select?: Prisma.LeadNoteSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeadNote
+   */
+  omit?: Prisma.LeadNoteOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeadNoteInclude<ExtArgs> | null
+  where?: Prisma.LeadNoteWhereInput
+  orderBy?: Prisma.LeadNoteOrderByWithRelationInput | Prisma.LeadNoteOrderByWithRelationInput[]
+  cursor?: Prisma.LeadNoteWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LeadNoteScalarFieldEnum | Prisma.LeadNoteScalarFieldEnum[]
+}
+
+/**
+ * User.requestedAppointments
+ */
+export type User$requestedAppointmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Appointment
+   */
+  select?: Prisma.AppointmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Appointment
+   */
+  omit?: Prisma.AppointmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AppointmentInclude<ExtArgs> | null
+  where?: Prisma.AppointmentWhereInput
+  orderBy?: Prisma.AppointmentOrderByWithRelationInput | Prisma.AppointmentOrderByWithRelationInput[]
+  cursor?: Prisma.AppointmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AppointmentScalarFieldEnum | Prisma.AppointmentScalarFieldEnum[]
+}
+
+/**
+ * User.assignedAppointments
+ */
+export type User$assignedAppointmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Appointment
+   */
+  select?: Prisma.AppointmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Appointment
+   */
+  omit?: Prisma.AppointmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AppointmentInclude<ExtArgs> | null
+  where?: Prisma.AppointmentWhereInput
+  orderBy?: Prisma.AppointmentOrderByWithRelationInput | Prisma.AppointmentOrderByWithRelationInput[]
+  cursor?: Prisma.AppointmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AppointmentScalarFieldEnum | Prisma.AppointmentScalarFieldEnum[]
+}
+
+/**
+ * User.favourites
+ */
+export type User$favouritesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Favourite
+   */
+  select?: Prisma.FavouriteSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Favourite
+   */
+  omit?: Prisma.FavouriteOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FavouriteInclude<ExtArgs> | null
+  where?: Prisma.FavouriteWhereInput
+  orderBy?: Prisma.FavouriteOrderByWithRelationInput | Prisma.FavouriteOrderByWithRelationInput[]
+  cursor?: Prisma.FavouriteWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FavouriteScalarFieldEnum | Prisma.FavouriteScalarFieldEnum[]
+}
+
+/**
+ * User.comparisonSelections
+ */
+export type User$comparisonSelectionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ComparisonSelection
+   */
+  select?: Prisma.ComparisonSelectionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ComparisonSelection
+   */
+  omit?: Prisma.ComparisonSelectionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ComparisonSelectionInclude<ExtArgs> | null
+  where?: Prisma.ComparisonSelectionWhereInput
+  orderBy?: Prisma.ComparisonSelectionOrderByWithRelationInput | Prisma.ComparisonSelectionOrderByWithRelationInput[]
+  cursor?: Prisma.ComparisonSelectionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ComparisonSelectionScalarFieldEnum | Prisma.ComparisonSelectionScalarFieldEnum[]
+}
+
+/**
+ * User.activityEvents
+ */
+export type User$activityEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ActivityEvent
+   */
+  select?: Prisma.ActivityEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ActivityEvent
+   */
+  omit?: Prisma.ActivityEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ActivityEventInclude<ExtArgs> | null
+  where?: Prisma.ActivityEventWhereInput
+  orderBy?: Prisma.ActivityEventOrderByWithRelationInput | Prisma.ActivityEventOrderByWithRelationInput[]
+  cursor?: Prisma.ActivityEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ActivityEventScalarFieldEnum | Prisma.ActivityEventScalarFieldEnum[]
 }
 
 /**

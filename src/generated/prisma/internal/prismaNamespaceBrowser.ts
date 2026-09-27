@@ -54,7 +54,16 @@ export const ModelName = {
   User: 'User',
   Session: 'Session',
   Account: 'Account',
-  Verification: 'Verification'
+  Verification: 'Verification',
+  Vehicle: 'Vehicle',
+  MediaAsset: 'MediaAsset',
+  Lead: 'Lead',
+  ValuationRequest: 'ValuationRequest',
+  LeadNote: 'LeadNote',
+  Appointment: 'Appointment',
+  Favourite: 'Favourite',
+  ComparisonSelection: 'ComparisonSelection',
+  ActivityEvent: 'ActivityEvent'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -142,12 +151,196 @@ export const VerificationScalarFieldEnum = {
 export type VerificationScalarFieldEnum = (typeof VerificationScalarFieldEnum)[keyof typeof VerificationScalarFieldEnum]
 
 
+export const VehicleScalarFieldEnum = {
+  id: 'id',
+  stockNumber: 'stockNumber',
+  slug: 'slug',
+  make: 'make',
+  model: 'model',
+  variant: 'variant',
+  description: 'description',
+  priceCents: 'priceCents',
+  marginEstimateCents: 'marginEstimateCents',
+  firstRegistration: 'firstRegistration',
+  mileage: 'mileage',
+  fuelType: 'fuelType',
+  transmissionType: 'transmissionType',
+  powerKw: 'powerKw',
+  bodyType: 'bodyType',
+  exteriorColor: 'exteriorColor',
+  consumption: 'consumption',
+  co2Emission: 'co2Emission',
+  condition: 'condition',
+  features: 'features',
+  labels: 'labels',
+  vinLastSix: 'vinLastSix',
+  ownerCount: 'ownerCount',
+  status: 'status',
+  inspectionStatus: 'inspectionStatus',
+  isFeatured: 'isFeatured',
+  acquisitionDate: 'acquisitionDate',
+  publishedAt: 'publishedAt',
+  reservedAt: 'reservedAt',
+  reservedUntil: 'reservedUntil',
+  soldAt: 'soldAt',
+  archivedAt: 'archivedAt',
+  updatedByUserId: 'updatedByUserId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VehicleScalarFieldEnum = (typeof VehicleScalarFieldEnum)[keyof typeof VehicleScalarFieldEnum]
+
+
+export const MediaAssetScalarFieldEnum = {
+  id: 'id',
+  provider: 'provider',
+  providerAssetId: 'providerAssetId',
+  url: 'url',
+  originalFilename: 'originalFilename',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  width: 'width',
+  height: 'height',
+  title: 'title',
+  altText: 'altText',
+  vehicleId: 'vehicleId',
+  position: 'position',
+  uploadedByUserId: 'uploadedByUserId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MediaAssetScalarFieldEnum = (typeof MediaAssetScalarFieldEnum)[keyof typeof MediaAssetScalarFieldEnum]
+
+
+export const LeadScalarFieldEnum = {
+  id: 'id',
+  source: 'source',
+  status: 'status',
+  priority: 'priority',
+  customerName: 'customerName',
+  customerEmail: 'customerEmail',
+  customerPhone: 'customerPhone',
+  message: 'message',
+  preferredDate: 'preferredDate',
+  consentAcceptedAt: 'consentAcceptedAt',
+  consentVersion: 'consentVersion',
+  vehicleId: 'vehicleId',
+  submittedByUserId: 'submittedByUserId',
+  assignedToUserId: 'assignedToUserId',
+  closedAt: 'closedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeadScalarFieldEnum = (typeof LeadScalarFieldEnum)[keyof typeof LeadScalarFieldEnum]
+
+
+export const ValuationRequestScalarFieldEnum = {
+  id: 'id',
+  leadId: 'leadId',
+  make: 'make',
+  model: 'model',
+  firstRegistration: 'firstRegistration',
+  mileage: 'mileage',
+  conditionDescription: 'conditionDescription',
+  accidentHistory: 'accidentHistory',
+  serviceHistory: 'serviceHistory',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ValuationRequestScalarFieldEnum = (typeof ValuationRequestScalarFieldEnum)[keyof typeof ValuationRequestScalarFieldEnum]
+
+
+export const LeadNoteScalarFieldEnum = {
+  id: 'id',
+  leadId: 'leadId',
+  authorUserId: 'authorUserId',
+  body: 'body',
+  createdAt: 'createdAt'
+} as const
+
+export type LeadNoteScalarFieldEnum = (typeof LeadNoteScalarFieldEnum)[keyof typeof LeadNoteScalarFieldEnum]
+
+
+export const AppointmentScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  status: 'status',
+  customerName: 'customerName',
+  customerEmail: 'customerEmail',
+  customerPhone: 'customerPhone',
+  startsAt: 'startsAt',
+  endsAt: 'endsAt',
+  location: 'location',
+  notes: 'notes',
+  vehicleId: 'vehicleId',
+  leadId: 'leadId',
+  requestedByUserId: 'requestedByUserId',
+  assignedToUserId: 'assignedToUserId',
+  confirmedAt: 'confirmedAt',
+  completedAt: 'completedAt',
+  cancelledAt: 'cancelledAt',
+  cancellationReason: 'cancellationReason',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AppointmentScalarFieldEnum = (typeof AppointmentScalarFieldEnum)[keyof typeof AppointmentScalarFieldEnum]
+
+
+export const FavouriteScalarFieldEnum = {
+  userId: 'userId',
+  vehicleId: 'vehicleId',
+  createdAt: 'createdAt'
+} as const
+
+export type FavouriteScalarFieldEnum = (typeof FavouriteScalarFieldEnum)[keyof typeof FavouriteScalarFieldEnum]
+
+
+export const ComparisonSelectionScalarFieldEnum = {
+  userId: 'userId',
+  vehicleId: 'vehicleId',
+  position: 'position',
+  createdAt: 'createdAt'
+} as const
+
+export type ComparisonSelectionScalarFieldEnum = (typeof ComparisonSelectionScalarFieldEnum)[keyof typeof ComparisonSelectionScalarFieldEnum]
+
+
+export const ActivityEventScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  severity: 'severity',
+  actorUserId: 'actorUserId',
+  actorName: 'actorName',
+  actorRole: 'actorRole',
+  targetType: 'targetType',
+  targetId: 'targetId',
+  targetLabel: 'targetLabel',
+  summary: 'summary',
+  metadata: 'metadata',
+  occurredAt: 'occurredAt'
+} as const
+
+export type ActivityEventScalarFieldEnum = (typeof ActivityEventScalarFieldEnum)[keyof typeof ActivityEventScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -164,4 +357,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

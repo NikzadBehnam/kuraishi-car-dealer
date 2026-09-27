@@ -26,6 +26,16 @@ model User {
   termsVersion    String?
   sessions        Session[]
   accounts        Account[]
+  updatedVehicles Vehicle[] @relation("VehicleUpdatedBy")
+  uploadedMedia   MediaAsset[] @relation("MediaUploadedBy")
+  submittedLeads  Lead[]       @relation("LeadSubmittedBy")
+  assignedLeads   Lead[]       @relation("LeadAssignedTo")
+  leadNotes       LeadNote[]    @relation("LeadNoteAuthor")
+  requestedAppointments Appointment[] @relation("AppointmentRequestedBy")
+  assignedAppointments  Appointment[] @relation("AppointmentAssignedTo")
+  favourites            Favourite[]
+  comparisonSelections  ComparisonSelection[]
+  activityEvents        ActivityEvent[] @relation("ActivityActor")
 
   @@unique([email])
   @@map("user")
@@ -80,4 +90,322 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+enum VehicleFuelType {
+  petrol
+  diesel
+  electric
+  hybrid
+}
+
+enum VehicleTransmissionType {
+  automatic
+  manual
+}
+
+enum VehicleBodyType {
+  suv
+  compact
+  sedan
+  wagon
+  van
+  sports
+}
+
+enum VehicleCondition {
+  used
+  demonstrator
+  annual
+}
+
+enum VehicleStatus {
+  draft
+  available
+  reserved
+  sold
+  archived
+}
+
+enum VehicleInspectionStatus {
+  pending
+  in_progress
+  passed
+  failed
+}
+
+enum LeadSource {
+  contact
+  valuation
+  test_drive @map("test-drive")
+  callback
+}
+
+enum LeadStatus {
+  new
+  contacted
+  qualified
+  closed
+  lost
+}
+
+enum LeadPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum AppointmentType {
+  test_drive
+  consultation
+  valuation
+  workshop
+  callback
+}
+
+enum AppointmentStatus {
+  requested
+  confirmed
+  completed
+  cancelled
+}
+
+enum ActivitySeverity {
+  info
+  success
+  warning
+  risk
+}
+
+model Vehicle {
+  id                     String                  @id @default(cuid())
+  stockNumber            String                  @unique
+  slug                   String                  @unique
+  make                   String
+  model                  String
+  variant                String
+  description            String                  @db.Text
+  priceCents             Int
+  marginEstimateCents    Int?
+  firstRegistration      DateTime                @db.Date
+  mileage                Int
+  fuelType               VehicleFuelType
+  transmissionType       VehicleTransmissionType
+  powerKw                Int
+  bodyType               VehicleBodyType
+  exteriorColor          String
+  consumption            Float?
+  co2Emission            Int?
+  condition              VehicleCondition
+  features               String[]                @default([])
+  labels                 String[]                @default([])
+  vinLastSix             String
+  ownerCount             Int                     @default(0)
+  status                 VehicleStatus            @default(draft)
+  inspectionStatus       VehicleInspectionStatus  @default(pending)
+  isFeatured             Boolean                  @default(false)
+  acquisitionDate        DateTime?                @db.Date
+  publishedAt            DateTime?
+  reservedAt             DateTime?
+  reservedUntil          DateTime?
+  soldAt                 DateTime?
+  archivedAt             DateTime?
+  updatedByUserId        String?
+  updatedBy              User?                    @relation("VehicleUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  images                 MediaAsset[]
+  leads                  Lead[]
+  appointments           Appointment[]
+  favourites             Favourite[]
+  comparisonSelections   ComparisonSelection[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  @@index([status, isFeatured])
+  @@index([status, publishedAt])
+  @@index([make, model])
+  @@index([priceCents])
+  @@index([mileage])
+  @@index([updatedAt])
+  @@index([updatedByUserId])
+  @@map("vehicle")
+}
+
+model MediaAsset {
+  id               String   @id @default(cuid())
+  provider         String
+  providerAssetId  String
+  url              String
+  originalFilename String
+  mimeType         String
+  sizeBytes        BigInt
+  width            Int?
+  height           Int?
+  title            String
+  altText          String?
+  vehicleId        String?
+  position         Int?
+  vehicle          Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  uploadedByUserId String?
+  uploadedBy       User?    @relation("MediaUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([provider, providerAssetId])
+  @@unique([vehicleId, position])
+  @@index([uploadedByUserId])
+  @@index([createdAt])
+  @@map("media_asset")
+}
+
+model Lead {
+  id                   String            @id @default(cuid())
+  source               LeadSource
+  status               LeadStatus        @default(new)
+  priority             LeadPriority      @default(medium)
+  customerName         String
+  customerEmail        String
+  customerPhone        String?
+  message              String?           @db.Text
+  preferredDate        DateTime?
+  consentAcceptedAt    DateTime?
+  consentVersion       String?
+  vehicleId            String?
+  vehicle              Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  submittedByUserId    String?
+  submittedBy          User?             @relation("LeadSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  assignedToUserId     String?
+  assignedTo           User?             @relation("LeadAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  valuationRequest     ValuationRequest?
+  notes                LeadNote[]
+  appointments         Appointment[]
+  closedAt             DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([status, createdAt])
+  @@index([assignedToUserId, status, createdAt])
+  @@index([source, createdAt])
+  @@index([priority, createdAt])
+  @@index([vehicleId])
+  @@index([submittedByUserId])
+  @@index([customerEmail])
+  @@map("lead")
+}
+
+model ValuationRequest {
+  id                   String   @id @default(cuid())
+  leadId               String   @unique
+  lead                 Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  make                 String
+  model                String
+  firstRegistration    DateTime @db.Date
+  mileage              Int
+  conditionDescription String?
+  accidentHistory      String?
+  serviceHistory       String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("valuation_request")
+}
+
+model LeadNote {
+  id           String   @id @default(cuid())
+  leadId       String
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorUserId String?
+  author       User?    @relation("LeadNoteAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  body         String   @db.Text
+  createdAt    DateTime @default(now())
+
+  @@index([leadId, createdAt])
+  @@index([authorUserId])
+  @@map("lead_note")
+}
+
+model Appointment {
+  id                String            @id @default(cuid())
+  type              AppointmentType
+  status            AppointmentStatus @default(requested)
+  customerName      String
+  customerEmail     String
+  customerPhone     String?
+  startsAt          DateTime
+  endsAt            DateTime
+  location          String
+  notes             String?           @db.Text
+  vehicleId         String?
+  vehicle           Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  leadId            String?
+  lead              Lead?             @relation(fields: [leadId], references: [id], onDelete: Restrict)
+  requestedByUserId String?
+  requestedBy       User?             @relation("AppointmentRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  assignedToUserId  String?
+  assignedTo        User?             @relation("AppointmentAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  confirmedAt       DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?          @db.Text
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([startsAt])
+  @@index([status, startsAt])
+  @@index([type, startsAt])
+  @@index([assignedToUserId, startsAt])
+  @@index([vehicleId])
+  @@index([leadId])
+  @@index([requestedByUserId])
+  @@index([customerEmail])
+  @@map("appointment")
+}
+
+model Favourite {
+  userId    String
+  vehicleId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@id([userId, vehicleId])
+  @@index([vehicleId])
+  @@map("favourite")
+}
+
+model ComparisonSelection {
+  userId    String
+  vehicleId String
+  position  Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@id([userId, vehicleId])
+  @@unique([userId, position])
+  @@index([vehicleId])
+  @@map("comparison_selection")
+}
+
+model ActivityEvent {
+  id          String           @id @default(cuid())
+  type        String
+  severity    ActivitySeverity @default(info)
+  actorUserId String?
+  actor       User?            @relation("ActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorName   String
+  actorRole   String?
+  targetType  String
+  targetId    String
+  targetLabel String
+  summary     String
+  metadata    Json             @default("{}")
+  occurredAt  DateTime         @default(now())
+
+  @@index([occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([type, occurredAt])
+  @@index([severity, occurredAt])
+  @@index([targetType, targetId, occurredAt])
+  @@map("activity_event")
 }

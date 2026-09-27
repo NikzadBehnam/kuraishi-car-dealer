@@ -12,8 +12,8 @@ import {
   optionalSearchSchema,
   normalizedTextSchema,
   paginationQueryShape,
-  resourceIdSchema,
   sortDirectionSchema,
+  userIdSchema,
 } from "../shared/schemas.ts";
 import {
   leadPriorities,
@@ -70,7 +70,7 @@ export const publicVehicleValuationSubmissionSchema = z.object({
 
 export const leadListQuerySchema = z.object({
   ...paginationQueryShape,
-  assignedToUserId: resourceIdSchema.optional(),
+  assignedToUserId: userIdSchema.optional(),
   priority: leadPrioritySchema.optional(),
   search: optionalSearchSchema,
   sortDirection: sortDirectionSchema.default("desc"),

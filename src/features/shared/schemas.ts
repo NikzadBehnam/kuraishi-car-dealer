@@ -25,6 +25,12 @@ export const resourceIdSchema = z
   .cuid("Resource ID must be a valid CUID.")
   .max(domainFieldLimits.id);
 
+export const userIdSchema = z
+  .string()
+  .trim()
+  .min(1, "User ID is required.")
+  .max(domainFieldLimits.id);
+
 export const paginationQueryShape = {
   page: z.coerce.number().int().min(1).default(paginationDefaults.page),
   pageSize: z.coerce

@@ -10,6 +10,7 @@ import {
   paginationQueryShape,
   resourceIdSchema,
   sortDirectionSchema,
+  userIdSchema,
 } from "../shared/schemas.ts";
 import {
   appointmentSortFields,
@@ -26,17 +27,14 @@ export const appointmentWindowSchema = z
     endsAt: z.iso.datetime({ offset: true }),
     startsAt: z.iso.datetime({ offset: true }),
   })
-  .refine(
-    ({ endsAt, startsAt }) => Date.parse(endsAt) > Date.parse(startsAt),
-    {
-      message: "Appointment end must be after its start.",
-      path: ["endsAt"],
-    },
-  );
+  .refine(({ endsAt, startsAt }) => Date.parse(endsAt) > Date.parse(startsAt), {
+    message: "Appointment end must be after its start.",
+    path: ["endsAt"],
+  });
 
 export const appointmentDraftSchema = z
   .object({
-    assignedToUserId: resourceIdSchema.optional(),
+    assignedToUserId: userIdSchema.optional(),
     customerEmail: normalizedEmailSchema,
     customerName: normalizedNameSchema,
     customerPhone: optionalPhoneSchema,
@@ -48,18 +46,15 @@ export const appointmentDraftSchema = z
     type: appointmentTypeSchema,
     vehicleId: resourceIdSchema.optional(),
   })
-  .refine(
-    ({ endsAt, startsAt }) => Date.parse(endsAt) > Date.parse(startsAt),
-    {
-      message: "Appointment end must be after its start.",
-      path: ["endsAt"],
-    },
-  );
+  .refine(({ endsAt, startsAt }) => Date.parse(endsAt) > Date.parse(startsAt), {
+    message: "Appointment end must be after its start.",
+    path: ["endsAt"],
+  });
 
 export const appointmentListQuerySchema = z
   .object({
     ...paginationQueryShape,
-    assignedToUserId: resourceIdSchema.optional(),
+    assignedToUserId: userIdSchema.optional(),
     from: z.iso.datetime({ offset: true }).optional(),
     search: optionalSearchSchema,
     sortDirection: sortDirectionSchema.default("asc"),
@@ -77,7 +72,25 @@ export const appointmentListQuerySchema = z
     },
   );
 
+export const appointmentStatusCommandSchema = z.object({
+  cancellationReason: optionalMessageSchema,
+  id: resourceIdSchema,
+  status: appointmentStatusSchema,
+});
+
+export const appointmentRescheduleCommandSchema = z
+  .object({
+    endsAt: z.iso.datetime({ offset: true }),
+    id: resourceIdSchema,
+    startsAt: z.iso.datetime({ offset: true }),
+  })
+  .refine(({ endsAt, startsAt }) => Date.parse(endsAt) > Date.parse(startsAt), {
+    message: "Appointment end must be after its start.",
+    path: ["endsAt"],
+  });
+
 export type AppointmentDraft = z.infer<typeof appointmentDraftSchema>;
-export type AppointmentListQuery = z.infer<
-  typeof appointmentListQuerySchema
+export type AppointmentListQuery = z.infer<typeof appointmentListQuerySchema>;
+export type AppointmentRescheduleCommand = z.infer<
+  typeof appointmentRescheduleCommandSchema
 >;

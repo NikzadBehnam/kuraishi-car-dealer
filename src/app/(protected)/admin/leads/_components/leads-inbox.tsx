@@ -418,7 +418,7 @@ function LeadDetailSheet({
                 variant="outline"
                 className="w-full rounded-[var(--radius-sm)] text-center whitespace-normal"
               >
-                <Link href={adminRoutes.appointments}>
+                <Link href={`${adminRoutes.appointments}?leadId=${lead.id}`}>
                   <CalendarPlus />
                   Schedule appointment
                 </Link>

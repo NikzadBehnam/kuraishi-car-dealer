@@ -22,6 +22,13 @@ export const leadSortFields = [
   "status",
 ] as const;
 
+export const currentLeadConsentVersion = "2026-09-27";
+
+export const publicLeadRateLimit = {
+  maximumSubmissions: 3,
+  windowMinutes: 15,
+} as const;
+
 export type LeadSource = (typeof leadSources)[number];
 export type LeadStatus = (typeof leadStatuses)[number];
 export type LeadPriority = (typeof leadPriorities)[number];

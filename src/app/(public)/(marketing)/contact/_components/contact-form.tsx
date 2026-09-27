@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +9,7 @@ import {
   contactFormSchema,
   type ContactFormValues,
 } from "../_schemas/contact-form.schema";
+import { submitPublicContactLeadAction } from "../actions";
 import { formContent } from "@/content/de/forms";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -24,20 +26,47 @@ export function ContactForm() {
     register,
     control,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
-      appointmentType: "Probefahrt",
-      message: "",
+      appointmentType: "test_drive",
       consent: false,
+      message: "",
+      phone: "",
+      preferredDate: "",
+      website: "",
     },
   });
-  const submit = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 650));
+
+  const submit = async (values: ContactFormValues) => {
+    const result = await submitPublicContactLeadAction(values);
+
+    if (!result.ok) {
+      for (const [field, messages] of Object.entries(
+        result.error.fieldErrors ?? {},
+      )) {
+        if (field in values && messages[0]) {
+          setError(field as keyof ContactFormValues, {
+            message: messages[0],
+            type: "server",
+          });
+        }
+      }
+
+      toast.error(
+        result.error.code === "RATE_LIMITED"
+          ? "Bitte warten Sie, bevor Sie eine weitere Anfrage senden."
+          : "Ihre Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+      );
+      return;
+    }
+
     setSubmitted(true);
     toast.success("Ihre Anfrage wurde erfolgreich gesendet.");
   };
+
   if (submitted)
     return (
       <div className="py-16 text-center" role="status">
@@ -60,7 +89,11 @@ export function ContactForm() {
             name="appointmentType"
             control={control}
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger
                   id="appointment-type"
                   aria-invalid={!!errors.appointmentType}
@@ -69,14 +102,14 @@ export function ContactForm() {
                 </SelectTrigger>
                 <SelectContent>
                   {[
-                    "Probefahrt",
-                    "Beratung",
-                    "Fahrzeugbewertung",
-                    "Werkstatt",
-                    "Rückruf",
-                  ].map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
+                    ["test_drive", "Probefahrt"],
+                    ["consultation", "Beratung"],
+                    ["valuation", "Fahrzeugbewertung"],
+                    ["workshop", "Werkstatt"],
+                    ["callback", "Rückruf"],
+                  ].map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -101,6 +134,7 @@ export function ContactForm() {
                 invalid={!!errors.preferredDate}
                 minDate={new Date()}
                 placeholder="Wunschtermin auswählen"
+                disabled={isSubmitting}
               />
             )}
           />
@@ -114,6 +148,7 @@ export function ContactForm() {
             id="contact-name"
             className="control focus-visible:outline-none!"
             aria-invalid={!!errors.name}
+            disabled={isSubmitting}
             {...register("name")}
           />
         </Field>
@@ -127,7 +162,23 @@ export function ContactForm() {
             className="control focus-visible:outline-none!"
             type="email"
             aria-invalid={!!errors.email}
+            disabled={isSubmitting}
             {...register("email")}
+          />
+        </Field>
+        <Field
+          id="contact-phone"
+          label={formContent.phone}
+          error={errors.phone?.message}
+        >
+          <input
+            id="contact-phone"
+            className="control focus-visible:outline-none!"
+            type="tel"
+            autoComplete="tel"
+            aria-invalid={!!errors.phone}
+            disabled={isSubmitting}
+            {...register("phone")}
           />
         </Field>
       </div>
@@ -140,13 +191,27 @@ export function ContactForm() {
           id="contact-message"
           className="control focus-visible:outline-none!"
           rows={5}
+          disabled={isSubmitting}
           {...register("message")}
         />
       </Field>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-[10000px] h-px w-px overflow-hidden"
+      >
+        <label htmlFor="contact-website">Website</label>
+        <input
+          id="contact-website"
+          tabIndex={-1}
+          autoComplete="off"
+          {...register("website")}
+        />
+      </div>
       <label className="flex items-start gap-3 text-sm">
         <input
           className="mt-1 size-4 focus-visible:outline-none!"
           type="checkbox"
+          disabled={isSubmitting}
           {...register("consent")}
         />
         <span>{formContent.consent}</span>
@@ -155,6 +220,7 @@ export function ContactForm() {
         <p className="text-destructive text-sm">{errors.consent.message}</p>
       )}
       <Button
+        type="submit"
         variant="accent"
         disabled={isSubmitting}
         className="w-full justify-center rounded-[var(--radius-sm)] focus-visible:outline-none!"

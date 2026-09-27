@@ -67,6 +67,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  bulkTransitionVehicleLifecycleAction,
+  duplicateVehicleAction,
+  transitionVehicleLifecycleAction,
+} from "../actions";
 
 const statusLabels: Record<VehicleStatus, string> = {
   draft: "Draft",
@@ -103,6 +108,20 @@ export function VehicleInventoryTable({
     visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
   const selectedCount = selectedIds.size;
+  const selectedVehicles = result.items.filter((vehicle) =>
+    selectedIds.has(vehicle.id),
+  );
+  const canBulkMarkSold =
+    selectedVehicles.some((vehicle) => vehicle.status !== "sold") &&
+    selectedVehicles.every(
+      (vehicle) =>
+        vehicle.status === "available" ||
+        vehicle.status === "reserved" ||
+        vehicle.status === "sold",
+    );
+  const canBulkArchive = selectedVehicles.some(
+    (vehicle) => vehicle.status !== "archived",
+  );
 
   const navigate = (params: URLSearchParams) => {
     const queryString = params.toString();
@@ -165,6 +184,62 @@ export function VehicleInventoryTable({
         else next.delete(id);
       });
       return next;
+    });
+  };
+
+  const transitionVehicle = (
+    vehicle: AdminVehicleListItemDto,
+    status: VehicleStatus,
+  ) => {
+    startTransition(async () => {
+      const result = await transitionVehicleLifecycleAction({
+        id: vehicle.id,
+        status,
+      });
+
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+
+      toast.success(
+        `${vehicle.make} ${vehicle.model} marked ${statusLabels[status].toLowerCase()}.`,
+      );
+      router.refresh();
+    });
+  };
+
+  const transitionSelectedVehicles = (status: VehicleStatus) => {
+    startTransition(async () => {
+      const result = await bulkTransitionVehicleLifecycleAction({
+        ids: Array.from(selectedIds),
+        status,
+      });
+
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+
+      setSelectedIds(new Set());
+      toast.success(
+        `${result.data.updatedCount} vehicle${result.data.updatedCount === 1 ? "" : "s"} marked ${statusLabels[status].toLowerCase()}.`,
+      );
+      router.refresh();
+    });
+  };
+
+  const duplicateSelectedVehicle = (vehicle: AdminVehicleListItemDto) => {
+    startTransition(async () => {
+      const result = await duplicateVehicleAction({ id: vehicle.id });
+
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+
+      toast.success(`Draft ${result.data.stockNumber} created.`);
+      router.refresh();
     });
   };
 
@@ -244,7 +319,8 @@ export function VehicleInventoryTable({
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => mockBulkAction("Archive", selectedCount)}
+              onClick={() => transitionSelectedVehicles("archived")}
+              disabled={isPending || !canBulkArchive}
             >
               <Archive />
               Archive
@@ -253,7 +329,8 @@ export function VehicleInventoryTable({
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => mockBulkAction("Mark sold", selectedCount)}
+              onClick={() => transitionSelectedVehicles("sold")}
+              disabled={isPending || !canBulkMarkSold}
             >
               <BadgeCheck />
               Mark sold
@@ -381,7 +458,12 @@ export function VehicleInventoryTable({
                     {formatDateTime(vehicle.updatedAt)}
                   </TableCell>
                   <TableCell className="px-3 text-right">
-                    <VehicleRowActions vehicle={vehicle} />
+                    <VehicleRowActions
+                      vehicle={vehicle}
+                      disabled={isPending}
+                      onDuplicate={duplicateSelectedVehicle}
+                      onStatusChange={transitionVehicle}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -523,10 +605,26 @@ function VehicleCoverImage({ vehicle }: { vehicle: AdminVehicleListItemDto }) {
   );
 }
 
-function VehicleRowActions({ vehicle }: { vehicle: AdminVehicleListItemDto }) {
+function VehicleRowActions({
+  disabled,
+  onDuplicate,
+  onStatusChange,
+  vehicle,
+}: {
+  disabled: boolean;
+  onDuplicate: (vehicle: AdminVehicleListItemDto) => void;
+  onStatusChange: (
+    vehicle: AdminVehicleListItemDto,
+    status: VehicleStatus,
+  ) => void;
+  vehicle: AdminVehicleListItemDto;
+}) {
   const title = `${vehicle.make} ${vehicle.model}`;
   const hasPublicPage =
     vehicle.status === "available" || vehicle.status === "reserved";
+  const canMarkSold =
+    vehicle.status === "available" || vehicle.status === "reserved";
+  const canArchive = vehicle.status !== "archived";
 
   return (
     <DropdownMenu>
@@ -563,15 +661,24 @@ function VehicleRowActions({ vehicle }: { vehicle: AdminVehicleListItemDto }) {
             Edit
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => mockRowAction("Duplicate", title)}>
+        <DropdownMenuItem
+          disabled={disabled}
+          onSelect={() => onDuplicate(vehicle)}
+        >
           <Copy />
           Duplicate
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => mockRowAction("Mark sold", title)}>
+        <DropdownMenuItem
+          disabled={disabled || !canMarkSold}
+          onSelect={() => onStatusChange(vehicle, "sold")}
+        >
           <BadgeCheck />
           Mark sold
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => mockRowAction("Archive", title)}>
+        <DropdownMenuItem
+          disabled={disabled || !canArchive}
+          onSelect={() => onStatusChange(vehicle, "archived")}
+        >
           <Archive />
           Archive
         </DropdownMenuItem>
@@ -599,12 +706,4 @@ function StatusBadge({ status }: { status: VehicleStatus }) {
 
 function formatDateTime(value: string) {
   return dateTime.format(new Date(value));
-}
-
-function mockRowAction(action: string, title: string) {
-  toast.info(`${action} is UI-only for ${title}.`);
-}
-
-function mockBulkAction(action: string, count: number) {
-  toast.info(`${action} is UI-only for ${count} selected vehicles.`);
 }

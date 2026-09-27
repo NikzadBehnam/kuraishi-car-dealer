@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
@@ -17,8 +18,10 @@ import {
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import type { AdminVehicle } from "@/types/admin";
 import { adminRoutes } from "@/config/admin-routes.config";
+import type { AdminVehicleDetailDto } from "@/features/vehicles/dto";
+import type { VehicleWriteInput } from "@/features/vehicles/schemas";
+import { createVehicleAction, updateVehicleAction } from "../actions";
 import {
   vehicleFormSchema,
   type VehicleFormValues,
@@ -56,7 +59,6 @@ const defaultValues: VehicleFormValues = {
   transmissionType: "automatic",
   bodyType: "suv",
   exteriorColor: "",
-  location: "Wien",
   condition: "used",
   ownerCount: 1,
   vinLastSix: "",
@@ -67,23 +69,24 @@ const defaultValues: VehicleFormValues = {
   status: "draft",
   inspectionStatus: "pending",
   isFeatured: false,
-  isAvailable: true,
 };
 
 const formTabClassName =
   "min-h-9 flex-1 basis-[8.5rem] bg-secondary px-3 text-xs sm:flex-none sm:text-sm";
 
-export function VehicleForm({
-  mode,
-  vehicle,
-}: {
-  mode: "create" | "edit";
-  vehicle?: AdminVehicle;
-}) {
+type VehicleFormProps =
+  | { mode: "create"; vehicle?: never }
+  | { mode: "edit"; vehicle: AdminVehicleDetailDto };
+
+export function VehicleForm(props: VehicleFormProps) {
+  const { mode } = props;
+  const vehicle = mode === "edit" ? props.vehicle : undefined;
+  const router = useRouter();
   const {
     register,
     control,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleFormSchema),
@@ -91,11 +94,28 @@ export function VehicleForm({
   });
 
   const submit = async (values: VehicleFormValues) => {
-    await new Promise((resolve) => setTimeout(resolve, 450));
+    const input = toVehicleWriteInput(values);
+    const result =
+      mode === "create"
+        ? await createVehicleAction(input)
+        : await updateVehicleAction({ id: vehicle.id, vehicle: input });
+
+    if (!result.ok) {
+      applyServerFieldErrors(result.error.fieldErrors, setError);
+      toast.error(result.error.message);
+      return;
+    }
+
     toast.success(
-      `${values.make || "Vehicle"} ${mode === "create" ? "created" : "updated"} in UI-only mode.`,
+      `${values.make || "Vehicle"} ${mode === "create" ? "created" : "updated"}.`,
     );
+    router.push(adminRoutes.vehicles);
+    router.refresh();
   };
+
+  const saveDraft = handleSubmit((values) =>
+    submit({ ...values, status: "draft" }),
+  );
 
   const title = mode === "create" ? "Add vehicle" : "Edit vehicle";
 
@@ -116,13 +136,13 @@ export function VehicleForm({
                   Back
                 </Link>
               </Button>
-              <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
-                UI-only
+              <Badge className="bg-success/10 text-success">
+                Database-backed
               </Badge>
             </div>
             <h2 className="mt-3 text-xl font-extrabold">{title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Complete inventory form ready for later backend integration.
+            <p className="text-muted-foreground mt-1 text-sm">
+              Vehicle details are validated and saved to the inventory database.
             </p>
           </div>
           <div className="grid w-full gap-2 sm:w-auto sm:grid-flow-col">
@@ -139,7 +159,8 @@ export function VehicleForm({
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => toast.info("Draft save is UI-only in this phase.")}
+              onClick={saveDraft}
+              disabled={isSubmitting}
             >
               <Save />
               Save draft
@@ -155,14 +176,14 @@ export function VehicleForm({
               ) : (
                 <BadgeCheck />
               )}
-              {mode === "create" ? "Publish" : "Update"}
+              {mode === "create" ? "Create vehicle" : "Update vehicle"}
             </Button>
           </div>
         </div>
       </Card>
 
       <Tabs defaultValue="basics" className="min-w-0">
-        <div className="min-w-0 rounded-[var(--radius-sm)] border bg-surface p-2">
+        <div className="bg-surface min-w-0 rounded-[var(--radius-sm)] border p-2">
           <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0">
             <TabsTrigger className={formTabClassName} value="basics">
               Basics
@@ -203,10 +224,10 @@ export function VehicleForm({
               <Field label="Slug" error={errors.slug?.message}>
                 <Input {...register("slug")} />
               </Field>
-              <Field label="Location" error={errors.location?.message}>
-                <Input {...register("location")} />
-              </Field>
-              <Field label="Exterior color" error={errors.exteriorColor?.message}>
+              <Field
+                label="Exterior color"
+                error={errors.exteriorColor?.message}
+              >
                 <Input {...register("exteriorColor")} />
               </Field>
               <SelectField
@@ -228,15 +249,28 @@ export function VehicleForm({
         </TabsContent>
 
         <TabsContent value="pricing">
-          <Panel title="Pricing" description="Commercial values for admin review.">
+          <Panel
+            title="Pricing"
+            description="Commercial values for admin review."
+          >
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <Field label="Price" error={errors.price?.message}>
-                <Input type="number" {...register("price", { valueAsNumber: true })} />
-              </Field>
-              <Field label="Margin estimate" error={errors.marginEstimate?.message}>
                 <Input
                   type="number"
-                  {...register("marginEstimate", { valueAsNumber: true })}
+                  step="0.01"
+                  {...register("price", { valueAsNumber: true })}
+                />
+              </Field>
+              <Field
+                label="Margin estimate"
+                error={errors.marginEstimate?.message}
+              >
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...register("marginEstimate", {
+                    setValueAs: optionalNumberValue,
+                  })}
                 />
               </Field>
             </div>
@@ -244,16 +278,31 @@ export function VehicleForm({
         </TabsContent>
 
         <TabsContent value="technical">
-          <Panel title="Technical details" description="Specifications shown in vehicle detail views.">
+          <Panel
+            title="Technical details"
+            description="Specifications shown in vehicle detail views."
+          >
             <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <Field label="First registration" error={errors.firstRegistration?.message}>
-                <Input placeholder="2024-01" {...register("firstRegistration")} />
+              <Field
+                label="First registration"
+                error={errors.firstRegistration?.message}
+              >
+                <Input
+                  placeholder="2024-01"
+                  {...register("firstRegistration")}
+                />
               </Field>
               <Field label="Mileage" error={errors.mileage?.message}>
-                <Input type="number" {...register("mileage", { valueAsNumber: true })} />
+                <Input
+                  type="number"
+                  {...register("mileage", { valueAsNumber: true })}
+                />
               </Field>
               <Field label="Power kW" error={errors.powerKw?.message}>
-                <Input type="number" {...register("powerKw", { valueAsNumber: true })} />
+                <Input
+                  type="number"
+                  {...register("powerKw", { valueAsNumber: true })}
+                />
               </Field>
               <Field label="VIN last six" error={errors.vinLastSix?.message}>
                 <Input maxLength={6} {...register("vinLastSix")} />
@@ -304,13 +353,17 @@ export function VehicleForm({
                 <Input
                   type="number"
                   step="0.1"
-                  {...register("consumption", { valueAsNumber: true })}
+                  {...register("consumption", {
+                    setValueAs: optionalNumberValue,
+                  })}
                 />
               </Field>
               <Field label="CO2 emission" error={errors.co2Emission?.message}>
                 <Input
                   type="number"
-                  {...register("co2Emission", { valueAsNumber: true })}
+                  {...register("co2Emission", {
+                    setValueAs: optionalNumberValue,
+                  })}
                 />
               </Field>
             </div>
@@ -335,17 +388,17 @@ export function VehicleForm({
             <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
               <button
                 type="button"
-                className="grid min-h-56 place-items-center rounded-[var(--radius-sm)] border border-dashed bg-background p-6 text-center transition-colors hover:bg-surface-muted focus-visible:outline-none"
+                className="bg-background hover:bg-surface-muted grid min-h-56 place-items-center rounded-[var(--radius-sm)] border border-dashed p-6 text-center transition-colors focus-visible:outline-none"
                 onClick={() => toast.info("Upload is UI-only in this phase.")}
               >
                 <span>
-                  <span className="mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
+                  <span className="bg-secondary text-primary mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)]">
                     <Upload className="size-6" aria-hidden="true" />
                   </span>
                   <span className="mt-4 block font-extrabold">
                     Drop vehicle images here
                   </span>
-                  <span className="mt-2 block text-sm text-muted-foreground">
+                  <span className="text-muted-foreground mt-2 block text-sm">
                     Mock upload zone for future media integration.
                   </span>
                 </span>
@@ -353,15 +406,15 @@ export function VehicleForm({
               <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {(vehicle?.images ?? []).map((image, index) => (
                   <div
-                    key={image}
-                    className="overflow-hidden rounded-[var(--radius-sm)] border bg-background"
+                    key={image.id}
+                    className="bg-background overflow-hidden rounded-[var(--radius-sm)] border"
                   >
-                    <div className="relative aspect-[4/3] bg-secondary">
+                    <div className="bg-secondary relative aspect-[4/3]">
                       <Image
                         fill
                         sizes="(max-width: 768px) 50vw, 18rem"
-                        src={image}
-                        alt=""
+                        src={image.url}
+                        alt={image.altText}
                         className="object-cover"
                       />
                     </div>
@@ -393,9 +446,9 @@ export function VehicleForm({
                   </div>
                 ))}
                 {!vehicle?.images.length && (
-                  <div className="grid min-h-44 place-items-center rounded-[var(--radius-sm)] border bg-background p-5 text-center">
+                  <div className="bg-background grid min-h-44 place-items-center rounded-[var(--radius-sm)] border p-5 text-center">
                     <span>
-                      <ImagePlus className="mx-auto size-8 text-muted-foreground" />
+                      <ImagePlus className="text-muted-foreground mx-auto size-8" />
                       <span className="mt-3 block text-sm font-bold">
                         No images yet
                       </span>
@@ -408,7 +461,10 @@ export function VehicleForm({
         </TabsContent>
 
         <TabsContent value="publishing">
-          <Panel title="Publishing" description="Visibility, workflow state, and quality gates.">
+          <Panel
+            title="Publishing"
+            description="Visibility, workflow state, and quality gates."
+          >
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <SelectField
                 label="Status"
@@ -417,7 +473,7 @@ export function VehicleForm({
                 error={errors.status?.message}
                 items={[
                   ["draft", "Draft"],
-                  ["published", "Published"],
+                  ["available", "Available"],
                   ["reserved", "Reserved"],
                   ["sold", "Sold"],
                   ["archived", "Archived"],
@@ -443,19 +499,9 @@ export function VehicleForm({
                     label="Featured vehicle"
                     description="Show this vehicle in highlighted admin and public sections."
                     checked={field.value}
-                    onCheckedChange={(checked) => field.onChange(checked === true)}
-                  />
-                )}
-              />
-              <Controller
-                control={control}
-                name="isAvailable"
-                render={({ field }) => (
-                  <CheckboxField
-                    label="Available"
-                    description="Vehicle can be shown as available in listing UI."
-                    checked={field.value}
-                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked === true)
+                    }
                   />
                 )}
               />
@@ -480,7 +526,7 @@ function Panel({
     <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
       <div>
         <h3 className="text-base font-extrabold">{title}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground mt-1 text-sm">{description}</p>
       </div>
       <Separator className="my-4" />
       <div className="grid min-w-0 gap-4">{children}</div>
@@ -501,7 +547,9 @@ function Field({
     <div className="grid min-w-0 gap-2">
       <Label>{label}</Label>
       {children}
-      {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
+      {error && (
+        <p className="text-destructive text-sm font-semibold">{error}</p>
+      )}
     </div>
   );
 }
@@ -555,7 +603,7 @@ function CheckboxField({
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex min-h-24 min-w-0 items-start gap-3 rounded-[var(--radius-sm)] border bg-background p-4">
+    <label className="bg-background flex min-h-24 min-w-0 items-start gap-3 rounded-[var(--radius-sm)] border p-4">
       <Checkbox
         checked={checked}
         className="shrink-0"
@@ -563,7 +611,7 @@ function CheckboxField({
       />
       <span className="min-w-0">
         <span className="block text-sm font-extrabold">{label}</span>
-        <span className="mt-1 block text-sm leading-6 text-muted-foreground">
+        <span className="text-muted-foreground mt-1 block text-sm leading-6">
           {description}
         </span>
       </span>
@@ -571,7 +619,7 @@ function CheckboxField({
   );
 }
 
-function toFormValues(vehicle: AdminVehicle): VehicleFormValues {
+function toFormValues(vehicle: AdminVehicleDetailDto): VehicleFormValues {
   return {
     make: vehicle.make,
     model: vehicle.model,
@@ -579,8 +627,11 @@ function toFormValues(vehicle: AdminVehicle): VehicleFormValues {
     stockNumber: vehicle.stockNumber,
     slug: vehicle.slug,
     description: vehicle.description,
-    price: vehicle.price,
-    marginEstimate: vehicle.marginEstimate,
+    price: vehicle.priceCents / 100,
+    marginEstimate:
+      vehicle.marginEstimateCents === null
+        ? undefined
+        : vehicle.marginEstimateCents / 100,
     firstRegistration: vehicle.firstRegistration,
     mileage: vehicle.mileage,
     powerKw: vehicle.powerKw,
@@ -588,17 +639,84 @@ function toFormValues(vehicle: AdminVehicle): VehicleFormValues {
     transmissionType: vehicle.transmissionType,
     bodyType: vehicle.bodyType,
     exteriorColor: vehicle.exteriorColor,
-    location: vehicle.location,
     condition: vehicle.condition,
     ownerCount: vehicle.ownerCount,
     vinLastSix: vehicle.vinLastSix,
-    consumption: vehicle.consumption,
-    co2Emission: vehicle.co2Emission,
+    consumption: vehicle.consumption ?? undefined,
+    co2Emission: vehicle.co2Emission ?? undefined,
     featuresText: vehicle.features.join("\n"),
     labelsText: vehicle.labels.join("\n"),
     status: vehicle.status,
     inspectionStatus: vehicle.inspectionStatus,
     isFeatured: vehicle.isFeatured,
-    isAvailable: vehicle.isAvailable,
   };
+}
+
+function toVehicleWriteInput(values: VehicleFormValues): VehicleWriteInput {
+  return {
+    bodyType: values.bodyType,
+    co2Emission: values.co2Emission ?? null,
+    condition: values.condition,
+    consumption: values.consumption ?? null,
+    description: values.description,
+    exteriorColor: values.exteriorColor,
+    features: splitLines(values.featuresText),
+    firstRegistration: values.firstRegistration,
+    fuelType: values.fuelType,
+    inspectionStatus: values.inspectionStatus,
+    isFeatured: values.isFeatured,
+    labels: splitLines(values.labelsText ?? ""),
+    make: values.make,
+    marginEstimateCents:
+      values.marginEstimate === undefined
+        ? null
+        : Math.round(values.marginEstimate * 100),
+    mileage: values.mileage,
+    model: values.model,
+    ownerCount: values.ownerCount,
+    powerKw: values.powerKw,
+    priceCents: Math.round(values.price * 100),
+    slug: values.slug,
+    status: values.status,
+    stockNumber: values.stockNumber,
+    transmissionType: values.transmissionType,
+    variant: values.variant,
+    vinLastSix: values.vinLastSix,
+  };
+}
+
+function splitLines(value: string) {
+  return value.split(/\r?\n/gu).map((line) => line.trim());
+}
+
+function optionalNumberValue(value: string) {
+  return value === "" ? undefined : Number(value);
+}
+
+const serverFieldNames: Partial<Record<string, keyof VehicleFormValues>> = {
+  features: "featuresText",
+  labels: "labelsText",
+  marginEstimateCents: "marginEstimate",
+  priceCents: "price",
+  stockNumber: "stockNumber",
+  slug: "slug",
+};
+
+function applyServerFieldErrors(
+  fieldErrors: Record<string, string[]> | undefined,
+  setError: ReturnType<typeof useForm<VehicleFormValues>>["setError"],
+) {
+  if (!fieldErrors) return;
+
+  for (const [serverField, messages] of Object.entries(fieldErrors)) {
+    const formField =
+      serverFieldNames[serverField] ??
+      (serverField in defaultValues
+        ? (serverField as keyof VehicleFormValues)
+        : undefined);
+
+    if (formField && messages[0]) {
+      setError(formField, { message: messages[0], type: "server" });
+    }
+  }
 }

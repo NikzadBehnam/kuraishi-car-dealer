@@ -10,6 +10,7 @@ import {
   optionalMessageSchema,
   optionalPhoneSchema,
   optionalSearchSchema,
+  normalizedTextSchema,
   paginationQueryShape,
   resourceIdSchema,
   sortDirectionSchema,
@@ -19,6 +20,9 @@ import {
   leadSortFields,
   leadSources,
   leadStatuses,
+  valuationAccidentHistories,
+  valuationConditions,
+  valuationServiceHistories,
 } from "./constants.ts";
 
 export const leadSourceSchema = z.enum(leadSources);
@@ -44,6 +48,26 @@ export const publicContactLeadSubmissionSchema = z.object({
   website: z.string().max(0).optional(),
 });
 
+export const publicVehicleValuationSubmissionSchema = z.object({
+  accidentHistory: z.enum(valuationAccidentHistories),
+  condition: z.enum(valuationConditions),
+  consent: z.boolean().refine(Boolean, "Consent is required."),
+  email: normalizedEmailSchema,
+  firstRegistration: z
+    .string()
+    .regex(
+      /^(19[5-9]\d|20\d{2})-(0[1-9]|1[0-2])$/,
+      "Use a valid registration month.",
+    ),
+  make: normalizedTextSchema(80),
+  mileage: z.coerce.number().int().min(0).max(2_000_000),
+  model: normalizedTextSchema(80),
+  name: normalizedNameSchema,
+  phone: optionalPhoneSchema,
+  serviceHistory: z.enum(valuationServiceHistories),
+  website: z.string().max(0).optional(),
+});
+
 export const leadListQuerySchema = z.object({
   ...paginationQueryShape,
   assignedToUserId: resourceIdSchema.optional(),
@@ -60,3 +84,6 @@ export type LeadListQuery = z.infer<typeof leadListQuerySchema>;
 export type PublicContactLeadSubmission = z.infer<
   typeof publicContactLeadSubmissionSchema
 > & { appointmentType: AppointmentType };
+export type PublicVehicleValuationSubmission = z.infer<
+  typeof publicVehicleValuationSubmissionSchema
+>;

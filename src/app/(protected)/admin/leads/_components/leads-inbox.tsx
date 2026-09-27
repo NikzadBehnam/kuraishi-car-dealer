@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   CalendarPlus,
@@ -15,16 +16,18 @@ import {
   XCircle,
 } from "lucide-react";
 
-import type {
-  AdminActivityEvent,
-  AdminLead,
-  AdminLeadPriority,
-  AdminLeadSource,
-  AdminLeadStatus,
-  AdminUser,
-  AdminVehicle,
-} from "@/types/admin";
 import { adminRoutes } from "@/config/admin-routes.config";
+import {
+  buildAdminLeadListingHref,
+  createAdminLeadListingSearchParams,
+} from "@/features/leads/admin-listing-search-params";
+import type {
+  LeadPriority as AdminLeadPriority,
+  LeadSource as AdminLeadSource,
+  LeadStatus as AdminLeadStatus,
+} from "@/features/leads/constants";
+import type { AdminLeadDto, AdminLeadListResult } from "@/features/leads/dto";
+import type { LeadListQuery } from "@/features/leads/schemas";
 import { formatMileage } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -95,57 +98,61 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
 });
 
 export function LeadsInbox({
-  leads,
-  vehicles,
-  users,
-  activityEvents,
+  query,
+  result,
 }: {
-  leads: AdminLead[];
-  vehicles: AdminVehicle[];
-  users: AdminUser[];
-  activityEvents: AdminActivityEvent[];
+  query: LeadListQuery;
+  result: AdminLeadListResult;
 }) {
-  const [activeTab, setActiveTab] = useState<LeadTab>("all");
-  const [query, setQuery] = useState("");
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [searchValue, setSearchValue] = useState(query.search ?? "");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const activeTab: LeadTab = query.status ?? "all";
+  const leads = result.items;
 
-  const filteredLeads = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("de");
+  const selectedLead = leads.find((lead) => lead.id === selectedLeadId) ?? null;
 
-    return leads
-      .filter((lead) => activeTab === "all" || lead.status === activeTab)
-      .filter((lead) => {
-        if (!normalizedQuery) return true;
-        const vehicle = getLeadVehicle(lead, vehicles);
-        return [
-          lead.customerName,
-          lead.customerEmail,
-          lead.customerPhone ?? "",
-          lead.message,
-          vehicle?.make ?? "",
-          vehicle?.model ?? "",
-          lead.valuationVehicle?.make ?? "",
-          lead.valuationVehicle?.model ?? "",
-        ]
-          .join(" ")
-          .toLocaleLowerCase("de")
-          .includes(normalizedQuery);
-      })
-      .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [activeTab, leads, query, vehicles]);
+  const navigate = (params: URLSearchParams) => {
+    const queryString = params.toString();
+    const href = queryString
+      ? `${adminRoutes.leads}?${queryString}`
+      : adminRoutes.leads;
 
-  const selectedLead =
-    leads.find((lead) => lead.id === selectedLeadId) ?? null;
+    startTransition(() => router.push(href));
+  };
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const params = createAdminLeadListingSearchParams(query);
+    const normalizedSearch = searchValue.trim();
+
+    if (normalizedSearch) params.set("search", normalizedSearch);
+    else params.delete("search");
+
+    params.delete("page");
+    navigate(params);
+  };
+
+  const updateStatus = (value: string) => {
+    const params = createAdminLeadListingSearchParams(query);
+
+    if (value === "all") params.delete("status");
+    else params.set("status", value);
+
+    params.delete("page");
+    navigate(params);
+  };
 
   return (
-    <div className="grid min-w-0 gap-4">
+    <div className={cn("grid min-w-0 gap-4", isPending && "opacity-70")}>
       <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-base font-extrabold">Leads inbox</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              UI-only intake board for contact, valuation, and test-drive
-              requests.
+            <p className="text-muted-foreground mt-1 text-sm">
+              Review contact, valuation, and test-drive requests from the lead
+              database.
             </p>
           </div>
           <Button
@@ -161,22 +168,33 @@ export function LeadsInbox({
         </div>
 
         <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search customer, contact, vehicle, message"
-              aria-label="Search leads"
-              className="bg-background pl-9"
-            />
-          </div>
+          <form className="flex min-w-0 gap-2" onSubmit={submitSearch}>
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                aria-hidden="true"
+              />
+              <Input
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                placeholder="Search customer, contact, vehicle, message"
+                aria-label="Search leads"
+                className="bg-background pl-9"
+                disabled={isPending}
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="outline"
+              className="rounded-[var(--radius-sm)]"
+              disabled={isPending}
+            >
+              Search
+            </Button>
+          </form>
           <Tabs
             value={activeTab}
-            onValueChange={(value) => setActiveTab(value as LeadTab)}
+            onValueChange={updateStatus}
             className="min-w-0"
           >
             <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0 lg:w-auto">
@@ -187,8 +205,8 @@ export function LeadsInbox({
                   value={tab.value}
                 >
                   {tab.label}
-                  <span className="ml-2 rounded-full bg-background px-1.5 py-0.5 text-[0.65rem]">
-                    {countLeads(leads, tab.value)}
+                  <span className="bg-background ml-2 rounded-full px-1.5 py-0.5 text-[0.65rem]">
+                    {result.statusCounts[tab.value]}
                   </span>
                 </TabsTrigger>
               ))}
@@ -198,7 +216,7 @@ export function LeadsInbox({
       </Card>
 
       <Card className="min-w-0 overflow-hidden rounded-[var(--radius-sm)]">
-        {filteredLeads.length ? (
+        {leads.length ? (
           <>
             <div className="hidden md:block">
               <Table>
@@ -216,11 +234,10 @@ export function LeadsInbox({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLeads.map((lead) => (
+                  {leads.map((lead) => (
                     <LeadTableRow
                       key={lead.id}
                       lead={lead}
-                      vehicle={getLeadVehicle(lead, vehicles)}
                       onOpen={() => setSelectedLeadId(lead.id)}
                     />
                   ))}
@@ -229,11 +246,10 @@ export function LeadsInbox({
             </div>
 
             <div className="grid min-w-0 md:hidden">
-              {filteredLeads.map((lead) => (
+              {leads.map((lead) => (
                 <LeadCard
                   key={lead.id}
                   lead={lead}
-                  vehicle={getLeadVehicle(lead, vehicles)}
                   onOpen={() => setSelectedLeadId(lead.id)}
                 />
               ))}
@@ -246,25 +262,22 @@ export function LeadsInbox({
 
       <LeadDetailSheet
         lead={selectedLead}
-        vehicle={selectedLead ? getLeadVehicle(selectedLead, vehicles) : undefined}
-        assignedUser={selectedLead ? getAssignedUser(selectedLead, users) : undefined}
-        activityEvents={selectedLead ? getLeadActivity(selectedLead, activityEvents) : []}
         open={!!selectedLead}
         onOpenChange={(open) => {
           if (!open) setSelectedLeadId(null);
         }}
       />
+
+      <LeadPagination query={query} result={result} />
     </div>
   );
 }
 
 function LeadTableRow({
   lead,
-  vehicle,
   onOpen,
 }: {
-  lead: AdminLead;
-  vehicle?: AdminVehicle;
+  lead: AdminLeadDto;
   onOpen: () => void;
 }) {
   return (
@@ -274,13 +287,13 @@ function LeadTableRow({
       </TableCell>
       <TableCell className="min-w-56 px-3">
         <p className="font-extrabold">{lead.customerName}</p>
-        <p className="text-xs text-muted-foreground">{lead.customerEmail}</p>
+        <p className="text-muted-foreground text-xs">{lead.customerEmail}</p>
         {lead.customerPhone && (
-          <p className="text-xs text-muted-foreground">{lead.customerPhone}</p>
+          <p className="text-muted-foreground text-xs">{lead.customerPhone}</p>
         )}
       </TableCell>
       <TableCell className="min-w-56 px-3">
-        <LeadVehicleInterest lead={lead} vehicle={vehicle} />
+        <LeadVehicleInterest lead={lead} />
       </TableCell>
       <TableCell className="px-3">
         <StatusBadge status={lead.status} />
@@ -288,7 +301,7 @@ function LeadTableRow({
       <TableCell className="px-3">
         <PriorityBadge priority={lead.priority} />
       </TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right text-xs font-bold text-muted-foreground">
+      <TableCell className="text-muted-foreground px-3 text-right text-xs font-bold whitespace-nowrap">
         {formatDateTime(lead.createdAt)}
       </TableCell>
       <TableCell className="px-3 text-right">
@@ -308,11 +321,9 @@ function LeadTableRow({
 
 function LeadCard({
   lead,
-  vehicle,
   onOpen,
 }: {
-  lead: AdminLead;
-  vehicle?: AdminVehicle;
+  lead: AdminLeadDto;
   onOpen: () => void;
 }) {
   return (
@@ -324,14 +335,14 @@ function LeadCard({
       </div>
       <div>
         <h3 className="font-extrabold">{lead.customerName}</h3>
-        <p className="text-sm text-muted-foreground">{lead.customerEmail}</p>
+        <p className="text-muted-foreground text-sm">{lead.customerEmail}</p>
         {lead.customerPhone && (
-          <p className="text-sm text-muted-foreground">{lead.customerPhone}</p>
+          <p className="text-muted-foreground text-sm">{lead.customerPhone}</p>
         )}
       </div>
-      <LeadVehicleInterest lead={lead} vehicle={vehicle} />
+      <LeadVehicleInterest lead={lead} />
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-bold text-muted-foreground">
+        <span className="text-muted-foreground text-xs font-bold">
           {formatDateTime(lead.createdAt)}
         </span>
         <Button
@@ -349,16 +360,10 @@ function LeadCard({
 
 function LeadDetailSheet({
   lead,
-  vehicle,
-  assignedUser,
-  activityEvents,
   open,
   onOpenChange,
 }: {
-  lead: AdminLead | null;
-  vehicle?: AdminVehicle;
-  assignedUser?: AdminUser;
-  activityEvents: AdminActivityEvent[];
+  lead: AdminLeadDto | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -391,7 +396,9 @@ function LeadDetailSheet({
                 variant="outline"
                 className="w-full rounded-[var(--radius-sm)]"
               >
-                <a href={lead.customerPhone ? `tel:${lead.customerPhone}` : "#"}>
+                <a
+                  href={lead.customerPhone ? `tel:${lead.customerPhone}` : "#"}
+                >
                   <Phone />
                   Call
                 </a>
@@ -409,7 +416,7 @@ function LeadDetailSheet({
               <Button
                 asChild
                 variant="outline"
-                className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
+                className="w-full rounded-[var(--radius-sm)] text-center whitespace-normal"
               >
                 <Link href={adminRoutes.appointments}>
                   <CalendarPlus />
@@ -440,21 +447,30 @@ function LeadDetailSheet({
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <Info label="Name" value={lead.customerName} />
                 <Info label="Email" value={lead.customerEmail} />
-                <Info label="Phone" value={lead.customerPhone ?? "Not provided"} />
+                <Info
+                  label="Phone"
+                  value={lead.customerPhone ?? "Not provided"}
+                />
                 <Info
                   label="Assigned to"
-                  value={assignedUser?.name ?? "Unassigned"}
+                  value={lead.assignedTo?.name ?? "Unassigned"}
                 />
+                {lead.preferredDate && (
+                  <Info
+                    label="Preferred date"
+                    value={formatDateTime(lead.preferredDate)}
+                  />
+                )}
               </div>
             </DetailSection>
 
             <DetailSection title="Vehicle interest">
-              <LeadVehicleInterest lead={lead} vehicle={vehicle} expanded />
+              <LeadVehicleInterest lead={lead} expanded />
             </DetailSection>
 
             <DetailSection title="Message">
-              <p className="text-sm leading-6 text-muted-foreground">
-                {lead.message}
+              <p className="text-muted-foreground text-sm leading-6">
+                {lead.message ?? "No message provided."}
               </p>
             </DetailSection>
 
@@ -474,7 +490,7 @@ function LeadDetailSheet({
                     time={lead.updatedAt}
                   />
                 )}
-                {activityEvents.map((event) => (
+                {lead.activityEvents.map((event) => (
                   <TimelineItem
                     key={event.id}
                     Icon={MessageSquareText}
@@ -487,9 +503,12 @@ function LeadDetailSheet({
             </DetailSection>
 
             <DetailSection title="Internal notes">
+              <p className="text-muted-foreground mb-3 text-sm">
+                {lead.noteCount} existing note{lead.noteCount === 1 ? "" : "s"}
+              </p>
               <Textarea
                 rows={5}
-                defaultValue={`Existing notes: ${lead.notesCount}`}
+                placeholder="Add an internal note"
                 aria-label="Internal lead notes"
               />
               <div className="mt-3 flex justify-end">
@@ -518,7 +537,7 @@ function DetailSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="min-w-0 rounded-[var(--radius-sm)] border bg-background p-4">
+    <section className="bg-background min-w-0 rounded-[var(--radius-sm)] border p-4">
       <h3 className="text-sm font-extrabold">{title}</h3>
       <Separator className="my-3" />
       {children}
@@ -539,15 +558,15 @@ function TimelineItem({
 }) {
   return (
     <div className="grid grid-cols-[auto_1fr] gap-3">
-      <span className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
+      <span className="bg-secondary text-primary grid size-9 place-items-center rounded-[var(--radius-sm)]">
         <Icon className="size-4" aria-hidden="true" />
       </span>
       <span>
         <span className="block text-sm font-extrabold">{title}</span>
-        <span className="mt-1 block text-sm leading-6 text-muted-foreground">
+        <span className="text-muted-foreground mt-1 block text-sm leading-6">
           {text}
         </span>
-        <span className="mt-1 block text-xs font-bold text-muted-foreground">
+        <span className="text-muted-foreground mt-1 block text-xs font-bold">
           {formatDateTime(time)}
         </span>
       </span>
@@ -558,7 +577,7 @@ function TimelineItem({
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-bold text-muted-foreground">{label}</p>
+      <p className="text-muted-foreground text-xs font-bold">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
     </div>
   );
@@ -566,51 +585,61 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function LeadVehicleInterest({
   lead,
-  vehicle,
   expanded = false,
 }: {
-  lead: AdminLead;
-  vehicle?: AdminVehicle;
+  lead: AdminLeadDto;
   expanded?: boolean;
 }) {
-  if (vehicle) {
+  if (lead.vehicle) {
     return (
       <div className={cn("min-w-0", expanded && "grid gap-2")}>
         <p className="truncate font-bold">
-          {vehicle.make} {vehicle.model}
+          {lead.vehicle.make} {lead.vehicle.model}
         </p>
-        <p className="truncate text-xs text-muted-foreground">
-          {vehicle.stockNumber} - {vehicle.variant}
+        <p className="text-muted-foreground truncate text-xs">
+          {lead.vehicle.stockNumber} - {lead.vehicle.variant}
         </p>
         {expanded && (
-          <p className="text-sm text-muted-foreground">
-            {formatMileage(vehicle.mileage)} - {vehicle.location}
+          <p className="text-muted-foreground text-sm">
+            {formatMileage(lead.vehicle.mileage)}
           </p>
         )}
       </div>
     );
   }
 
-  if (lead.valuationVehicle) {
+  if (lead.valuationRequest) {
     return (
       <div className={cn("min-w-0", expanded && "grid gap-2")}>
         <p className="truncate font-bold">
-          {lead.valuationVehicle.make} {lead.valuationVehicle.model}
+          {lead.valuationRequest.make} {lead.valuationRequest.model}
         </p>
-        <p className="truncate text-xs text-muted-foreground">
-          Trade-in valuation - {formatMileage(lead.valuationVehicle.mileage)}
+        <p className="text-muted-foreground truncate text-xs">
+          Trade-in valuation - {formatMileage(lead.valuationRequest.mileage)}
         </p>
         {expanded && (
-          <p className="text-sm text-muted-foreground">
-            First registration {lead.valuationVehicle.firstRegistration}
-          </p>
+          <div className="text-muted-foreground grid gap-1 text-sm">
+            <p>First registration {lead.valuationRequest.firstRegistration}</p>
+            <p>
+              Condition:{" "}
+              {lead.valuationRequest.conditionDescription ?? "Not provided"}
+            </p>
+            <p>
+              Accident history:{" "}
+              {lead.valuationRequest.accidentHistory ?? "Not provided"}
+            </p>
+            <p>
+              Service history:{" "}
+              {lead.valuationRequest.serviceHistory ?? "Not provided"}
+            </p>
+          </div>
         )}
       </div>
     );
   }
 
   return (
-    <p className="text-sm font-semibold text-muted-foreground">
+    <p className="text-muted-foreground text-sm font-semibold">
       No vehicle linked
     </p>
   );
@@ -620,14 +649,77 @@ function EmptyLeadsState() {
   return (
     <div className="grid min-h-72 place-items-center p-8 text-center">
       <div className="max-w-sm">
-        <span className="mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
+        <span className="bg-secondary text-primary mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)]">
           <Inbox className="size-6" aria-hidden="true" />
         </span>
         <h3 className="mt-4 font-extrabold">No leads found</h3>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Change the selected status tab or search term to review more mocked
-          lead records.
+        <p className="text-muted-foreground mt-2 text-sm leading-6">
+          Change the selected status tab or search term to review more lead
+          records.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function LeadPagination({
+  query,
+  result,
+}: {
+  query: LeadListQuery;
+  result: AdminLeadListResult;
+}) {
+  return (
+    <div className="bg-surface grid gap-3 rounded-[var(--radius-sm)] border p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+      <p className="text-muted-foreground text-sm">
+        Showing{" "}
+        <strong className="text-foreground">{result.items.length}</strong> of{" "}
+        <strong className="text-foreground">{result.total}</strong> leads
+      </p>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
+        {result.hasPreviousPage ? (
+          <Button
+            asChild
+            variant="outline"
+            className="rounded-[var(--radius-sm)]"
+          >
+            <Link href={buildAdminLeadListingHref(query, query.page - 1)}>
+              Previous
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-[var(--radius-sm)]"
+            disabled
+          >
+            Previous
+          </Button>
+        )}
+        <span className="text-center text-sm font-bold">
+          Page {result.page} of {Math.max(1, result.totalPages)}
+        </span>
+        {result.hasNextPage ? (
+          <Button
+            asChild
+            variant="outline"
+            className="rounded-[var(--radius-sm)]"
+          >
+            <Link href={buildAdminLeadListingHref(query, query.page + 1)}>
+              Next
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-[var(--radius-sm)]"
+            disabled
+          >
+            Next
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -670,33 +762,6 @@ function PriorityBadge({ priority }: { priority: AdminLeadPriority }) {
       {priorityLabels[priority]}
     </Badge>
   );
-}
-
-function getLeadVehicle(lead: AdminLead, vehicles: AdminVehicle[]) {
-  return lead.vehicleId
-    ? vehicles.find((vehicle) => vehicle.id === lead.vehicleId)
-    : undefined;
-}
-
-function getAssignedUser(lead: AdminLead, users: AdminUser[]) {
-  return lead.assignedToUserId
-    ? users.find((user) => user.id === lead.assignedToUserId)
-    : undefined;
-}
-
-function getLeadActivity(
-  lead: AdminLead,
-  activityEvents: AdminActivityEvent[],
-) {
-  return activityEvents
-    .filter((event) => event.targetType === "lead" && event.targetId === lead.id)
-    .toSorted((a, b) => b.occurredAt.localeCompare(a.occurredAt));
-}
-
-function countLeads(leads: AdminLead[], tab: LeadTab) {
-  return tab === "all"
-    ? leads.length
-    : leads.filter((lead) => lead.status === tab).length;
 }
 
 function formatDateTime(value: string) {

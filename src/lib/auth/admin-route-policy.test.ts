@@ -42,6 +42,15 @@ describe("admin route policy", () => {
     );
   });
 
+  it("forbids a banned ADMIN session", () => {
+    assert.equal(
+      getAdminAuthorizationState({
+        user: { banned: true, role: authRoles.admin },
+      }).status,
+      "forbidden",
+    );
+  });
+
   it("supports comma-separated Better Auth admin-plugin roles", () => {
     assert.equal(isAdminRole(`${authRoles.staff}, ${authRoles.admin}`), true);
   });

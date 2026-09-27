@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+import {
+  vehicleBodyTypeSchema,
+  vehicleConditionSchema,
+  vehicleFuelTypeSchema,
+  vehicleInspectionStatusSchema,
+  vehicleTransmissionTypeSchema,
+} from "@/features/vehicles/schemas";
+
 export const vehicleFormSchema = z.object({
   make: z.string().min(1, "Make is required."),
   model: z.string().min(1, "Model is required."),
@@ -14,12 +22,12 @@ export const vehicleFormSchema = z.object({
   firstRegistration: z.string().min(1, "First registration is required."),
   mileage: z.number().min(0, "Mileage cannot be negative."),
   powerKw: z.number().min(1, "Power must be greater than zero."),
-  fuelType: z.enum(["petrol", "diesel", "electric", "hybrid"]),
-  transmissionType: z.enum(["automatic", "manual"]),
-  bodyType: z.enum(["suv", "compact", "sedan", "wagon", "van", "sports"]),
+  fuelType: vehicleFuelTypeSchema,
+  transmissionType: vehicleTransmissionTypeSchema,
+  bodyType: vehicleBodyTypeSchema,
   exteriorColor: z.string().min(1, "Exterior color is required."),
   location: z.string().min(1, "Location is required."),
-  condition: z.enum(["used", "demonstrator", "annual"]),
+  condition: vehicleConditionSchema,
   ownerCount: z.number().min(0, "Owner count cannot be negative."),
   vinLastSix: z
     .string()
@@ -29,7 +37,7 @@ export const vehicleFormSchema = z.object({
   featuresText: z.string().min(1, "Add at least one feature."),
   labelsText: z.string().optional(),
   status: z.enum(["draft", "published", "reserved", "sold", "archived"]),
-  inspectionStatus: z.enum(["pending", "in_progress", "passed", "failed"]),
+  inspectionStatus: vehicleInspectionStatusSchema,
   isFeatured: z.boolean(),
   isAvailable: z.boolean(),
 });

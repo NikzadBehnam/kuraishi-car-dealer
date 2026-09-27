@@ -1,6 +1,13 @@
-export type FuelType = "petrol" | "diesel" | "electric" | "hybrid";
-export type TransmissionType = "automatic" | "manual";
-export type BodyType = "suv" | "compact" | "sedan" | "wagon" | "van" | "sports";
+import type {
+  VehicleBodyType,
+  VehicleCondition,
+  VehicleFuelType,
+  VehicleTransmissionType,
+} from "@/features/vehicles/constants";
+
+export type FuelType = VehicleFuelType;
+export type TransmissionType = VehicleTransmissionType;
+export type BodyType = VehicleBodyType;
 export interface Vehicle {
   id: string;
   slug: string;
@@ -18,7 +25,7 @@ export interface Vehicle {
   exteriorColor: string;
   consumption?: number;
   co2Emission?: number;
-  condition: "used" | "demonstrator" | "annual";
+  condition: VehicleCondition;
   features: string[];
   description: string;
   images: string[];

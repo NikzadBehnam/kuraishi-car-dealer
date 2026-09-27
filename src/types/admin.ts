@@ -1,10 +1,19 @@
+import type {
+  AppointmentStatus,
+  AppointmentType,
+} from "@/features/appointments/constants";
+import type {
+  LeadPriority,
+  LeadSource,
+  LeadStatus,
+} from "@/features/leads/constants";
+import type { VehicleInspectionStatus } from "@/features/vehicles/constants";
 import type { Vehicle } from "@/types/vehicle";
 
 export type AdminVehicleStatus =
   "draft" | "published" | "reserved" | "sold" | "archived";
 
-export type AdminInspectionStatus =
-  "pending" | "in_progress" | "passed" | "failed";
+export type AdminInspectionStatus = VehicleInspectionStatus;
 
 export interface AdminVehicle extends Vehicle {
   stockNumber: string;
@@ -24,13 +33,9 @@ export interface AdminVehicle extends Vehicle {
   marginEstimate: number;
 }
 
-export type AdminLeadSource =
-  "contact" | "valuation" | "test-drive" | "callback";
-
-export type AdminLeadStatus =
-  "new" | "contacted" | "qualified" | "closed" | "lost";
-
-export type AdminLeadPriority = "low" | "medium" | "high" | "urgent";
+export type AdminLeadSource = LeadSource;
+export type AdminLeadStatus = LeadStatus;
+export type AdminLeadPriority = LeadPriority;
 
 export interface AdminLead {
   id: string;
@@ -55,11 +60,8 @@ export interface AdminLead {
   };
 }
 
-export type AdminAppointmentType =
-  "test_drive" | "consultation" | "valuation" | "workshop" | "callback";
-
-export type AdminAppointmentStatus =
-  "requested" | "confirmed" | "completed" | "cancelled";
+export type AdminAppointmentType = AppointmentType;
+export type AdminAppointmentStatus = AppointmentStatus;
 
 export interface AdminAppointment {
   id: string;

@@ -6,6 +6,7 @@ export const adminLoginPath = "/login";
 
 export type AdminSessionLike = {
   user: {
+    banned?: boolean | null;
     role?: string | null;
   };
 };
@@ -52,7 +53,7 @@ export function getAdminAuthorizationState<TSession extends AdminSessionLike>(
     };
   }
 
-  if (!isAdminRole(session.user.role)) {
+  if (session.user.banned === true || !isAdminRole(session.user.role)) {
     return {
       session,
       status: "forbidden",

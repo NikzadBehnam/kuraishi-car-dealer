@@ -105,11 +105,11 @@ export default async function HomePage() {
           <QuickSearchForm facets={vehicleFacets} />
         </div>
       </section>
-      <section className="py-12 sm:py-14 lg:py-16">
+      {/* <section className="py-12 sm:py-14 lg:py-16">
         <AnimatedSection>
           <VehicleDiscoverySearch facets={vehicleFacets} />
         </AnimatedSection>
-      </section>
+      </section> */}
       <section className="section-space bg-surface">
         <div className="site-container">
           <div className="flex items-end justify-between gap-4">

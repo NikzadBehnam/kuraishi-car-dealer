@@ -5,7 +5,6 @@ import { publicRoutes } from "@/config/routes.config";
 
 const marketplaceNavigation = [
   ["Alle Fahrzeuge", publicRoutes.vehicles],
-  ["Erweiterte Suche", publicRoutes.vehicleSearch],
   ["Merkliste", publicRoutes.favourites],
   ["Vergleich", publicRoutes.comparison],
 ] as const;

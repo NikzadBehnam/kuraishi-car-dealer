@@ -152,13 +152,13 @@ export function VehicleDiscoverySearch({
             </Button>
           </form>
 
-          <div className="mt-4 flex justify-end">
+          {/* <div className="mt-4 flex justify-end">
             <Button asChild variant="link">
               <Link href={publicRoutes.vehicleSearch}>
                 Erweiterte Suche <ArrowRight />
               </Link>
             </Button>
-          </div>
+          </div> */}
 
           <div className="mt-5 flex items-center gap-2">
             <CarFront className="text-accent size-5" aria-hidden="true" />

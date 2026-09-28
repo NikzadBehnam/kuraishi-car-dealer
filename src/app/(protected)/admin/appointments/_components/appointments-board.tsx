@@ -380,7 +380,9 @@ export function AppointmentsBoard({
         }}
       />
       <AppointmentFormDialog
-        key={createOpen ? `open-${initialLeadId ?? "new"}` : "closed"}
+        key={
+          createOpen ? `create-open-${initialLeadId ?? "new"}` : "create-closed"
+        }
         initialLeadId={initialLeadId}
         open={createOpen}
         options={result.options}
@@ -403,7 +405,7 @@ export function AppointmentsBoard({
         }}
       />
       <RescheduleDialog
-        key={rescheduleAppointment?.id ?? "closed"}
+        key={`reschedule-${rescheduleAppointment?.id ?? "closed"}`}
         appointment={rescheduleAppointment}
         pending={isPending}
         onOpenChange={(open) => !open && setRescheduleAppointment(null)}
@@ -427,7 +429,7 @@ export function AppointmentsBoard({
         }}
       />
       <CancelDialog
-        key={cancelAppointment?.id ?? "closed"}
+        key={`cancel-${cancelAppointment?.id ?? "closed"}`}
         appointment={cancelAppointment}
         pending={isPending}
         onOpenChange={(open) => !open && setCancelAppointment(null)}
@@ -879,11 +881,7 @@ function CancelDialog({
 }) {
   const [reason, setReason] = useState("");
   return (
-    <Dialog
-      key={appointment?.id ?? "closed"}
-      open={!!appointment}
-      onOpenChange={onOpenChange}
-    >
+    <Dialog open={!!appointment} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Cancel appointment</DialogTitle>

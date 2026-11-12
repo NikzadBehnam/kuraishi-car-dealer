@@ -14,7 +14,6 @@ import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { publicRoutes } from "@/config/routes.config";
-import { QuickSearchForm } from "./_components/quick-search-form";
 import { createPublicMetadata } from "@/lib/metadata";
 
 export const metadata = createPublicMetadata(
@@ -92,7 +91,6 @@ export default function HomePage() {
               ))}
             </div>
           </div>
-          <QuickSearchForm />
         </div>
       </section>
       <section className="section-space bg-surface">

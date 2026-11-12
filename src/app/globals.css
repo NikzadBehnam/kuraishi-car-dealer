@@ -305,12 +305,6 @@ textarea.control {
   background: rgb(232 93 42 / 0.12);
   color: var(--accent);
 }
-.hero-search {
-  border-color: rgb(19 32 51 / 0.12);
-  background: rgb(255 255 255 / 0.86);
-  box-shadow: 0 1rem 3rem rgb(16 33 59 / 0.12);
-  backdrop-filter: blur(18px);
-}
 .hero-secondary-action {
   border-color: rgb(19 32 51 / 0.2);
   background: rgb(255 255 255 / 0.68);
@@ -341,11 +335,6 @@ textarea.control {
 }
 .dark .hero-check {
   background: rgb(244 119 71 / 0.15);
-}
-.dark .hero-search {
-  border-color: rgb(255 255 255 / 0.12);
-  background: rgb(12 25 43 / 0.84);
-  box-shadow: 0 1rem 3rem rgb(0 0 0 / 0.28);
 }
 .dark .hero-secondary-action {
   border-color: rgb(255 255 255 / 0.2);

@@ -166,7 +166,7 @@ Admin layout:
 
 Marketing:
 
-- `src/app/(public)/(marketing)/page.tsx`: home page. Uses hero video, quick search, featured vehicles, benefits, and valuation CTA.
+- `src/app/(public)/(marketing)/page.tsx`: home page. Uses hero video, featured vehicles, benefits, and valuation CTA.
 - `src/app/(public)/(marketing)/about-us/page.tsx`: about page with stats and showroom image.
 - `src/app/(public)/(marketing)/services/page.tsx`: service cards for trade-in, purchase, warranty, insurance, registration, workshop.
 - `src/app/(public)/(marketing)/contact/page.tsx`: contact form plus dealer contact panel using `siteConfig`.
@@ -308,10 +308,6 @@ Vehicle components:
 - `src/app/(public)/(marketplace)/vehicles/[slug]/_components/vehicle-image-gallery.tsx`: detail gallery.
 - `src/app/(public)/(marketplace)/favourites/_components/favourites-grid.tsx`: saved vehicles grid.
 - `src/app/(public)/(marketplace)/vehicle-comparison/_components/vehicle-comparison-table.tsx`: comparison table.
-
-Marketing components:
-
-- `src/app/(public)/(marketing)/_components/quick-search-form.tsx`: compact hero search.
 
 Admin components:
 

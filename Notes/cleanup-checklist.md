@@ -1,7 +1,7 @@
 ### http://localhost:3000/
 
 - [+] 1- remove the cars filter section
-- [-] 2- remove the mini filter on the hero section
+- [+] 2- remove the mini filter on the hero section
 - [-] 3- remove the wishlist
 - [-] 4- remove the orange button on the header
 

@@ -2,7 +2,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { VehicleSearchResults } from "./_components/vehicle-search-results";
 import { vehicleListingContent as content } from "@/content/de/vehicle-listing";
 import { vehicles } from "@/data/vehicles";
-import type { VehicleFilters } from "@/lib/vehicle-filters";
 import { createPublicMetadata } from "@/lib/metadata";
 import { publicRoutes } from "@/config/routes.config";
 
@@ -17,17 +16,7 @@ export default async function VehiclesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const initialFilters: VehicleFilters = {
-    make: typeof params.make === "string" ? params.make : undefined,
-    model: typeof params.model === "string" ? params.model : undefined,
-    bodyType: typeof params.bodyType === "string" ? params.bodyType : undefined,
-    fuelType: typeof params.fuelType === "string" ? params.fuelType : undefined,
-    location: typeof params.location === "string" ? params.location : undefined,
-    maximumPrice:
-      typeof params.maximumPrice === "string"
-        ? Number(params.maximumPrice)
-        : undefined,
-  };
+  const initialQuery = typeof params.q === "string" ? params.q : "";
   return (
     <>
       <PageHeader
@@ -36,8 +25,9 @@ export default async function VehiclesPage({
         breadcrumb="Fahrzeuge"
       />
       <VehicleSearchResults
+        key={initialQuery}
         vehicles={vehicles}
-        initialFilters={initialFilters}
+        initialQuery={initialQuery}
       />
     </>
   );

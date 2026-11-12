@@ -8,7 +8,7 @@
 ## http://localhost:3000/fahrzeuge
 
 - [+] 5- remove or change the size of the hero section the hero section "Fahrzeuge entdecken" (compact header)
-- [-] 6- chage the fiters, one general seach field is enough
+- [+] 6- chage the fiters, one general seach field is enough
 - [-] 7- on the footer, remove the section "Neue Fahrzeuge direkt in Ihr Postfach"
 - [-] 8- update the entire data in the footer with the recent supplied
 

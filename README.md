@@ -55,7 +55,7 @@ The localized App Router strategy is documented in [`docs/routing-architecture.m
 
 ## Search and local state
 
-Filtering is implemented in `src/lib/vehicle-filters.ts`, independent of the visual components, so it can be moved to an API or database query later. Initial filters are parsed from URL search parameters. Comparison selections use a focused React provider and browser `localStorage`; a production account service can replace this persistence boundary.
+Keyword search is implemented in `src/lib/vehicle-filters.ts`, independent of the visual components, so it can be moved to an API or database query later. The vehicle listing has one live search field, initialized from the `q` URL parameter. Search terms match across vehicle details and German labels, ignoring case and accents; all terms must match. Featured vehicles remain first. Comparison selections use a focused React provider and browser `localStorage`; a production account service can replace this persistence boundary.
 
 ## Forms and future integrations
 

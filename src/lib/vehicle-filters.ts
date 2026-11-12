@@ -1,33 +1,44 @@
 import type { Vehicle } from "@/types/vehicle";
-export interface VehicleFilters {
-  make?: string;
-  model?: string;
-  bodyType?: string;
-  fuelType?: string;
-  location?: string;
-  maximumPrice?: number;
-  sort?: string;
-}
-export function filterVehicles(input: Vehicle[], filters: VehicleFilters) {
-  const result = input.filter(
-    (vehicle) =>
-      (!filters.make || vehicle.make === filters.make) &&
-      (!filters.model || vehicle.model === filters.model) &&
-      (!filters.bodyType || vehicle.bodyType === filters.bodyType) &&
-      (!filters.fuelType || vehicle.fuelType === filters.fuelType) &&
-      (!filters.location ||
-        vehicle.location
-          .toLocaleLowerCase("de")
-          .includes(filters.location.toLocaleLowerCase("de"))) &&
-      (!filters.maximumPrice || vehicle.price <= filters.maximumPrice),
-  );
-  return result.toSorted((a, b) =>
-    filters.sort === "price-asc"
-      ? a.price - b.price
-      : filters.sort === "price-desc"
-        ? b.price - a.price
-        : filters.sort === "newest"
-          ? b.firstRegistration.localeCompare(a.firstRegistration)
-          : Number(b.isFeatured) - Number(a.isFeatured),
+import {
+  formatBodyType,
+  formatFuelType,
+  formatTransmission,
+} from "./formatters.ts";
+
+const normalizeSearch = (value: string) =>
+  value
+    .toLocaleLowerCase("de")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+export function filterVehicles(input: Vehicle[], query: string) {
+  const terms = normalizeSearch(query).trim().split(/\s+/).filter(Boolean);
+  const result = input.filter((vehicle) => {
+    if (!terms.length) return true;
+
+    const searchableText = normalizeSearch(
+      [
+        vehicle.make,
+        vehicle.model,
+        vehicle.variant,
+        vehicle.bodyType,
+        formatBodyType(vehicle.bodyType),
+        vehicle.fuelType,
+        formatFuelType(vehicle.fuelType),
+        vehicle.transmissionType,
+        formatTransmission(vehicle.transmissionType),
+        vehicle.exteriorColor,
+        vehicle.location,
+        vehicle.firstRegistration,
+        ...vehicle.features,
+        ...vehicle.labels,
+      ].join(" "),
+    );
+
+    return terms.every((term) => searchableText.includes(term));
+  });
+
+  return result.toSorted(
+    (a, b) => Number(b.isFeatured) - Number(a.isFeatured),
   );
 }

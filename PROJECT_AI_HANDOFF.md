@@ -171,7 +171,7 @@ Marketing:
 
 Marketplace:
 
-- `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Parses `searchParams` for make, model, body type, fuel type, location, maximum price. Passes local vehicles to `VehicleSearchResults`.
+- `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Reads the initial keyword search from the `q` URL parameter and passes local vehicles to `VehicleSearchResults`.
 - `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. Shows gallery, facts, features, description, dealer contact card, actions, similar vehicles, and mobile sticky CTA.
 - `src/app/(public)/(marketplace)/vehicle-search/page.tsx`: advanced search UI stub with many select fields. The fields are not wired to filtering yet; CTA links to `/fahrzeuge`.
 - `src/app/(public)/(marketplace)/vehicle-comparison/page.tsx`: reads browser-local comparison selections through `ComparisonTable`.
@@ -237,9 +237,9 @@ Admin mock data:
 
 Vehicle filtering:
 
-- `src/lib/vehicle-filters.ts` exports `VehicleFilters` and `filterVehicles`.
-- Supports make, model, bodyType, fuelType, location substring, maximumPrice.
-- Sort modes: `price-asc`, `price-desc`, `newest`; default sorts featured vehicles first.
+- `src/lib/vehicle-filters.ts` exports `filterVehicles(input, query)` for the listing's single live keyword search.
+- Matches all whitespace-separated terms across make, model, variant, German body/fuel/transmission labels, color, location, registration, equipment, and labels; ignores case and accents.
+- Results sort featured vehicles first. Former structured filter and sort controls are removed.
 - Uses `toSorted`, so it does not mutate the source array.
 
 Formatting:
@@ -298,8 +298,7 @@ Vehicle components:
 - `src/components/vehicle/vehicle-card.tsx`: public vehicle card linking to canonical detail route.
 - `src/components/vehicle/vehicle-actions.tsx`: compare buttons using `useVehicleState`.
 - `src/components/vehicle/vehicle-card-skeleton.tsx`: loading placeholder.
-- `src/app/(public)/(marketplace)/vehicles/_components/vehicle-filter-bar.tsx`: listing filters.
-- `src/app/(public)/(marketplace)/vehicles/_components/vehicle-search-results.tsx`: filtered results.
+- `src/app/(public)/(marketplace)/vehicles/_components/vehicle-search-results.tsx`: compact left-aligned keyword search field, clear action, and filtered results without a vehicle-count label.
 - `src/app/(public)/(marketplace)/vehicles/[slug]/_components/vehicle-image-gallery.tsx`: detail gallery.
 - `src/app/(public)/(marketplace)/vehicle-comparison/_components/vehicle-comparison-table.tsx`: comparison table.
 
@@ -379,7 +378,7 @@ Current tests:
 
 - `src/config/routes.config.test.ts`: checks German public vs English internal route config and vehicle route builder.
 - `src/lib/formatters.test.ts`: checks German formatting for currency, mileage, registration.
-- `src/lib/vehicle-filters.test.ts`: checks filtering/sorting without source mutation and homepage make/model/location filtering.
+- `src/lib/vehicle-filters.test.ts`: checks multi-term search, German labels/equipment, accents, empty/unmatched queries, and featured ordering without source mutation.
 
 Recommended validation commands before/after code changes:
 
@@ -398,7 +397,7 @@ Recommended validation commands before/after code changes:
 - Contact, valuation, auth, admin actions, settings, media upload, appointment operations, and admin vehicle save actions are UI-only toasts.
 - Legal pages are placeholders and must be replaced before production.
 - README and routing documentation are partially outdated relative to current admin/auth implementation.
-- Advanced vehicle search page is mostly static select UI; the real filtering happens on `/fahrzeuge` and homepage discovery/search components.
+- Advanced vehicle search page is mostly static select UI; the real keyword search happens on `/fahrzeuge`.
 - Browser local state is anonymous per device and stored in `localStorage`, not tied to users.
 
 ## 17. Guidance for Future Agents

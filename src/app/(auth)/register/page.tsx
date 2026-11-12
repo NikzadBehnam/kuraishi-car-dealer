@@ -13,7 +13,7 @@ export default function RegisterPage() {
     <AuthShell
       eyebrow="Register"
       title="Create your client account"
-      description="Prepare a client profile for future saved vehicles, comparisons, valuations, and inquiries."
+      description="Prepare a client profile for future comparisons, valuations, and inquiries."
       footer={
         <p>
           Already registered?{" "}

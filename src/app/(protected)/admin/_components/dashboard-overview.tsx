@@ -77,7 +77,6 @@ const priorityLabels: Record<AdminLeadPriority, string> = {
 
 const activityIcons: Record<AdminActivityEvent["type"], LucideIcon> = {
   login: Users,
-  favourite: CarFront,
   comparison: Activity,
   inquiry: Inbox,
   valuation: ClipboardPlus,
@@ -401,7 +400,7 @@ function InventorySummary() {
         })}
       </div>
       <Separator className="my-4" />
-      <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+      <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
         <p>
           <strong className="text-foreground">
             {integer.format(adminVehicles.reduce((sum, item) => sum + item.views, 0))}
@@ -415,14 +414,6 @@ function InventorySummary() {
             )}
           </strong>{" "}
           inventory inquiries
-        </p>
-        <p>
-          <strong className="text-foreground">
-            {integer.format(
-              adminVehicles.reduce((sum, item) => sum + item.favourites, 0),
-            )}
-          </strong>{" "}
-          saved vehicle events
         </p>
       </div>
     </Card>

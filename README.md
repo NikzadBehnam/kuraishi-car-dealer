@@ -39,7 +39,7 @@ pnpm test
 - `src/schemas`: Zod validation schemas with German messages
 - `src/lib`: formatting, filtering and shared utilities
 
-Server Components are the default. Client Components are limited to filters, local favourites/comparison state, mobile navigation, calculators, forms and notifications.
+Server Components are the default. Client Components are limited to filters, local comparison state, mobile navigation, calculators, forms and notifications.
 
 The localized App Router strategy is documented in [`docs/routing-architecture.md`](docs/routing-architecture.md).
 
@@ -55,7 +55,7 @@ The localized App Router strategy is documented in [`docs/routing-architecture.m
 
 ## Search and local state
 
-Filtering is implemented in `src/lib/vehicle-filters.ts`, independent of the visual components, so it can be moved to an API or database query later. Initial filters are parsed from URL search parameters. Favourites and comparison selections use a focused React provider and browser `localStorage`; a production account service can replace this persistence boundary.
+Filtering is implemented in `src/lib/vehicle-filters.ts`, independent of the visual components, so it can be moved to an API or database query later. Initial filters are parsed from URL search parameters. Comparison selections use a focused React provider and browser `localStorage`; a production account service can replace this persistence boundary.
 
 ## Forms and future integrations
 

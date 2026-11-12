@@ -216,9 +216,6 @@ export function UsersManagement({
                     <TableHead className="px-3">Status</TableHead>
                     <TableHead className="px-3">Registered</TableHead>
                     <TableHead className="px-3">Last login</TableHead>
-                    <TableHead className="px-3 text-right">
-                      Favourites
-                    </TableHead>
                     <TableHead className="px-3 text-right">Inquiries</TableHead>
                     <TableHead className="w-12 px-3 text-right">
                       Actions
@@ -294,9 +291,6 @@ function UserTableRow({
         {user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "Never"}
       </TableCell>
       <TableCell className="px-3 text-right font-bold">
-        {user.favouritesVehicleIds.length}
-      </TableCell>
-      <TableCell className="px-3 text-right font-bold">
         {user.inquiryIds.length}
       </TableCell>
       <TableCell className="px-3 text-right">
@@ -322,7 +316,6 @@ function UserCard({ user, onOpen }: { user: AdminUser; onOpen: () => void }) {
         <span>
           Last login {user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "Never"}
         </span>
-        <span>{user.favouritesVehicleIds.length} favourites</span>
         <span>{user.inquiryIds.length} inquiries</span>
       </div>
     </article>
@@ -346,9 +339,6 @@ function UserDetailSheet({
 }) {
   if (!user) return null;
 
-  const savedVehicles = vehicles.filter((vehicle) =>
-    user.favouritesVehicleIds.includes(vehicle.id),
-  );
   const comparedVehicles = vehicles.filter((vehicle) =>
     user.comparisonVehicleIds.includes(vehicle.id),
   );
@@ -467,18 +457,11 @@ function UserDetailSheet({
               </TabsContent>
 
               <TabsContent value="vehicles">
-                <DetailSection title="Saved vehicles">
-                  <VehicleList vehicles={savedVehicles} empty="No saved vehicles." />
-                  <Separator className="my-4" />
-                  <h4 className="text-sm font-extrabold">
-                    Comparison vehicles
-                  </h4>
-                  <div className="mt-3">
-                    <VehicleList
-                      vehicles={comparedVehicles}
-                      empty="No comparison vehicles."
-                    />
-                  </div>
+                <DetailSection title="Comparison vehicles">
+                  <VehicleList
+                    vehicles={comparedVehicles}
+                    empty="No comparison vehicles."
+                  />
                 </DetailSection>
               </TabsContent>
 

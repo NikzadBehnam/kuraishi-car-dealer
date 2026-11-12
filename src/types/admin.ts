@@ -20,7 +20,6 @@ export interface AdminVehicle extends Vehicle {
   ownerCount: number;
   views: number;
   inquiries: number;
-  favourites: number;
   marginEstimate: number;
 }
 
@@ -89,7 +88,6 @@ export interface AdminUser {
   status: AdminUserStatus;
   registeredAt: string;
   lastLoginAt?: string;
-  favouritesVehicleIds: string[];
   comparisonVehicleIds: string[];
   inquiryIds: string[];
   valuationLeadIds: string[];
@@ -98,7 +96,7 @@ export interface AdminUser {
 }
 
 export type AdminActivityType =
-  "login" | "favourite" | "comparison" | "inquiry" | "valuation" | "update";
+  "login" | "comparison" | "inquiry" | "valuation" | "update";
 
 export type AdminActivitySeverity = "info" | "success" | "warning" | "risk";
 

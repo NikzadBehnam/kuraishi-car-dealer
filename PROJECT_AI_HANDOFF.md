@@ -4,7 +4,7 @@ This document is a source-grounded technical overview of the project as of the c
 
 ## 1. Project Purpose
 
-Kuraishi Car Dealer is a Next.js App Router application for a German-language car dealership / vehicle marketplace. It currently implements a production-oriented UI prototype with typed local demo data, German public pages, vehicle browsing, favourites/comparison state in the browser, UI-only forms, auth screens, and an admin back office prototype.
+Kuraishi Car Dealer is a Next.js App Router application for a German-language car dealership / vehicle marketplace. It currently implements a production-oriented UI prototype with typed local demo data, German public pages, vehicle browsing, comparison state in the browser, UI-only forms, auth screens, and an admin back office prototype.
 
 Important boundary: there is no real backend yet. Authentication, sessions, database persistence, CRM/email delivery, media uploads, booking, inventory mutations, and account services are not implemented. Most submit/action handlers show Sonner toasts and intentionally remain UI-only.
 
@@ -73,7 +73,6 @@ Public canonical URLs:
 - `/fahrzeuge` -> vehicle listing
 - `/fahrzeuge/[slug]` -> vehicle detail via route builder
 - `/fahrzeugsuche` -> advanced search
-- `/merkliste` -> favourites
 - `/fahrzeugvergleich` -> comparison
 - `/fahrzeug-verkaufen` -> sell/valuation flow
 - `/services` -> services
@@ -89,7 +88,6 @@ Internal physical routes:
 - `/vehicles`
 - `/vehicles/[slug]`
 - `/vehicle-search`
-- `/favourites`
 - `/vehicle-comparison`
 - `/sell-vehicle`
 - `/about-us`
@@ -142,7 +140,7 @@ Public layout:
 
 Marketplace layout:
 
-- `src/app/(public)/(marketplace)/layout.tsx`: adds a horizontal marketplace nav for all vehicles, advanced search, favourites, and comparison.
+- `src/app/(public)/(marketplace)/layout.tsx`: adds a horizontal marketplace nav for all vehicles, advanced search, and comparison.
 - Marketplace has its own loading/error boundaries plus listing/detail specific loading/error/not-found files.
 
 Legal layout:
@@ -176,7 +174,6 @@ Marketplace:
 - `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Parses `searchParams` for make, model, body type, fuel type, location, maximum price. Passes local vehicles to `VehicleSearchResults`.
 - `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. Shows gallery, facts, features, description, dealer contact card, actions, similar vehicles, and mobile sticky CTA.
 - `src/app/(public)/(marketplace)/vehicle-search/page.tsx`: advanced search UI stub with many select fields. The fields are not wired to filtering yet; CTA links to `/fahrzeuge`.
-- `src/app/(public)/(marketplace)/favourites/page.tsx`: reads browser-local favourites through `FavouritesGrid`.
 - `src/app/(public)/(marketplace)/vehicle-comparison/page.tsx`: reads browser-local comparison selections through `ComparisonTable`.
 - `src/app/(public)/(marketplace)/sell-vehicle/page.tsx`: vehicle valuation form and benefit panel.
 
@@ -228,7 +225,7 @@ Public mock data:
 
 Admin contract: `src/types/admin.ts`
 
-- Extends vehicles into `AdminVehicle` with stock number, status, inspection status, acquisition/published/reserved/sold timestamps, updater, VIN ending, owner count, views, inquiries, favourites, margin estimate.
+- Extends vehicles into `AdminVehicle` with stock number, status, inspection status, acquisition/published/reserved/sold timestamps, updater, VIN ending, owner count, views, inquiries, margin estimate.
 - Defines leads, appointments, users, activity events, media assets, and stats.
 
 Admin mock data:
@@ -256,13 +253,11 @@ Route helpers:
 
 Browser state:
 
-- `src/components/providers/vehicle-state-provider.tsx`: client context storing `favourites` and `comparison` as Sets.
-- Persistence keys:
-  - `kuraishi-favourites`
-  - `kuraishi-comparison`
+- `src/components/providers/vehicle-state-provider.tsx`: client context storing `comparison` as a Set.
+- Persistence key: `kuraishi-comparison`.
 - Comparison limit is 3 vehicles.
 - Mutations write to `localStorage` and show German toasts.
-- Provider is mounted globally in `src/app/layout.tsx`, so public header and vehicle actions can use it.
+- Provider is mounted globally in `src/app/layout.tsx`, so vehicle actions and the comparison page can use it.
 
 ## 10. Forms and Validation
 
@@ -292,7 +287,7 @@ All forms are client-side UI prototypes.
 
 Shared layout:
 
-- `src/components/layout/site-header.tsx`: sticky glass header, desktop/mobile nav, theme toggle, favourites count.
+- `src/components/layout/site-header.tsx`: sticky glass header, desktop/mobile nav, theme toggle.
 - `src/components/layout/site-footer.tsx`: newsletter, contact links, legal links, social icons, QR code.
 - `src/components/layout/page-header.tsx`: common page header/breadcrumb.
 - `src/components/layout/newsletter-form.tsx`: UI-only newsletter signup toast.
@@ -301,12 +296,11 @@ Shared layout:
 Vehicle components:
 
 - `src/components/vehicle/vehicle-card.tsx`: public vehicle card linking to canonical detail route.
-- `src/components/vehicle/vehicle-actions.tsx`: favourite/compare buttons using `useVehicleState`.
+- `src/components/vehicle/vehicle-actions.tsx`: compare buttons using `useVehicleState`.
 - `src/components/vehicle/vehicle-card-skeleton.tsx`: loading placeholder.
 - `src/app/(public)/(marketplace)/vehicles/_components/vehicle-filter-bar.tsx`: listing filters.
 - `src/app/(public)/(marketplace)/vehicles/_components/vehicle-search-results.tsx`: filtered results.
 - `src/app/(public)/(marketplace)/vehicles/[slug]/_components/vehicle-image-gallery.tsx`: detail gallery.
-- `src/app/(public)/(marketplace)/favourites/_components/favourites-grid.tsx`: saved vehicles grid.
 - `src/app/(public)/(marketplace)/vehicle-comparison/_components/vehicle-comparison-table.tsx`: comparison table.
 
 Admin components:

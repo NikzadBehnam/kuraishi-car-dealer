@@ -10,7 +10,6 @@ import { siteConfig } from "@/config/site.config";
 const vehicleLinks = [
   ["Alle Fahrzeuge", routes.vehicles],
   ["Erweiterte Suche", routes.vehicleSearch],
-  ["Merkliste", routes.favourites],
   ["Vergleich", routes.comparison],
 ] as const;
 

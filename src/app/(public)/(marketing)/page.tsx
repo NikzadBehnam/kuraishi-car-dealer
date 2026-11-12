@@ -15,9 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { publicRoutes } from "@/config/routes.config";
 import { QuickSearchForm } from "./_components/quick-search-form";
-import { AnimatedSection } from "@/components/motion/animated-section";
 import { createPublicMetadata } from "@/lib/metadata";
-import { VehicleDiscoverySearch } from "./_components/vehicle-discovery-search";
 
 export const metadata = createPublicMetadata(
   "Startseite",
@@ -96,11 +94,6 @@ export default function HomePage() {
           </div>
           <QuickSearchForm />
         </div>
-      </section>
-      <section className="py-12 sm:py-14 lg:py-16">
-        <AnimatedSection>
-          <VehicleDiscoverySearch />
-        </AnimatedSection>
       </section>
       <section className="section-space bg-surface">
         <div className="site-container">

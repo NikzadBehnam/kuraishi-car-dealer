@@ -8,7 +8,6 @@ export const commonContent = {
     comparison: "Vergleich",
   },
   actions: {
-    findVehicle: "Fahrzeug finden",
     viewDetails: "Details ansehen",
     remove: "Entfernen",
     compare: "Vergleichen",

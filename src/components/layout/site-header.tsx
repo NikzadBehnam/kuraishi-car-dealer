@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { CarFront, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { commonContent } from "@/content/de/common";
 import { mainNavigation } from "@/config/navigation.config";
@@ -36,16 +36,6 @@ export function SiteHeader() {
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
-          <Button
-            asChild
-            variant="accent"
-            className="hidden rounded-[var(--radius-sm)] sm:inline-flex"
-          >
-            <Link href={routes.vehicles}>
-              <CarFront />
-              {commonContent.actions.findVehicle}
-            </Link>
-          </Button>
           <Button
             variant="outline"
             size="icon"

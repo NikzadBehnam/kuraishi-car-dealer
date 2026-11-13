@@ -292,7 +292,7 @@ Admin components:
 - `src/app/(protected)/admin/vehicles/_components/vehicle-form.tsx`: create/edit form.
 - `src/app/(protected)/admin/leads/_components/leads-inbox.tsx`: contact and vehicle inquiry filtering, request details, and UI-only actions.
 - `src/app/(protected)/admin/media/_components/media-library.tsx`: media filtering/detail/upload placeholders.
-- `src/app/(protected)/admin/settings/_components/settings-panel.tsx`: dealership, contact, appearance, and legal UI settings.
+- `src/app/(protected)/admin/settings/_components/settings-panel.tsx`: dealership and contact UI settings.
 
 Design system:
 

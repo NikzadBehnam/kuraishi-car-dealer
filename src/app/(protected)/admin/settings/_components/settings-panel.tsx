@@ -1,33 +1,14 @@
 "use client";
 
 import { toast } from "sonner";
-import {
-  Building2,
-  Eye,
-  FileText,
-  Mail,
-  Moon,
-  Palette,
-  Save,
-  Sun,
-} from "lucide-react";
+import { Building2, Mail, Save } from "lucide-react";
 
 import type { siteConfig } from "@/config/site.config";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -48,12 +29,6 @@ export function SettingsPanel({ site }: { site: SiteConfig }) {
             </TabsTrigger>
             <TabsTrigger className={settingsTabClassName} value="contact">
               Contact
-            </TabsTrigger>
-            <TabsTrigger className={settingsTabClassName} value="appearance">
-              Appearance
-            </TabsTrigger>
-            <TabsTrigger className={settingsTabClassName} value="legal">
-              Legal placeholders
             </TabsTrigger>
           </TabsList>
         </div>
@@ -118,93 +93,6 @@ export function SettingsPanel({ site }: { site: SiteConfig }) {
           </SettingsSection>
         </TabsContent>
 
-        <TabsContent value="appearance">
-          <SettingsSection
-            icon={Palette}
-            title="Appearance"
-            description="Visual preferences aligned with the current dark mode system."
-          >
-            <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-              <div className="grid min-w-0 gap-3">
-                <SwitchRow
-                  label="Compact admin tables"
-                  description="Use denser row spacing in operational views."
-                  defaultChecked
-                />
-                <SwitchRow
-                  label="Reduce decorative motion"
-                  description="Keep transitions subtle in admin workflows."
-                />
-                <SwitchRow
-                  label="Show dashboard trend colors"
-                  description="Use success, warning, and info color indicators."
-                  defaultChecked
-                />
-              </div>
-              <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-extrabold">Theme</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Uses the existing app theme provider.
-                    </p>
-                  </div>
-                  <ThemeToggle />
-                </div>
-                <Separator className="my-4" />
-                <div className="grid gap-2">
-                  <AppearanceChoice Icon={Sun} label="Light mode" />
-                  <AppearanceChoice Icon={Moon} label="Dark mode" />
-                  <AppearanceChoice Icon={Eye} label="System preference" />
-                </div>
-              </Card>
-            </div>
-            <SaveBar label="Save appearance settings" />
-          </SettingsSection>
-        </TabsContent>
-
-        <TabsContent value="legal">
-          <SettingsSection
-            icon={FileText}
-            title="Legal placeholders"
-            description="Placeholder controls only. Legal content must be reviewed before production."
-          >
-            <div className="grid min-w-0 gap-4 md:grid-cols-2">
-              <CheckboxRow
-                label="Show legal placeholder banner"
-                description="Keep internal warning visible until reviewed."
-                defaultChecked
-              />
-              <CheckboxRow
-                label="Require legal review before publish"
-                description="Future guard for production content workflows."
-                defaultChecked
-              />
-              <Field label="Legal owner">
-                <Input defaultValue="Not assigned" />
-              </Field>
-              <Field label="Review status">
-                <Select defaultValue="placeholder">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="placeholder">Placeholder</SelectItem>
-                    <SelectItem value="in-review">In review</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Internal legal note" className="md:col-span-2">
-                <Textarea
-                  rows={5}
-                  defaultValue="All legal pages are UI placeholders and must be replaced before production."
-                />
-              </Field>
-            </div>
-            <SaveBar label="Save legal placeholder settings" />
-          </SettingsSection>
-        </TabsContent>
       </Tabs>
     </div>
   );
@@ -254,69 +142,6 @@ function Field({
       <Label>{label}</Label>
       <div className="min-w-0">{children}</div>
     </div>
-  );
-}
-
-function SwitchRow({
-  label,
-  description,
-  defaultChecked = false,
-}: {
-  label: string;
-  description: string;
-  defaultChecked?: boolean;
-}) {
-  return (
-    <label className="flex min-h-24 min-w-0 items-start justify-between gap-4 rounded-[var(--radius-sm)] border bg-background p-4">
-      <span className="min-w-0">
-        <span className="block text-sm font-extrabold">{label}</span>
-        <span className="mt-1 block text-sm leading-6 text-muted-foreground">
-          {description}
-        </span>
-      </span>
-      <Switch className="shrink-0" defaultChecked={defaultChecked} />
-    </label>
-  );
-}
-
-function CheckboxRow({
-  label,
-  description,
-  defaultChecked = false,
-}: {
-  label: string;
-  description: string;
-  defaultChecked?: boolean;
-}) {
-  return (
-    <label className="flex min-h-24 min-w-0 items-start gap-3 rounded-[var(--radius-sm)] border bg-background p-4">
-      <Checkbox defaultChecked={defaultChecked} className="mt-1 shrink-0" />
-      <span className="min-w-0">
-        <span className="block text-sm font-extrabold">{label}</span>
-        <span className="mt-1 block text-sm leading-6 text-muted-foreground">
-          {description}
-        </span>
-      </span>
-    </label>
-  );
-}
-
-function AppearanceChoice({
-  Icon,
-  label,
-}: {
-  Icon: typeof Sun;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      className="flex min-w-0 items-center gap-3 rounded-[var(--radius-sm)] border bg-background p-3 text-left transition-colors hover:bg-surface-muted focus-visible:outline-none"
-      onClick={() => toast.info(`${label} selection is UI-only.`)}
-    >
-      <Icon className="size-4 shrink-0 text-accent" aria-hidden="true" />
-      <span className="min-w-0 text-sm font-bold">{label}</span>
-    </button>
   );
 }
 

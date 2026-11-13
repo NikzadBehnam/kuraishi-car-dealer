@@ -81,7 +81,11 @@ export default async function VehicleDetailPage({
       value: formatMileage(vehicle.mileage),
       Icon: Gauge,
     },
-    { label: "Kraftstoff", value: formatFuelType(vehicle.fuelType), Icon: Fuel },
+    {
+      label: "Kraftstoff",
+      value: formatFuelType(vehicle.fuelType),
+      Icon: Fuel,
+    },
     {
       label: "Getriebe",
       value: formatTransmission(vehicle.transmissionType),
@@ -102,51 +106,6 @@ export default async function VehicleDetailPage({
   ];
   return (
     <>
-      <div className="bg-surface border-b">
-        <div className="site-container py-8 sm:py-10">
-          <nav
-            aria-label="Brotkrümelnavigation"
-            className="text-muted-foreground flex flex-wrap gap-1 text-sm"
-          >
-            <Link className="hover:text-foreground" href={publicRoutes.home}>
-              Startseite
-            </Link>
-            <span aria-hidden="true"> / </span>
-            <Link className="hover:text-foreground" href={publicRoutes.vehicles}>
-              Fahrzeuge
-            </Link>
-            <span aria-hidden="true"> / </span>
-            <span aria-current="page">{vehicleTitle}</span>
-          </nav>
-          <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-success bg-success/10 inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-3 py-1 text-xs font-extrabold">
-                  <BadgeCheck className="size-3.5" aria-hidden="true" />
-                  Sofort verfügbar
-                </span>
-                <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-3 py-1 text-xs font-bold">
-                  <MapPin className="size-3.5" aria-hidden="true" />
-                  {vehicle.location}
-                </span>
-              </div>
-              <h1 className="page-title mt-4">{vehicleTitle}</h1>
-              <p className="text-muted-foreground mt-2 text-lg">
-                {vehicle.variant}
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-sm)] border bg-background px-5 py-4 shadow-sm">
-              <span className="text-muted-foreground text-xs font-bold">
-                Angebotspreis
-              </span>
-              <p className="text-3xl font-black tracking-tight">
-                {formatCurrency(vehicle.price)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="site-container grid gap-8 py-8 pb-24 lg:grid-cols-[minmax(0,1.45fr)_minmax(21rem,.72fr)] lg:pb-10">
         <div className="min-w-0">
           <VehicleImageGallery images={vehicle.images} title={vehicleTitle} />
@@ -181,45 +140,103 @@ export default async function VehicleDetailPage({
             </div>
           </section>
 
-          <div className="grid gap-5 xl:grid-cols-[.85fr_1.15fr]">
-            <section>
-              <div className="mb-5 flex items-center gap-2">
+          <Card className="divide-y overflow-hidden rounded-[var(--radius-sm)] shadow-none">
+            <section
+              aria-labelledby="vehicle-equipment-title"
+              className="p-5 sm:p-6"
+            >
+              <div className="flex items-center gap-2">
                 <Sparkles className="text-accent size-5" aria-hidden="true" />
-                <h2 className="text-2xl font-extrabold">Ausstattung</h2>
+                <h2
+                  id="vehicle-equipment-title"
+                  className="text-xl font-extrabold"
+                >
+                  Ausstattung
+                </h2>
               </div>
-              <div className="grid gap-3">
+              <ul className="mt-5 grid gap-2 sm:grid-cols-2">
                 {vehicle.features.map((feature) => (
-                  <div
-                    className="bg-surface flex items-center gap-3 rounded-[var(--radius-sm)] border p-4"
+                  <li
+                    className="bg-secondary/50 flex min-w-0 items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3"
                     key={feature}
                   >
-                    <span className="bg-success/10 text-success grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)]">
-                      <Check className="size-4" aria-hidden="true" />
+                    <Check
+                      className="text-success size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 text-sm font-semibold break-words">
+                      {feature}
                     </span>
-                    <span className="font-semibold">{feature}</span>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </section>
 
-            <section>
-              <div className="mb-5 flex items-center gap-2">
-                <ShieldCheck className="text-accent size-5" aria-hidden="true" />
-                <h2 className="text-2xl font-extrabold">Beschreibung</h2>
+            <section
+              aria-labelledby="vehicle-description-title"
+              className="p-5 sm:p-6"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck
+                  className="text-accent size-5"
+                  aria-hidden="true"
+                />
+                <h2
+                  id="vehicle-description-title"
+                  className="text-xl font-extrabold"
+                >
+                  Beschreibung
+                </h2>
               </div>
-              <Card className="rounded-[var(--radius-sm)] p-6">
-                <p className="text-muted-foreground leading-7">
-                  {vehicle.description} Vor Auslieferung erhält das Fahrzeug
-                  eine professionelle Aufbereitung. Irrtümer und Zwischenverkauf
-                  vorbehalten.
-                </p>
-              </Card>
+              <p className="text-muted-foreground mt-4 text-sm leading-7">
+                {vehicle.description} Vor Auslieferung erhält das Fahrzeug eine
+                professionelle Aufbereitung.
+              </p>
+              <p className="text-muted-foreground mt-4 text-xs leading-5">
+                Irrtümer und Zwischenverkauf vorbehalten.
+              </p>
             </section>
-          </div>
+          </Card>
         </div>
 
-        <aside className="lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:self-start">
+        <aside className="order-first min-w-0 lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:order-last lg:self-start">
           <Card className="overflow-hidden rounded-[var(--radius-sm)]">
+            <div className="p-6">
+              <nav
+                aria-label="Brotkrümelnavigation"
+                className="text-muted-foreground flex flex-wrap gap-1 text-xs"
+              >
+                <Link
+                  className="hover:text-foreground"
+                  href={publicRoutes.home}
+                >
+                  Startseite
+                </Link>
+                <span aria-hidden="true"> / </span>
+                <Link
+                  className="hover:text-foreground"
+                  href={publicRoutes.vehicles}
+                >
+                  Fahrzeuge
+                </Link>
+                <span aria-hidden="true"> / </span>
+                <span aria-current="page">{vehicleTitle}</span>
+              </nav>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-success bg-success/10 inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-3 py-1 text-xs font-extrabold">
+                  <BadgeCheck className="size-3.5" aria-hidden="true" />
+                  Sofort verfügbar
+                </span>
+                <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-3 py-1 text-xs font-bold">
+                  <MapPin className="size-3.5" aria-hidden="true" />
+                  {vehicle.location}
+                </span>
+              </div>
+              <h1 className="mt-4 text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
+                {vehicleTitle}
+              </h1>
+              <p className="text-muted-foreground mt-2">{vehicle.variant}</p>
+            </div>
             <div className="bg-brand-panel text-brand-panel-foreground p-6">
               <p className="text-brand-panel-muted text-xs font-bold">
                 Direkt anfragen
@@ -242,7 +259,7 @@ export default async function VehicleDetailPage({
                 ★ {dealer.rating} ({dealer.reviewCount} Bewertungen)
               </p>
               <p className="mt-4 flex gap-2 text-sm">
-                <MapPin className="size-4 shrink-0 text-accent" />
+                <MapPin className="text-accent size-4 shrink-0" />
                 {dealer.address}
               </p>
               <Button asChild variant="outline" className="mt-4 w-full">

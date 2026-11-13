@@ -172,7 +172,7 @@ Marketing:
 Marketplace:
 
 - `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Reads the initial keyword search from the `q` URL parameter and passes local vehicles to `VehicleSearchResults`.
-- `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. Shows gallery, facts, features, description, dealer contact card, actions, similar vehicles, and mobile sticky CTA.
+- `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. No standalone page header: the side column contains the breadcrumb, title, variant, availability, location, price, and dealer contact/actions. It appears before the gallery on mobile. Equipment and description share a divided panel with a responsive equipment list. Also shows facts, similar vehicles, and mobile sticky CTA.
 - `src/app/(public)/(marketplace)/vehicle-search/page.tsx`: advanced search UI stub with many select fields. The fields are not wired to filtering yet; CTA links to `/fahrzeuge`.
 - `src/app/(public)/(marketplace)/vehicle-comparison/page.tsx`: reads browser-local comparison selections through `ComparisonTable`.
 - `src/app/(public)/(marketplace)/sell-vehicle/page.tsx`: vehicle valuation form and benefit panel.

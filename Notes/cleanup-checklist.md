@@ -14,7 +14,7 @@
 
 ## `/fahrzeuge/[slug]` | Vehicle details — try `/fahrzeuge/volkswagen-tiguan-1` |
 
-- [-] 9- remove or change the size of the hero section the hero section "Volkswagen Tiguan"
+- [+] **9- remove the vehicle details header; move its information into the side column**
 
 ## http://localhost:3000/fahrzeugsuche
 

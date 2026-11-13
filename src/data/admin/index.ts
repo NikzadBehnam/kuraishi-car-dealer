@@ -50,8 +50,6 @@ export const adminLeads: AdminLead[] = [
   {
     id: "lead-1",
     source: "test-drive",
-    status: "new",
-    priority: "urgent",
     customerName: "Daniel Berger",
     customerEmail: "daniel.berger@example.com",
     customerPhone: "+43 699 100 44 11",
@@ -65,8 +63,6 @@ export const adminLeads: AdminLead[] = [
   {
     id: "lead-3",
     source: "contact",
-    status: "qualified",
-    priority: "medium",
     customerName: "Elena Fischer",
     customerEmail: "elena.fischer@example.com",
     customerPhone: "+43 699 100 55 22",
@@ -81,8 +77,6 @@ export const adminLeads: AdminLead[] = [
   {
     id: "lead-4",
     source: "callback",
-    status: "closed",
-    priority: "low",
     customerName: "Lukas Steiner",
     customerEmail: "lukas.steiner@example.com",
     customerPhone: "+43 699 100 77 44",
@@ -95,8 +89,6 @@ export const adminLeads: AdminLead[] = [
   {
     id: "lead-5",
     source: "contact",
-    status: "lost",
-    priority: "medium",
     customerName: "Martin Hoffmann",
     customerEmail: "martin.hoffmann@example.com",
     customerPhone: "+43 699 100 66 33",

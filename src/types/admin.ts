@@ -25,16 +25,9 @@ export interface AdminVehicle extends Vehicle {
 export type AdminLeadSource =
   "contact" | "test-drive" | "callback";
 
-export type AdminLeadStatus =
-  "new" | "contacted" | "qualified" | "closed" | "lost";
-
-export type AdminLeadPriority = "low" | "medium" | "high" | "urgent";
-
 export interface AdminLead {
   id: string;
   source: AdminLeadSource;
-  status: AdminLeadStatus;
-  priority: AdminLeadPriority;
   customerName: string;
   customerEmail: string;
   customerPhone?: string;

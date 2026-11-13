@@ -11,8 +11,6 @@ import {
 import { adminLeads, adminVehicles } from "@/data/admin";
 import type {
   AdminLead,
-  AdminLeadPriority,
-  AdminLeadStatus,
   AdminVehicleStatus,
 } from "@/types/admin";
 import { adminRoutes } from "@/config/admin-routes.config";
@@ -48,25 +46,7 @@ const statusLabels: Record<AdminVehicleStatus, string> = {
   archived: "Archived",
 };
 
-const leadStatusLabels: Record<AdminLeadStatus, string> = {
-  new: "New",
-  contacted: "Contacted",
-  qualified: "Qualified",
-  closed: "Closed",
-  lost: "Lost",
-};
-
-const priorityLabels: Record<AdminLeadPriority, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  urgent: "Urgent",
-};
-
 export function DashboardOverview() {
-  const openLeads = adminLeads.filter(
-    (lead) => !["closed", "lost"].includes(lead.status),
-  );
   const soldVehicles = adminVehicles.filter(
     (vehicle) => vehicle.status === "sold",
   );
@@ -83,11 +63,9 @@ export function DashboardOverview() {
       tone: "primary",
     },
     {
-      label: "New leads",
-      value: integer.format(
-        adminLeads.filter((lead) => lead.status === "new").length,
-      ),
-      helper: `${openLeads.length} open lead workflows`,
+      label: "Leads",
+      value: integer.format(adminLeads.length),
+      helper: "Contact and vehicle inquiries",
       Icon: Inbox,
       tone: "accent",
     },
@@ -215,7 +193,6 @@ function RecentLeads({ leads }: { leads: AdminLead[] }) {
             <TableRow className="hover:bg-transparent">
               <TableHead className="bg-surface px-3">Customer</TableHead>
               <TableHead className="bg-surface px-3">Source</TableHead>
-              <TableHead className="bg-surface px-3">Status</TableHead>
               <TableHead className="bg-surface px-3 text-right">
                 Created
               </TableHead>
@@ -236,12 +213,6 @@ function RecentLeads({ leads }: { leads: AdminLead[] }) {
                   <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
                     {lead.source}
                   </Badge>
-                </TableCell>
-                <TableCell className="px-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    <LeadStatusBadge status={lead.status} />
-                    <PriorityBadge priority={lead.priority} />
-                  </div>
                 </TableCell>
                 <TableCell className="px-3 text-right text-xs font-bold text-muted-foreground">
                   {formatDateTime(lead.createdAt)}
@@ -362,37 +333,6 @@ function StatusBadge({ status }: { status: AdminVehicleStatus }) {
       )}
     >
       {statusLabels[status]}
-    </Badge>
-  );
-}
-
-function LeadStatusBadge({ status }: { status: AdminLeadStatus }) {
-  return (
-    <Badge
-      className={cn(
-        "bg-secondary text-secondary-foreground dark:bg-secondary",
-        status === "new" && "bg-accent/10 text-accent",
-        status === "contacted" && "bg-info/10 text-info",
-        status === "qualified" && "bg-success/10 text-success",
-        status === "closed" && "bg-secondary text-secondary-foreground",
-        status === "lost" && "bg-destructive/10 text-destructive",
-      )}
-    >
-      {leadStatusLabels[status]}
-    </Badge>
-  );
-}
-
-function PriorityBadge({ priority }: { priority: AdminLeadPriority }) {
-  return (
-    <Badge
-      className={cn(
-        "bg-secondary text-secondary-foreground dark:bg-secondary",
-        priority === "high" && "bg-warning/10 text-warning",
-        priority === "urgent" && "bg-destructive/10 text-destructive",
-      )}
-    >
-      {priorityLabels[priority]}
     </Badge>
   );
 }

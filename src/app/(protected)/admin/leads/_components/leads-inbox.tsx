@@ -2,20 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  CheckCircle2,
-  Inbox,
-  Mail,
-  Phone,
-  Search,
-  XCircle,
-} from "lucide-react";
+import { Inbox, Mail, Phone, Search } from "lucide-react";
 
 import type {
   AdminLead,
-  AdminLeadPriority,
   AdminLeadSource,
-  AdminLeadStatus,
   AdminVehicle,
 } from "@/types/admin";
 import { formatMileage } from "@/lib/formatters";
@@ -41,37 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-
-type LeadTab = "all" | AdminLeadStatus;
-
-const leadTabs: Array<{ value: LeadTab; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "new", label: "New" },
-  { value: "contacted", label: "Contacted" },
-  { value: "qualified", label: "Qualified" },
-  { value: "closed", label: "Closed" },
-  { value: "lost", label: "Lost" },
-];
-
-const leadTabClassName =
-  "min-h-9 flex-1 basis-[7rem] bg-secondary px-3 text-xs sm:flex-none sm:text-sm";
-
-const statusLabels: Record<AdminLeadStatus, string> = {
-  new: "New",
-  contacted: "Contacted",
-  qualified: "Qualified",
-  closed: "Closed",
-  lost: "Lost",
-};
-
-const priorityLabels: Record<AdminLeadPriority, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  urgent: "Urgent",
-};
 
 const sourceLabels: Record<AdminLeadSource, string> = {
   contact: "Contact",
@@ -93,7 +54,6 @@ export function LeadsInbox({
   leads: AdminLead[];
   vehicles: AdminVehicle[];
 }) {
-  const [activeTab, setActiveTab] = useState<LeadTab>("all");
   const [query, setQuery] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
@@ -101,7 +61,6 @@ export function LeadsInbox({
     const normalizedQuery = query.trim().toLocaleLowerCase("de");
 
     return leads
-      .filter((lead) => activeTab === "all" || lead.status === activeTab)
       .filter((lead) => {
         if (!normalizedQuery) return true;
         const vehicle = getLeadVehicle(lead, vehicles);
@@ -118,7 +77,7 @@ export function LeadsInbox({
           .includes(normalizedQuery);
       })
       .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [activeTab, leads, query, vehicles]);
+  }, [leads, query, vehicles]);
 
   const selectedLead =
     leads.find((lead) => lead.id === selectedLeadId) ?? null;
@@ -135,7 +94,7 @@ export function LeadsInbox({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="mt-4">
           <div className="relative">
             <Search
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -149,26 +108,6 @@ export function LeadsInbox({
               className="bg-background pl-9"
             />
           </div>
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as LeadTab)}
-            className="min-w-0"
-          >
-            <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0 lg:w-auto">
-              {leadTabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  className={leadTabClassName}
-                  value={tab.value}
-                >
-                  {tab.label}
-                  <span className="ml-2 rounded-full bg-background px-1.5 py-0.5 text-[0.65rem]">
-                    {countLeads(leads, tab.value)}
-                  </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
         </div>
       </Card>
 
@@ -182,8 +121,6 @@ export function LeadsInbox({
                     <TableHead className="px-3">Source</TableHead>
                     <TableHead className="px-3">Customer</TableHead>
                     <TableHead className="px-3">Vehicle interest</TableHead>
-                    <TableHead className="px-3">Status</TableHead>
-                    <TableHead className="px-3">Priority</TableHead>
                     <TableHead className="px-3 text-right">Created</TableHead>
                     <TableHead className="w-24 px-3 text-right">
                       Action
@@ -255,12 +192,6 @@ function LeadTableRow({
       <TableCell className="min-w-56 px-3">
         <LeadVehicleInterest vehicle={vehicle} />
       </TableCell>
-      <TableCell className="px-3">
-        <StatusBadge status={lead.status} />
-      </TableCell>
-      <TableCell className="px-3">
-        <PriorityBadge priority={lead.priority} />
-      </TableCell>
       <TableCell className="whitespace-nowrap px-3 text-right text-xs font-bold text-muted-foreground">
         {formatDateTime(lead.createdAt)}
       </TableCell>
@@ -292,8 +223,6 @@ function LeadCard({
     <article className="grid gap-3 border-b p-4 last:border-b-0">
       <div className="flex flex-wrap items-center gap-2">
         <SourceBadge source={lead.source} />
-        <StatusBadge status={lead.status} />
-        <PriorityBadge priority={lead.priority} />
       </div>
       <div>
         <h3 className="font-extrabold">{lead.customerName}</h3>
@@ -344,8 +273,6 @@ function LeadDetailSheet({
             <SheetHeader>
               <div className="flex flex-wrap gap-2">
                 <SourceBadge source={lead.source} />
-                <StatusBadge status={lead.status} />
-                <PriorityBadge priority={lead.priority} />
               </div>
               <SheetTitle>{lead.customerName}</SheetTitle>
               <SheetDescription>
@@ -374,24 +301,6 @@ function LeadDetailSheet({
                   <Mail />
                   Email
                 </a>
-              </Button>
-              <Button
-                type="button"
-                variant="accent"
-                className="w-full rounded-[var(--radius-sm)]"
-                onClick={() => toast.info("Mark contacted is UI-only.")}
-              >
-                <CheckCircle2 />
-                Mark contacted
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full rounded-[var(--radius-sm)] sm:col-span-2"
-                onClick={() => toast.info("Close lead is UI-only.")}
-              >
-                <XCircle />
-                Close
               </Button>
             </div>
 
@@ -520,8 +429,7 @@ function EmptyLeadsState() {
         </span>
         <h3 className="mt-4 font-extrabold">No leads found</h3>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Change the selected status tab or search term to review more mocked
-          lead records.
+          Change the search term to review more mocked lead records.
         </p>
       </div>
     </div>
@@ -536,47 +444,10 @@ function SourceBadge({ source }: { source: AdminLeadSource }) {
   );
 }
 
-function StatusBadge({ status }: { status: AdminLeadStatus }) {
-  return (
-    <Badge
-      className={cn(
-        "bg-secondary text-secondary-foreground dark:bg-secondary",
-        status === "new" && "bg-accent/10 text-accent",
-        status === "contacted" && "bg-info/10 text-info",
-        status === "qualified" && "bg-success/10 text-success",
-        status === "closed" && "bg-secondary text-secondary-foreground",
-        status === "lost" && "bg-destructive/10 text-destructive",
-      )}
-    >
-      {statusLabels[status]}
-    </Badge>
-  );
-}
-
-function PriorityBadge({ priority }: { priority: AdminLeadPriority }) {
-  return (
-    <Badge
-      className={cn(
-        "bg-secondary text-secondary-foreground dark:bg-secondary",
-        priority === "high" && "bg-warning/10 text-warning",
-        priority === "urgent" && "bg-destructive/10 text-destructive",
-      )}
-    >
-      {priorityLabels[priority]}
-    </Badge>
-  );
-}
-
 function getLeadVehicle(lead: AdminLead, vehicles: AdminVehicle[]) {
   return lead.vehicleId
     ? vehicles.find((vehicle) => vehicle.id === lead.vehicleId)
     : undefined;
-}
-
-function countLeads(leads: AdminLead[], tab: LeadTab) {
-  return tab === "all"
-    ? leads.length
-    : leads.filter((lead) => lead.status === tab).length;
 }
 
 function formatDateTime(value: string) {

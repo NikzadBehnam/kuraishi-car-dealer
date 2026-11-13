@@ -72,7 +72,6 @@ Public canonical URLs:
 - `/` -> home
 - `/fahrzeuge` -> vehicle listing
 - `/fahrzeuge/[slug]` -> vehicle detail via route builder
-- `/fahrzeugsuche` -> advanced search
 - `/fahrzeugvergleich` -> comparison
 - `/fahrzeug-verkaufen` -> sell/valuation flow
 - `/services` -> services
@@ -87,7 +86,6 @@ Internal physical routes:
 
 - `/vehicles`
 - `/vehicles/[slug]`
-- `/vehicle-search`
 - `/vehicle-comparison`
 - `/sell-vehicle`
 - `/about-us`
@@ -140,7 +138,7 @@ Public layout:
 
 Marketplace layout:
 
-- `src/app/(public)/(marketplace)/layout.tsx`: adds a horizontal marketplace nav for all vehicles, advanced search, and comparison.
+- `src/app/(public)/(marketplace)/layout.tsx`: adds a horizontal marketplace nav for all vehicles and comparison.
 - Marketplace has its own loading/error boundaries plus listing/detail specific loading/error/not-found files.
 
 Legal layout:
@@ -173,7 +171,6 @@ Marketplace:
 
 - `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Reads the initial keyword search from the `q` URL parameter and passes local vehicles to `VehicleSearchResults`.
 - `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. No standalone page header: the side column contains the breadcrumb, title, variant, availability, location, price, and dealer contact/actions. It appears before the gallery on mobile. Equipment and description share a divided panel with a responsive equipment list. Also shows facts, similar vehicles, and mobile sticky CTA.
-- `src/app/(public)/(marketplace)/vehicle-search/page.tsx`: advanced search UI stub with many select fields. The fields are not wired to filtering yet; CTA links to `/fahrzeuge`.
 - `src/app/(public)/(marketplace)/vehicle-comparison/page.tsx`: reads browser-local comparison selections through `ComparisonTable`.
 - `src/app/(public)/(marketplace)/sell-vehicle/page.tsx`: vehicle valuation form and benefit panel.
 
@@ -396,7 +393,6 @@ Recommended validation commands before/after code changes:
 - Contact, valuation, auth, admin actions, settings, media upload, appointment operations, and admin vehicle save actions are UI-only toasts.
 - Legal pages are placeholders and must be replaced before production.
 - README and routing documentation are partially outdated relative to current admin/auth implementation.
-- Advanced vehicle search page is mostly static select UI; the real keyword search happens on `/fahrzeuge`.
 - Browser local state is anonymous per device and stored in `localStorage`, not tied to users.
 
 ## 17. Guidance for Future Agents

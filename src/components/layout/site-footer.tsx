@@ -8,7 +8,6 @@ import { siteConfig } from "@/config/site.config";
 
 const vehicleLinks = [
   ["Alle Fahrzeuge", routes.vehicles],
-  ["Erweiterte Suche", routes.vehicleSearch],
   ["Vergleich", routes.comparison],
 ] as const;
 

@@ -12,13 +12,13 @@
 - [+] 7- on the footer, remove the section "Neue Fahrzeuge direkt in Ihr Postfach"
 - [+] 8- update the entire data in the footer with the recent supplied
 
-## `/fahrzeuge/[slug]` | Vehicle details — try `/fahrzeuge/volkswagen-tiguan-1` |
+## `/fahrzeuge/[slug]` | Vehicle details — try `/fahrzeuge/volkswagen-tiguan-1`
 
-- [+] **9- remove the vehicle details header; move its information into the side column**
+- [+] 9- remove the vehicle details header; move its information into the side column
 
 ## http://localhost:3000/fahrzeugsuche
 
-- [-] 10- remove entire feature
+- [+] 10- remove entire feature
 
 ## http://localhost:3000/merkliste
 

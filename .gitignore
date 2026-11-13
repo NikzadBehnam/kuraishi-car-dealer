@@ -5,6 +5,7 @@ outputs/
 .next/
 *.tsbuildinfo
 .DS_Store
+src/generated/
 .env
 .env.*
 !.env.example

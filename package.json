@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "serve": "next dev",
+    "postinstall": "prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
@@ -46,6 +47,7 @@
     "react-day-picker": "^10.0.1",
     "react-dom": "latest",
     "react-hook-form": "latest",
+    "server-only": "0.0.1",
     "sonner": "latest",
     "tailwind-merge": "latest",
     "ws": "8.23.0",

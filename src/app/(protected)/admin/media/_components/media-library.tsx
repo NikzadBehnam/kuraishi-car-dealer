@@ -17,7 +17,6 @@ import type {
   AdminMediaAsset,
   AdminMediaType,
   AdminMediaUsage,
-  AdminUser,
   AdminVehicle,
 } from "@/types/admin";
 import { cn } from "@/lib/utils";
@@ -71,11 +70,9 @@ const integer = new Intl.NumberFormat("de-DE");
 
 export function MediaLibrary({
   assets,
-  users,
   vehicles,
 }: {
   assets: AdminMediaAsset[];
-  users: AdminUser[];
   vehicles: AdminVehicle[];
 }) {
   const [query, setQuery] = useState("");
@@ -194,24 +191,6 @@ export function MediaLibrary({
         </div>
       </Card>
 
-      <button
-        type="button"
-        className="grid min-h-44 place-items-center rounded-[var(--radius-sm)] border border-dashed bg-surface p-6 text-center transition-colors hover:bg-surface-muted focus-visible:outline-none"
-        onClick={() => toast.info("Dropzone upload is UI-only.")}
-      >
-        <span>
-          <span className="mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
-            <Upload className="size-6" aria-hidden="true" />
-          </span>
-          <span className="mt-4 block font-extrabold">
-            Drop media files here
-          </span>
-          <span className="mt-2 block text-sm leading-6 text-muted-foreground">
-            Mock upload area for future media storage integration.
-          </span>
-        </span>
-      </button>
-
       {selectedCount > 0 && (
         <Card className="grid min-w-0 gap-3 rounded-[var(--radius-sm)] p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm font-bold">
@@ -268,7 +247,6 @@ export function MediaLibrary({
       <MediaAssetDialog
         asset={activeAsset}
         vehicle={activeAsset ? getVehicle(activeAsset, vehicles) : undefined}
-        uploadedBy={activeAsset ? getUploader(activeAsset, users) : undefined}
         open={!!activeAsset}
         onOpenChange={(open) => {
           if (!open) setActiveAssetId(null);
@@ -344,13 +322,11 @@ function MediaAssetCard({
 function MediaAssetDialog({
   asset,
   vehicle,
-  uploadedBy,
   open,
   onOpenChange,
 }: {
   asset: AdminMediaAsset | null;
   vehicle?: AdminVehicle;
-  uploadedBy?: AdminUser;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -389,10 +365,6 @@ function MediaAssetDialog({
                     ? `${vehicle.make} ${vehicle.model}`
                     : usageLabels[asset.usage]
                 }
-              />
-              <Info
-                label="Uploaded by"
-                value={uploadedBy?.name ?? asset.uploadedByUserId}
               />
               <Info label="Uploaded" value={formatDateTime(asset.uploadedAt)} />
             </div>
@@ -516,10 +488,6 @@ function getVehicle(asset: AdminMediaAsset, vehicles: AdminVehicle[]) {
   return asset.usedByVehicleId
     ? vehicles.find((vehicle) => vehicle.id === asset.usedByVehicleId)
     : undefined;
-}
-
-function getUploader(asset: AdminMediaAsset, users: AdminUser[]) {
-  return users.find((user) => user.id === asset.uploadedByUserId);
 }
 
 function formatDimensions(asset: AdminMediaAsset) {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, CarFront, Menu, Search } from "lucide-react";
+import { CarFront, Menu, Search } from "lucide-react";
 import { useState } from "react";
 
 import { AdminMobileSidebar } from "@/components/admin/layout/admin-sidebar";
@@ -24,12 +24,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { adminRoutes } from "@/config/admin-routes.config";
 
 export function AdminTopBar() {
@@ -90,22 +84,6 @@ export function AdminTopBar() {
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="rounded-[var(--radius-sm)]"
-                  aria-label="Notifications"
-                >
-                  <Bell />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Notifications</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

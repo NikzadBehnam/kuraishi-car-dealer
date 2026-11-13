@@ -1,30 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  CalendarPlus,
   CheckCircle2,
-  Clock3,
   Inbox,
   Mail,
-  MessageSquareText,
   Phone,
   Search,
   XCircle,
 } from "lucide-react";
 
 import type {
-  AdminActivityEvent,
   AdminLead,
   AdminLeadPriority,
   AdminLeadSource,
   AdminLeadStatus,
-  AdminUser,
   AdminVehicle,
 } from "@/types/admin";
-import { adminRoutes } from "@/config/admin-routes.config";
 import { formatMileage } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -96,13 +89,9 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
 export function LeadsInbox({
   leads,
   vehicles,
-  users,
-  activityEvents,
 }: {
   leads: AdminLead[];
   vehicles: AdminVehicle[];
-  users: AdminUser[];
-  activityEvents: AdminActivityEvent[];
 }) {
   const [activeTab, setActiveTab] = useState<LeadTab>("all");
   const [query, setQuery] = useState("");
@@ -141,20 +130,9 @@ export function LeadsInbox({
           <div className="min-w-0">
             <h2 className="text-base font-extrabold">Leads inbox</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              UI-only intake board for contact and test-drive
-              requests.
+              Review and manage contact and vehicle inquiry requests.
             </p>
           </div>
-          <Button
-            asChild
-            variant="accent"
-            className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-          >
-            <Link href={adminRoutes.appointments}>
-              <CalendarPlus />
-              Schedule
-            </Link>
-          </Button>
         </div>
 
         <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -244,8 +222,6 @@ export function LeadsInbox({
       <LeadDetailSheet
         lead={selectedLead}
         vehicle={selectedLead ? getLeadVehicle(selectedLead, vehicles) : undefined}
-        assignedUser={selectedLead ? getAssignedUser(selectedLead, users) : undefined}
-        activityEvents={selectedLead ? getLeadActivity(selectedLead, activityEvents) : []}
         open={!!selectedLead}
         onOpenChange={(open) => {
           if (!open) setSelectedLeadId(null);
@@ -347,15 +323,11 @@ function LeadCard({
 function LeadDetailSheet({
   lead,
   vehicle,
-  assignedUser,
-  activityEvents,
   open,
   onOpenChange,
 }: {
   lead: AdminLead | null;
   vehicle?: AdminVehicle;
-  assignedUser?: AdminUser;
-  activityEvents: AdminActivityEvent[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -404,16 +376,6 @@ function LeadDetailSheet({
                 </a>
               </Button>
               <Button
-                asChild
-                variant="outline"
-                className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
-              >
-                <Link href={adminRoutes.appointments}>
-                  <CalendarPlus />
-                  Schedule appointment
-                </Link>
-              </Button>
-              <Button
                 type="button"
                 variant="accent"
                 className="w-full rounded-[var(--radius-sm)]"
@@ -438,9 +400,22 @@ function LeadDetailSheet({
                 <Info label="Name" value={lead.customerName} />
                 <Info label="Email" value={lead.customerEmail} />
                 <Info label="Phone" value={lead.customerPhone ?? "Not provided"} />
+              </div>
+            </DetailSection>
+
+            <DetailSection title="Request">
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <Info
-                  label="Assigned to"
-                  value={assignedUser?.name ?? "Unassigned"}
+                  label="Request type"
+                  value={lead.appointmentType ?? sourceLabels[lead.source]}
+                />
+                <Info
+                  label="Preferred date"
+                  value={
+                    lead.preferredDate
+                      ? formatDateTime(lead.preferredDate)
+                      : "Not provided"
+                  }
                 />
               </div>
             </DetailSection>
@@ -453,34 +428,6 @@ function LeadDetailSheet({
               <p className="text-sm leading-6 text-muted-foreground">
                 {lead.message}
               </p>
-            </DetailSection>
-
-            <DetailSection title="Timeline">
-              <div className="grid gap-4">
-                <TimelineItem
-                  Icon={Inbox}
-                  title="Lead created"
-                  text={`${sourceLabels[lead.source]} request entered the admin inbox.`}
-                  time={lead.createdAt}
-                />
-                {lead.updatedAt !== lead.createdAt && (
-                  <TimelineItem
-                    Icon={Clock3}
-                    title="Lead updated"
-                    text={`Status is ${statusLabels[lead.status].toLowerCase()}.`}
-                    time={lead.updatedAt}
-                  />
-                )}
-                {activityEvents.map((event) => (
-                  <TimelineItem
-                    key={event.id}
-                    Icon={MessageSquareText}
-                    title={event.summary}
-                    text={event.targetLabel}
-                    time={event.occurredAt}
-                  />
-                ))}
-              </div>
             </DetailSection>
 
             <DetailSection title="Internal notes">
@@ -520,35 +467,6 @@ function DetailSection({
       <Separator className="my-3" />
       {children}
     </section>
-  );
-}
-
-function TimelineItem({
-  Icon,
-  title,
-  text,
-  time,
-}: {
-  Icon: typeof Inbox;
-  title: string;
-  text: string;
-  time: string;
-}) {
-  return (
-    <div className="grid grid-cols-[auto_1fr] gap-3">
-      <span className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
-      <span>
-        <span className="block text-sm font-extrabold">{title}</span>
-        <span className="mt-1 block text-sm leading-6 text-muted-foreground">
-          {text}
-        </span>
-        <span className="mt-1 block text-xs font-bold text-muted-foreground">
-          {formatDateTime(time)}
-        </span>
-      </span>
-    </div>
   );
 }
 
@@ -653,21 +571,6 @@ function getLeadVehicle(lead: AdminLead, vehicles: AdminVehicle[]) {
   return lead.vehicleId
     ? vehicles.find((vehicle) => vehicle.id === lead.vehicleId)
     : undefined;
-}
-
-function getAssignedUser(lead: AdminLead, users: AdminUser[]) {
-  return lead.assignedToUserId
-    ? users.find((user) => user.id === lead.assignedToUserId)
-    : undefined;
-}
-
-function getLeadActivity(
-  lead: AdminLead,
-  activityEvents: AdminActivityEvent[],
-) {
-  return activityEvents
-    .filter((event) => event.targetType === "lead" && event.targetId === lead.id)
-    .toSorted((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 }
 
 function countLeads(leads: AdminLead[], tab: LeadTab) {

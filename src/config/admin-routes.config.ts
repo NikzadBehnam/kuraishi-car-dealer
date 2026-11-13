@@ -1,12 +1,9 @@
 import {
-  Activity,
-  CalendarDays,
   Gauge,
   Images,
   Inbox,
   Settings,
   CarFront,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -14,9 +11,6 @@ export const adminRoutes = {
   dashboard: "/admin",
   vehicles: "/admin/vehicles",
   leads: "/admin/leads",
-  appointments: "/admin/appointments",
-  users: "/admin/users",
-  activity: "/admin/activity",
   media: "/admin/media",
   settings: "/admin/settings",
 } as const;
@@ -46,24 +40,6 @@ export const adminNavigation: AdminNavigationItem[] = [
     description: "Review inquiries and contact requests.",
     href: adminRoutes.leads,
     Icon: Inbox,
-  },
-  {
-    label: "Appointments",
-    description: "Track test drives, consultations, and callbacks.",
-    href: adminRoutes.appointments,
-    Icon: CalendarDays,
-  },
-  {
-    label: "Users",
-    description: "Inspect client accounts and account activity.",
-    href: adminRoutes.users,
-    Icon: Users,
-  },
-  {
-    label: "Activity",
-    description: "Audit user, lead, and inventory events.",
-    href: adminRoutes.activity,
-    Icon: Activity,
   },
   {
     label: "Media",

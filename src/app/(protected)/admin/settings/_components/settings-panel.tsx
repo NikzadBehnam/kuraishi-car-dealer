@@ -2,9 +2,7 @@
 
 import { toast } from "sonner";
 import {
-  Bell,
   Building2,
-  Clock3,
   Eye,
   FileText,
   Mail,
@@ -42,27 +40,6 @@ const settingsTabClassName =
 export function SettingsPanel({ site }: { site: SiteConfig }) {
   return (
     <div className="grid min-w-0 gap-4">
-      <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-base font-extrabold">Settings</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              UI-only dealership and admin preferences. Values are prefilled
-              from site config and are not persisted.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-            onClick={() => toast.info("Settings export is UI-only.")}
-          >
-            <FileText />
-            Export
-          </Button>
-        </div>
-      </Card>
-
       <Tabs defaultValue="dealership">
         <div className="min-w-0 rounded-[var(--radius-sm)] border bg-surface p-2">
           <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0">
@@ -71,15 +48,6 @@ export function SettingsPanel({ site }: { site: SiteConfig }) {
             </TabsTrigger>
             <TabsTrigger className={settingsTabClassName} value="contact">
               Contact
-            </TabsTrigger>
-            <TabsTrigger className={settingsTabClassName} value="hours">
-              Opening hours
-            </TabsTrigger>
-            <TabsTrigger
-              className={settingsTabClassName}
-              value="notifications"
-            >
-              Notifications
             </TabsTrigger>
             <TabsTrigger className={settingsTabClassName} value="appearance">
               Appearance
@@ -147,100 +115,6 @@ export function SettingsPanel({ site }: { site: SiteConfig }) {
               </Field>
             </div>
             <SaveBar label="Save contact settings" />
-          </SettingsSection>
-        </TabsContent>
-
-        <TabsContent value="hours">
-          <SettingsSection
-            icon={Clock3}
-            title="Opening hours"
-            description="Mock opening-hours editor for future structured hours."
-          >
-            <div className="grid min-w-0 gap-4 md:grid-cols-2">
-              {site.openingHours.map((item, index) => (
-                <Field key={item} label={`Opening rule ${index + 1}`}>
-                  <Input defaultValue={item} />
-                </Field>
-              ))}
-              <Field label="Holiday notice">
-                <Input defaultValue="By appointment outside regular hours" />
-              </Field>
-              <Field label="Appointment buffer">
-                <Select defaultValue="30">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-            <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2">
-              <SwitchRow
-                label="Allow same-day appointments"
-                description="Controls future booking availability."
-                defaultChecked
-              />
-              <SwitchRow
-                label="Show weekend availability"
-                description="Display Saturday hours in public surfaces."
-                defaultChecked
-              />
-            </div>
-            <SaveBar label="Save opening hours" />
-          </SettingsSection>
-        </TabsContent>
-
-        <TabsContent value="notifications">
-          <SettingsSection
-            icon={Bell}
-            title="Notifications"
-            description="Mock delivery preferences for future lead and inventory alerts."
-          >
-            <div className="grid min-w-0 gap-3 md:grid-cols-2">
-              <SwitchRow
-                label="New lead alerts"
-                description="Notify staff when a new lead enters the inbox."
-                defaultChecked
-              />
-              <SwitchRow
-                label="Appointment reminders"
-                description="Send reminders before scheduled appointments."
-                defaultChecked
-              />
-              <SwitchRow
-                label="Inventory status changes"
-                description="Notify admins when vehicles are sold, reserved, or archived."
-                defaultChecked
-              />
-              <SwitchRow
-                label="Weekly performance digest"
-                description="Summarize leads, views, and vehicle status changes."
-              />
-            </div>
-            <Separator className="my-4" />
-            <div className="grid min-w-0 gap-4 md:grid-cols-2">
-              <Field label="Notification email">
-                <Input defaultValue={site.contact.email} />
-              </Field>
-              <Field label="Digest day">
-                <Select defaultValue="monday">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monday">Monday</SelectItem>
-                    <SelectItem value="wednesday">Wednesday</SelectItem>
-                    <SelectItem value="friday">Friday</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-            <SaveBar label="Save notification settings" />
           </SettingsSection>
         </TabsContent>
 

@@ -1,26 +1,15 @@
 import Link from "next/link";
 import {
-  Activity,
   ArrowRight,
-  CalendarDays,
+  BadgeCheck,
   CarFront,
   CircleDollarSign,
-  Clock3,
   Inbox,
   Plus,
-  Users,
-  type LucideIcon,
 } from "lucide-react";
 
-import {
-  adminActivityEvents,
-  adminAppointments,
-  adminLeads,
-  adminUsers,
-  adminVehicles,
-} from "@/data/admin";
+import { adminLeads, adminVehicles } from "@/data/admin";
 import type {
-  AdminActivityEvent,
   AdminLead,
   AdminLeadPriority,
   AdminLeadStatus,
@@ -74,13 +63,6 @@ const priorityLabels: Record<AdminLeadPriority, string> = {
   urgent: "Urgent",
 };
 
-const activityIcons: Record<AdminActivityEvent["type"], LucideIcon> = {
-  login: Users,
-  comparison: Activity,
-  inquiry: Inbox,
-  update: Clock3,
-};
-
 export function DashboardOverview() {
   const openLeads = adminLeads.filter(
     (lead) => !["closed", "lost"].includes(lead.status),
@@ -110,24 +92,10 @@ export function DashboardOverview() {
       tone: "accent",
     },
     {
-      label: "Appointments",
-      value: integer.format(adminAppointments.length),
-      helper: "Requested and scheduled",
-      Icon: CalendarDays,
-      tone: "info",
-    },
-    {
-      label: "Users",
-      value: integer.format(adminUsers.length),
-      helper: "Clients, staff, admins",
-      Icon: Users,
-      tone: "success",
-    },
-    {
       label: "Sold vehicles",
       value: integer.format(soldVehicles.length),
       helper: "Closed inventory records",
-      Icon: Activity,
+      Icon: BadgeCheck,
       tone: "warning",
     },
     {
@@ -141,9 +109,6 @@ export function DashboardOverview() {
 
   const recentLeads = [...adminLeads]
     .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 5);
-  const recentActivity = [...adminActivityEvents]
-    .toSorted((a, b) => b.occurredAt.localeCompare(a.occurredAt))
     .slice(0, 5);
 
   return (
@@ -159,7 +124,6 @@ export function DashboardOverview() {
                 "grid size-11 place-items-center rounded-[var(--radius-sm)]",
                 tone === "accent" && "bg-accent/12 text-accent",
                 tone === "primary" && "bg-secondary text-primary",
-                tone === "info" && "bg-info/10 text-info",
                 tone === "success" && "bg-success/10 text-success",
                 tone === "warning" && "bg-warning/10 text-warning",
               )}
@@ -183,8 +147,7 @@ export function DashboardOverview() {
 
       <QuickActions />
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <RecentActivity events={recentActivity} />
+      <section>
         <RecentLeads leads={recentLeads} />
       </section>
 
@@ -205,18 +168,6 @@ function QuickActions() {
       label: "Review leads",
       href: adminRoutes.leads,
       Icon: Inbox,
-      variant: "outline" as const,
-    },
-    {
-      label: "Schedule appointment",
-      href: adminRoutes.appointments,
-      Icon: CalendarDays,
-      variant: "outline" as const,
-    },
-    {
-      label: "Manage users",
-      href: adminRoutes.users,
-      Icon: Users,
       variant: "outline" as const,
     },
   ];
@@ -245,52 +196,6 @@ function QuickActions() {
             </Button>
           ))}
         </div>
-      </div>
-    </Card>
-  );
-}
-
-function RecentActivity({ events }: { events: AdminActivityEvent[] }) {
-  return (
-    <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
-      <SectionHeading
-        title="Recent activity"
-        description="Latest mocked client and staff events."
-        href={adminRoutes.activity}
-      />
-      <div className="mt-4 grid gap-4">
-        {events.map((event, index) => {
-          const Icon = activityIcons[event.type];
-
-          return (
-            <div key={event.id} className="grid grid-cols-[auto_1fr] gap-3">
-              <div className="grid justify-items-center">
-                <span className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
-                {index < events.length - 1 && (
-                  <span className="mt-2 h-full w-px bg-border" />
-                )}
-              </div>
-              <div className="min-w-0 pb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-extrabold">
-                    {event.actorName}
-                  </p>
-                  <ActivityBadge severity={event.severity}>
-                    {event.type}
-                  </ActivityBadge>
-                </div>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  {event.summary}
-                </p>
-                <p className="mt-1 text-xs font-bold text-muted-foreground">
-                  {formatDateTime(event.occurredAt)} - {event.targetLabel}
-                </p>
-              </div>
-            </div>
-          );
-        })}
       </div>
     </Card>
   );
@@ -488,27 +393,6 @@ function PriorityBadge({ priority }: { priority: AdminLeadPriority }) {
       )}
     >
       {priorityLabels[priority]}
-    </Badge>
-  );
-}
-
-function ActivityBadge({
-  severity,
-  children,
-}: {
-  severity: AdminActivityEvent["severity"];
-  children: React.ReactNode;
-}) {
-  return (
-    <Badge
-      className={cn(
-        "bg-secondary text-secondary-foreground dark:bg-secondary",
-        severity === "success" && "bg-success/10 text-success",
-        severity === "warning" && "bg-warning/10 text-warning",
-        severity === "risk" && "bg-destructive/10 text-destructive",
-      )}
-    >
-      {children}
     </Badge>
   );
 }

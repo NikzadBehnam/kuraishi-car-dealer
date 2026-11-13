@@ -15,7 +15,6 @@ export interface AdminVehicle extends Vehicle {
   reservedUntil?: string;
   soldAt?: string;
   lastUpdatedAt: string;
-  updatedByUserId: string;
   vinLastSix: string;
   ownerCount: number;
   views: number;
@@ -40,72 +39,12 @@ export interface AdminLead {
   customerEmail: string;
   customerPhone?: string;
   vehicleId?: string;
-  assignedToUserId?: string;
   createdAt: string;
   updatedAt: string;
+  appointmentType?: string;
   preferredDate?: string;
   message: string;
   notesCount: number;
-}
-
-export type AdminAppointmentType =
-  "test_drive" | "consultation" | "workshop" | "callback";
-
-export type AdminAppointmentStatus =
-  "requested" | "confirmed" | "completed" | "cancelled";
-
-export interface AdminAppointment {
-  id: string;
-  type: AdminAppointmentType;
-  status: AdminAppointmentStatus;
-  customerName: string;
-  customerEmail: string;
-  customerPhone?: string;
-  vehicleId?: string;
-  leadId?: string;
-  assignedToUserId: string;
-  startsAt: string;
-  endsAt: string;
-  location: string;
-  notes: string;
-}
-
-export type AdminUserRole = "client" | "admin" | "staff";
-export type AdminUserStatus = "active" | "suspended" | "invited";
-
-export interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role: AdminUserRole;
-  status: AdminUserStatus;
-  registeredAt: string;
-  lastLoginAt?: string;
-  comparisonVehicleIds: string[];
-  inquiryIds: string[];
-  totalSessions: number;
-  notes?: string;
-}
-
-export type AdminActivityType =
-  "login" | "comparison" | "inquiry" | "update";
-
-export type AdminActivitySeverity = "info" | "success" | "warning" | "risk";
-
-export interface AdminActivityEvent {
-  id: string;
-  type: AdminActivityType;
-  severity: AdminActivitySeverity;
-  actorUserId?: string;
-  actorName: string;
-  actorRole: AdminUserRole;
-  targetType: "vehicle" | "lead" | "appointment" | "user" | "media";
-  targetId: string;
-  targetLabel: string;
-  occurredAt: string;
-  summary: string;
-  metadata: Record<string, string | number | boolean>;
 }
 
 export type AdminMediaType = "image" | "document" | "brand";
@@ -123,15 +62,5 @@ export interface AdminMediaAsset {
   width?: number;
   height?: number;
   usedByVehicleId?: string;
-  uploadedByUserId: string;
   uploadedAt: string;
-}
-
-export interface AdminStat {
-  id: string;
-  label: string;
-  value: string;
-  helper: string;
-  trend: "up" | "down" | "flat";
-  delta: string;
 }

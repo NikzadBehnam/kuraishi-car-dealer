@@ -111,9 +111,6 @@ Admin/auth routes are direct and not localized:
 - `/admin/vehicles/new`
 - `/admin/vehicles/[id]/edit`
 - `/admin/leads`
-- `/admin/appointments`
-- `/admin/users`
-- `/admin/activity`
 - `/admin/media`
 - `/admin/settings`
 
@@ -193,9 +190,6 @@ Admin:
 - `src/app/(protected)/admin/vehicles/new/page.tsx`: create vehicle form.
 - `src/app/(protected)/admin/vehicles/[id]/edit/page.tsx`: edit vehicle form; unknown id calls `notFound()`.
 - `src/app/(protected)/admin/leads/page.tsx`: leads inbox.
-- `src/app/(protected)/admin/appointments/page.tsx`: appointments board.
-- `src/app/(protected)/admin/users/page.tsx`: user management.
-- `src/app/(protected)/admin/activity/page.tsx`: audit/activity explorer.
 - `src/app/(protected)/admin/media/page.tsx`: media library.
 - `src/app/(protected)/admin/settings/page.tsx`: UI settings panel.
 
@@ -219,12 +213,12 @@ Public mock data:
 
 Admin contract: `src/types/admin.ts`
 
-- Extends vehicles into `AdminVehicle` with stock number, status, inspection status, acquisition/published/reserved/sold timestamps, updater, VIN ending, owner count, views, inquiries, margin estimate.
-- Defines leads, appointments, users, activity events, media assets, and stats.
+- Extends vehicles into `AdminVehicle` with stock number, status, inspection status, acquisition/published/reserved/sold timestamps, VIN ending, owner count, views, inquiries, and margin estimate.
+- Defines leads and media assets. Contact leads can carry their requested appointment type and preferred date.
 
 Admin mock data:
 
-- `src/data/admin/index.ts`: derives `adminVehicles` from public `vehicles`, then defines `adminUsers`, `adminLeads`, `adminAppointments`, `adminActivityEvents`, `adminMediaAssets`, and `adminStats`.
+- `src/data/admin/index.ts`: derives `adminVehicles` from public `vehicles`, then defines `adminLeads` and `adminMediaAssets`.
 - Admin dates are static 2026 demo timestamps.
 
 ## 9. State and Business Logic
@@ -296,12 +290,9 @@ Admin components:
 - `src/app/(protected)/admin/_components/dashboard-overview.tsx`: dashboard metrics and panels.
 - `src/app/(protected)/admin/vehicles/_components/vehicle-inventory-table.tsx`: inventory list with search/sort/status filter, selection, UI-only actions.
 - `src/app/(protected)/admin/vehicles/_components/vehicle-form.tsx`: create/edit form.
-- `src/app/(protected)/admin/leads/_components/leads-inbox.tsx`: lead filtering, selection, detail panel, UI-only actions.
-- `src/app/(protected)/admin/appointments/_components/appointments-board.tsx`: appointment board/detail interactions.
-- `src/app/(protected)/admin/users/_components/users-management.tsx`: user table/details/actions.
-- `src/app/(protected)/admin/activity/_components/activity-audit.tsx`: audit log filters/detail.
+- `src/app/(protected)/admin/leads/_components/leads-inbox.tsx`: contact and vehicle inquiry filtering, request details, and UI-only actions.
 - `src/app/(protected)/admin/media/_components/media-library.tsx`: media filtering/detail/upload placeholders.
-- `src/app/(protected)/admin/settings/_components/settings-panel.tsx`: UI settings panels/actions.
+- `src/app/(protected)/admin/settings/_components/settings-panel.tsx`: dealership, contact, appearance, and legal UI settings.
 
 Design system:
 

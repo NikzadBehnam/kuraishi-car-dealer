@@ -288,9 +288,8 @@ All forms are client-side UI prototypes.
 Shared layout:
 
 - `src/components/layout/site-header.tsx`: sticky glass header, desktop/mobile nav, theme toggle.
-- `src/components/layout/site-footer.tsx`: newsletter, contact links, legal links, social icons, QR code.
+- `src/components/layout/site-footer.tsx`: contact links, legal links, social icons, QR code.
 - `src/components/layout/page-header.tsx`: compact shared page header/breadcrumb with reduced title size and vertical spacing on all consuming pages.
-- `src/components/layout/newsletter-form.tsx`: UI-only newsletter signup toast.
 - `src/components/layout/dealership-qr-code.tsx`: client QR code component.
 
 Vehicle components:

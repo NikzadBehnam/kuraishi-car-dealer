@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { BrandLogo } from "@/components/brand-logo";
 import { DealershipQrCode } from "@/components/layout/dealership-qr-code";
-import { NewsletterForm } from "@/components/layout/newsletter-form";
 import { routes } from "@/config/routes.config";
 import { siteConfig } from "@/config/site.config";
 
@@ -38,23 +37,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-20 border-t border-white/10 bg-[#0c192b] text-[#c9d3df]">
       <div className="site-container py-10 sm:py-14">
-        <section className="footer-reveal grid gap-7 rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.045] p-5 sm:p-7 lg:grid-cols-[minmax(0,0.85fr)_minmax(24rem,1.15fr)] lg:items-center">
-          <div>
-            <p className="text-accent text-xs font-extrabold tracking-[0.16em] uppercase">
-              Kuraishi Newsletter
-            </p>
-            <h2 className="mt-3 text-xl font-extrabold text-white sm:text-2xl">
-              Neue Fahrzeuge direkt in Ihr Postfach.
-            </h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[#aebbc9]">
-              Erhalten Sie ausgewählte Angebote und Neuigkeiten. Klar,
-              gelegentlich und jederzeit abbestellbar.
-            </p>
-          </div>
-          <NewsletterForm />
-        </section>
-
-        <div className="mt-10 grid gap-10 border-b border-white/10 pb-10 sm:mt-12 sm:pb-12 md:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr_1fr]">
+        <div className="grid gap-10 border-b border-white/10 pb-10 sm:pb-12 md:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr_1fr]">
           <div>
             <Link href={routes.home} aria-label="Kuraishi Startseite">
               <BrandLogo

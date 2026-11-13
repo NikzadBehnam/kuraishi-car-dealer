@@ -118,7 +118,7 @@ export default function HomePage() {
         </div>
       </section>
       <section className="section-space">
-        <div className="site-container grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(21rem,0.72fr)] lg:items-stretch">
+        <div className="site-container">
           <div>
             <p className="eyebrow">Unser Versprechen</p>
             <h2 className="section-title mt-3 max-w-3xl">
@@ -129,7 +129,7 @@ export default function HomePage() {
               vor der Übergabe dokumentiert wird.
             </p>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
               {homePageContent.benefits.map((benefit, index) => {
                 const Icon = index === 0 ? BadgeCheck : ReceiptText;
 
@@ -155,40 +155,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          <Card className="bg-brand-panel text-brand-panel-foreground grid rounded-[var(--radius-sm)] p-6 sm:p-8 lg:content-between">
-            <div>
-              <p className="eyebrow text-[#ff9a75]">Inzahlungnahme</p>
-              <h2 className="mt-3 text-3xl leading-tight font-extrabold sm:text-4xl">
-                Was ist Ihr Fahrzeug wert?
-              </h2>
-              <p className="text-brand-panel-muted mt-4 leading-7">
-                In wenigen Schritten zur kostenlosen und unverbindlichen
-                Bewertung.
-              </p>
-            </div>
-
-            <div className="mt-8">
-              <div className="text-brand-panel-muted grid gap-3 text-sm">
-                {["Fahrzeugdaten eingeben", "Bewertung erhalten"].map(
-                  (step, index) => (
-                    <span className="flex items-center gap-3" key={step}>
-                      <span className="grid size-7 place-items-center rounded-[var(--radius-sm)] bg-white/10 text-xs font-extrabold text-white">
-                        {index + 1}
-                      </span>
-                      {step}
-                    </span>
-                  ),
-                )}
-              </div>
-              <Button asChild variant="accent" className="mt-7 w-full sm:w-fit">
-                <Link href={publicRoutes.sellVehicle}>
-                  <CarFront />
-                  Bewertung starten
-                  <ArrowRight />
-                </Link>
-              </Button>
-            </div>
-          </Card>
         </div>
       </section>
     </>

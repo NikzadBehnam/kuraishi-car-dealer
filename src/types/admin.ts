@@ -24,7 +24,7 @@ export interface AdminVehicle extends Vehicle {
 }
 
 export type AdminLeadSource =
-  "contact" | "valuation" | "test-drive" | "callback";
+  "contact" | "test-drive" | "callback";
 
 export type AdminLeadStatus =
   "new" | "contacted" | "qualified" | "closed" | "lost";
@@ -46,16 +46,10 @@ export interface AdminLead {
   preferredDate?: string;
   message: string;
   notesCount: number;
-  valuationVehicle?: {
-    make: string;
-    model: string;
-    firstRegistration: string;
-    mileage: number;
-  };
 }
 
 export type AdminAppointmentType =
-  "test_drive" | "consultation" | "valuation" | "workshop" | "callback";
+  "test_drive" | "consultation" | "workshop" | "callback";
 
 export type AdminAppointmentStatus =
   "requested" | "confirmed" | "completed" | "cancelled";
@@ -90,13 +84,12 @@ export interface AdminUser {
   lastLoginAt?: string;
   comparisonVehicleIds: string[];
   inquiryIds: string[];
-  valuationLeadIds: string[];
   totalSessions: number;
   notes?: string;
 }
 
 export type AdminActivityType =
-  "login" | "comparison" | "inquiry" | "valuation" | "update";
+  "login" | "comparison" | "inquiry" | "update";
 
 export type AdminActivitySeverity = "info" | "success" | "warning" | "risk";
 

@@ -12,7 +12,6 @@ const vehicleLinks = [
 ] as const;
 
 const companyLinks = [
-  ["Fahrzeug verkaufen", routes.sellVehicle],
   ["Service", routes.services],
   ["Über uns", routes.about],
   ["Kontakt", routes.contact],

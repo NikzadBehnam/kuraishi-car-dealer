@@ -52,7 +52,6 @@ import {
 const appointmentTypeLabels: Record<AdminAppointmentType, string> = {
   test_drive: "Test drive",
   consultation: "Consultation",
-  valuation: "Valuation",
   workshop: "Workshop",
   callback: "Callback",
 };
@@ -67,7 +66,6 @@ const appointmentStatusLabels: Record<AdminAppointmentStatus, string> = {
 const typeIcons: Record<AdminAppointmentType, LucideIcon> = {
   test_drive: CarFront,
   consultation: CalendarCheck,
-  valuation: CalendarClock,
   workshop: RotateCcw,
   callback: Phone,
 };

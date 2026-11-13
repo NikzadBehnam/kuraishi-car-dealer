@@ -24,13 +24,9 @@
 
 - [+] 11- remove entire feature (completed with item 3)
 
-## http://localhost:3000/fahrzeugvergleich
-
-- [-] 12- remove entire feature
-
 ## http://localhost:3000/fahrzeug-verkaufen
 
-- [-] 13- remove entire feature
+- [+] 13- remove entire feature
 
 ## http://localhost:3000/services
 

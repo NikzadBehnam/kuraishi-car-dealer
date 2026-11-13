@@ -4,7 +4,6 @@
 `/fahrzeuge` | Vehicle listing |
 `/fahrzeuge/[slug]` | Vehicle details — try `/fahrzeuge/volkswagen-tiguan-1` |
 `/fahrzeugvergleich` | Vehicle comparison |
-`/fahrzeug-verkaufen` | Sell a vehicle |
 `/services` | Services |
 `/ueber-uns` | About us |
 `/kontakt` | Contact |

@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CarFront,
   CircleDollarSign,
-  ClipboardPlus,
   Clock3,
   Inbox,
   Plus,
@@ -79,7 +78,6 @@ const activityIcons: Record<AdminActivityEvent["type"], LucideIcon> = {
   login: Users,
   comparison: Activity,
   inquiry: Inbox,
-  valuation: ClipboardPlus,
   update: Clock3,
 };
 

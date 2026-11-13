@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   Activity,
-  CarFront,
   Eye,
   Inbox,
   ListFilter,
@@ -57,7 +56,6 @@ const typeLabels: Record<AdminActivityType, string> = {
   login: "Login",
   comparison: "Comparison",
   inquiry: "Inquiry",
-  valuation: "Valuation",
   update: "Update",
 };
 
@@ -78,7 +76,6 @@ const typeIcons: Record<AdminActivityType, LucideIcon> = {
   login: UserRound,
   comparison: Scale,
   inquiry: Inbox,
-  valuation: CarFront,
   update: Activity,
 };
 

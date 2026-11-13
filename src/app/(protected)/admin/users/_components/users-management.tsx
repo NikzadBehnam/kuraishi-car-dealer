@@ -343,9 +343,6 @@ function UserDetailSheet({
     user.comparisonVehicleIds.includes(vehicle.id),
   );
   const inquiries = leads.filter((lead) => user.inquiryIds.includes(lead.id));
-  const valuations = leads.filter((lead) =>
-    user.valuationLeadIds.includes(lead.id),
-  );
   const events = activityEvents
     .filter((event) => event.actorUserId === user.id)
     .toSorted((a, b) => b.occurredAt.localeCompare(a.occurredAt));
@@ -423,9 +420,6 @@ function UserDetailSheet({
                   <TabsTrigger className={userTabClassName} value="inquiries">
                     Inquiries
                   </TabsTrigger>
-                  <TabsTrigger className={userTabClassName} value="valuations">
-                    Valuations
-                  </TabsTrigger>
                   <TabsTrigger className={userTabClassName} value="activity">
                     Activity
                   </TabsTrigger>
@@ -468,15 +462,6 @@ function UserDetailSheet({
               <TabsContent value="inquiries">
                 <DetailSection title="Inquiries">
                   <LeadList leads={inquiries} empty="No inquiries recorded." />
-                </DetailSection>
-              </TabsContent>
-
-              <TabsContent value="valuations">
-                <DetailSection title="Valuation requests">
-                  <LeadList
-                    leads={valuations}
-                    empty="No valuation requests recorded."
-                  />
                 </DetailSection>
               </TabsContent>
 

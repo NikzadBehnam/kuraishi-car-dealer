@@ -73,7 +73,6 @@ Public canonical URLs:
 - `/fahrzeuge` -> vehicle listing
 - `/fahrzeuge/[slug]` -> vehicle detail via route builder
 - `/fahrzeugvergleich` -> comparison
-- `/fahrzeug-verkaufen` -> sell/valuation flow
 - `/services` -> services
 - `/ueber-uns` -> about
 - `/kontakt` -> contact
@@ -87,7 +86,6 @@ Internal physical routes:
 - `/vehicles`
 - `/vehicles/[slug]`
 - `/vehicle-comparison`
-- `/sell-vehicle`
 - `/about-us`
 - `/contact`
 - `/imprint`
@@ -162,7 +160,7 @@ Admin layout:
 
 Marketing:
 
-- `src/app/(public)/(marketing)/page.tsx`: home page. Uses hero video, featured vehicles, benefits, and valuation CTA.
+- `src/app/(public)/(marketing)/page.tsx`: home page. Uses hero video, featured vehicles, and benefits.
 - `src/app/(public)/(marketing)/about-us/page.tsx`: about page with stats and showroom image.
 - `src/app/(public)/(marketing)/services/page.tsx`: service cards for trade-in, purchase, warranty, insurance, registration, workshop.
 - `src/app/(public)/(marketing)/contact/page.tsx`: contact form plus dealer contact panel using `siteConfig`.
@@ -172,7 +170,6 @@ Marketplace:
 - `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Reads the initial keyword search from the `q` URL parameter and passes local vehicles to `VehicleSearchResults`.
 - `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. No standalone page header: the side column contains the breadcrumb, title, variant, availability, location, price, and dealer contact/actions. It appears before the gallery on mobile. Equipment and description share a divided panel with a responsive equipment list. Also shows facts, similar vehicles, and mobile sticky CTA.
 - `src/app/(public)/(marketplace)/vehicle-comparison/page.tsx`: reads browser-local comparison selections through `ComparisonTable`.
-- `src/app/(public)/(marketplace)/sell-vehicle/page.tsx`: vehicle valuation form and benefit panel.
 
 Legal:
 
@@ -265,11 +262,6 @@ All forms are client-side UI prototypes.
   - Component: `src/app/(public)/(marketing)/contact/_components/contact-form.tsx`
   - Fields include name, email, phone, appointment type, preferred date, message, consent.
 
-- Vehicle valuation form:
-  - Schema: `src/app/(public)/(marketplace)/sell-vehicle/_schemas/vehicle-valuation.schema.ts`
-  - Component: `src/app/(public)/(marketplace)/sell-vehicle/_components/vehicle-valuation-form.tsx`
-  - Fields include make, model, first registration, mileage, optional email.
-
 - Auth forms:
   - Schema: `src/app/(auth)/_schemas/auth.schema.ts`
   - Components: login/register forms.
@@ -313,7 +305,7 @@ Admin components:
 
 Design system:
 
-- `src/components/ui/*`: Button, Card, Input, Label, Textarea, Select, Checkbox, Switch, Dialog, Dropdown, Popover, Sheet, Tabs, Table, Tooltip, Avatar, Badge, Calendar, DatePicker, MonthPicker, ScrollArea, Separator, Skeleton.
+- `src/components/ui/*`: Button, Card, Input, Label, Textarea, Select, Checkbox, Switch, Dialog, Dropdown, Popover, Sheet, Tabs, Table, Tooltip, Avatar, Badge, Calendar, DatePicker, ScrollArea, Separator, Skeleton.
 - `src/components/brand-logo.tsx`, `src/components/theme-provider.tsx`, `src/components/theme-toggle.tsx`, `src/components/motion/animated-section.tsx`, and `src/components/shared/*` support the common UI.
 
 ## 12. Configuration Details
@@ -390,7 +382,7 @@ Recommended validation commands before/after code changes:
 - No server actions for form submissions.
 - No real uploads or media storage.
 - No email/CRM/booking/inventory integrations.
-- Contact, valuation, auth, admin actions, settings, media upload, appointment operations, and admin vehicle save actions are UI-only toasts.
+- Contact, auth, admin actions, settings, media upload, appointment operations, and admin vehicle save actions are UI-only toasts.
 - Legal pages are placeholders and must be replaced before production.
 - README and routing documentation are partially outdated relative to current admin/auth implementation.
 - Browser local state is anonymous per device and stored in `localStorage`, not tied to users.

@@ -3,9 +3,7 @@ import {
   ArrowRight,
   BadgeCheck,
   CarFront,
-  CircleDollarSign,
   Inbox,
-  Plus,
 } from "lucide-react";
 
 import { adminLeads, adminVehicles } from "@/data/admin";
@@ -14,7 +12,6 @@ import type {
   AdminVehicleStatus,
 } from "@/types/admin";
 import { adminRoutes } from "@/config/admin-routes.config";
-import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,10 +47,6 @@ export function DashboardOverview() {
   const soldVehicles = adminVehicles.filter(
     (vehicle) => vehicle.status === "sold",
   );
-  const estimatedRevenue = soldVehicles.reduce(
-    (total, vehicle) => total + vehicle.price,
-    0,
-  );
   const stats = [
     {
       label: "Inventory",
@@ -76,13 +69,6 @@ export function DashboardOverview() {
       Icon: BadgeCheck,
       tone: "warning",
     },
-    {
-      label: "Revenue estimate",
-      value: formatCurrency(estimatedRevenue),
-      helper: "Mock sold vehicle total",
-      Icon: CircleDollarSign,
-      tone: "success",
-    },
   ] as const;
 
   const recentLeads = [...adminLeads]
@@ -102,7 +88,6 @@ export function DashboardOverview() {
                 "grid size-11 place-items-center rounded-[var(--radius-sm)]",
                 tone === "accent" && "bg-accent/12 text-accent",
                 tone === "primary" && "bg-secondary text-primary",
-                tone === "success" && "bg-success/10 text-success",
                 tone === "warning" && "bg-warning/10 text-warning",
               )}
             >
@@ -123,59 +108,12 @@ export function DashboardOverview() {
         ))}
       </section>
 
-      <QuickActions />
-
       <section>
         <RecentLeads leads={recentLeads} />
       </section>
 
       <InventorySummary />
     </div>
-  );
-}
-
-function QuickActions() {
-  const actions = [
-    {
-      label: "Add vehicle",
-      href: `${adminRoutes.vehicles}/new`,
-      Icon: Plus,
-      variant: "accent" as const,
-    },
-    {
-      label: "Review leads",
-      href: adminRoutes.leads,
-      Icon: Inbox,
-      variant: "outline" as const,
-    },
-  ];
-
-  return (
-    <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-extrabold">Quick actions</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            UI-only shortcuts for the upcoming admin workflows.
-          </p>
-        </div>
-        <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">
-          {actions.map(({ label, href, Icon, variant }) => (
-            <Button
-              key={label}
-              asChild
-              variant={variant}
-              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-            >
-              <Link href={href}>
-                <Icon />
-                {label}
-              </Link>
-            </Button>
-          ))}
-        </div>
-      </div>
-    </Card>
   );
 }
 

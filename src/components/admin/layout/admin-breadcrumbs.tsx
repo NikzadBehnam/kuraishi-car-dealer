@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight, Home, Inbox, Plus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import {
   adminRoutes,
   getAdminNavigationItem,
@@ -12,6 +13,7 @@ import {
 export function AdminBreadcrumbs() {
   const pathname = usePathname();
   const activeItem = getAdminNavigationItem(pathname);
+  const isDashboard = pathname === adminRoutes.dashboard;
 
   return (
     <section className="min-w-0 rounded-[var(--radius-sm)] border bg-surface px-4 py-3 sm:px-5">
@@ -40,10 +42,36 @@ export function AdminBreadcrumbs() {
           <h1 className="break-words text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
             {activeItem.label}
           </h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            {activeItem.description}
-          </p>
+          {activeItem.description && (
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              {activeItem.description}
+            </p>
+          )}
         </div>
+        {isDashboard && (
+          <div className="grid w-full gap-2 sm:flex sm:w-auto">
+            <Button
+              asChild
+              variant="accent"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
+            >
+              <Link href={`${adminRoutes.vehicles}/new`}>
+                <Plus />
+                Add vehicle
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
+            >
+              <Link href={adminRoutes.leads}>
+                <Inbox />
+                Review leads
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

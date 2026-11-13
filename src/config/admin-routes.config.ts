@@ -17,7 +17,7 @@ export const adminRoutes = {
 
 export interface AdminNavigationItem {
   label: string;
-  description: string;
+  description?: string;
   href: (typeof adminRoutes)[keyof typeof adminRoutes];
   Icon: LucideIcon;
 }
@@ -25,7 +25,6 @@ export interface AdminNavigationItem {
 export const adminNavigation: AdminNavigationItem[] = [
   {
     label: "Dashboard",
-    description: "Operational overview for the dealership.",
     href: adminRoutes.dashboard,
     Icon: Gauge,
   },

@@ -35,25 +35,36 @@ export function SiteFooter() {
   return (
     <footer className="mt-20 border-t border-white/10 bg-[#0c192b] text-[#c9d3df]">
       <div className="site-container py-10 sm:py-14">
-        <div className="grid gap-10 border-b border-white/10 pb-10 sm:pb-12 md:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr_1fr]">
-          <div>
+        <div className="grid gap-x-10 gap-y-9 border-b border-white/10 pb-10 sm:pb-12 md:grid-cols-2 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(18rem,0.9fr)]">
+          <section className="min-w-0 md:col-span-2 lg:col-span-1">
             <Link href={routes.home} aria-label="Kuraishi Startseite">
               <BrandLogo
                 variant="full"
                 tone="dark"
-                className="w-full max-w-[15rem] transition-transform duration-500 ease-out hover:scale-[1.01]"
+                className="w-full max-w-[13rem] transition-transform duration-500 ease-out hover:scale-[1.01]"
               />
             </Link>
-            <p className="mt-5 max-w-sm text-sm leading-6">
+            <p className="mt-4 max-w-md text-sm leading-6 text-[#aebbc9]">
               {siteConfig.description}
             </p>
-            <address className="mt-5 grid gap-3 text-sm not-italic">
-              <ContactLink href={siteConfig.mapUrl} icon={MapPin} external>
-                {siteConfig.address.street}, {siteConfig.address.postalCode}{" "}
-                {siteConfig.address.city}, {siteConfig.address.country}
-              </ContactLink>
-              {[siteConfig.contact.phone, ...siteConfig.contact.additionalPhones].map(
-                (phone) => (
+            <address className="mt-6 grid gap-5 text-sm not-italic sm:grid-cols-2 lg:grid-cols-1">
+              <div className="grid content-start gap-3">
+                <ContactLink href={siteConfig.mapUrl} icon={MapPin} external>
+                  {siteConfig.address.street}, {siteConfig.address.postalCode}{" "}
+                  {siteConfig.address.city}, {siteConfig.address.country}
+                </ContactLink>
+                <ContactLink
+                  href={`mailto:${siteConfig.contact.email}`}
+                  icon={Mail}
+                >
+                  {siteConfig.contact.email}
+                </ContactLink>
+              </div>
+              <div className="grid content-start gap-3">
+                {[
+                  siteConfig.contact.phone,
+                  ...siteConfig.contact.additionalPhones,
+                ].map((phone) => (
                   <ContactLink
                     key={phone}
                     href={`tel:${phone.replace(/\s/g, "")}`}
@@ -61,19 +72,15 @@ export function SiteFooter() {
                   >
                     {phone}
                   </ContactLink>
-                ),
-              )}
-              <ContactLink
-                href={`mailto:${siteConfig.contact.email}`}
-                icon={Mail}
-              >
-                {siteConfig.contact.email}
-              </ContactLink>
+                ))}
+              </div>
             </address>
-          </div>
+          </section>
 
-          <FooterGroup title="Fahrzeuge" links={vehicleLinks} />
-          <FooterGroup title="Unternehmen" links={companyLinks} />
+          <div className="grid gap-8 sm:grid-cols-2 md:col-span-1 lg:col-span-1">
+            <FooterGroup title="Fahrzeuge" links={vehicleLinks} />
+            <FooterGroup title="Unternehmen" links={companyLinks} />
+          </div>
           <DealershipQrCode />
         </div>
 

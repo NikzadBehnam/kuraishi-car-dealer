@@ -13,7 +13,7 @@ export default function LoginPage() {
     <AuthShell
       eyebrow="Login"
       title="Welcome back"
-      description="Access the future client area for saved vehicles, comparisons, and inquiries."
+      description="Access the future client area for comparisons and inquiries."
       footer={
         <p>
           No account yet?{" "}

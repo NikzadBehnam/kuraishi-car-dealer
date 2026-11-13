@@ -229,16 +229,6 @@ textarea.control {
 .dark .brand-logo-dark {
   display: block;
 }
-@keyframes footer-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(0.75rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 @keyframes footer-qr-scan {
   0%,
   15% {
@@ -253,15 +243,6 @@ textarea.control {
     transform: translateY(7.4rem);
     opacity: 0;
   }
-}
-.footer-reveal {
-  animation: footer-reveal 600ms var(--ease-out) both;
-}
-.footer-newsletter-input:focus,
-.footer-newsletter-input:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-  --tw-ring-shadow: 0 0 #0000 !important;
 }
 .footer-qr-scan {
   position: absolute;
@@ -305,12 +286,6 @@ textarea.control {
   background: rgb(232 93 42 / 0.12);
   color: var(--accent);
 }
-.hero-search {
-  border-color: rgb(19 32 51 / 0.12);
-  background: rgb(255 255 255 / 0.86);
-  box-shadow: 0 1rem 3rem rgb(16 33 59 / 0.12);
-  backdrop-filter: blur(18px);
-}
 .hero-secondary-action {
   border-color: rgb(19 32 51 / 0.2);
   background: rgb(255 255 255 / 0.68);
@@ -341,11 +316,6 @@ textarea.control {
 }
 .dark .hero-check {
   background: rgb(244 119 71 / 0.15);
-}
-.dark .hero-search {
-  border-color: rgb(255 255 255 / 0.12);
-  background: rgb(12 25 43 / 0.84);
-  box-shadow: 0 1rem 3rem rgb(0 0 0 / 0.28);
 }
 .dark .hero-secondary-action {
   border-color: rgb(255 255 255 / 0.2);

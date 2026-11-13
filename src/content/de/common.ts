@@ -1,17 +1,13 @@
 export const commonContent = {
   navigation: {
     vehicles: "Fahrzeuge",
-    sellVehicle: "Fahrzeug verkaufen",
     services: "Services",
     about: "Über uns",
     contact: "Kontakt",
-    favourites: "Merkliste",
     comparison: "Vergleich",
   },
   actions: {
-    findVehicle: "Fahrzeug finden",
     viewDetails: "Details ansehen",
-    save: "Fahrzeug merken",
     remove: "Entfernen",
     compare: "Vergleichen",
     contactDealer: "Händler kontaktieren",

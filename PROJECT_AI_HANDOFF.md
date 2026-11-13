@@ -4,7 +4,7 @@ This document is a source-grounded technical overview of the project as of the c
 
 ## 1. Project Purpose
 
-Kuraishi Car Dealer is a Next.js App Router application for a German-language car dealership / vehicle marketplace. It currently implements a production-oriented UI prototype with typed local demo data, German public pages, vehicle browsing, favourites/comparison state in the browser, UI-only forms, auth screens, and an admin back office prototype.
+Kuraishi Car Dealer is a Next.js App Router application for a German-language car dealership / vehicle marketplace. It currently implements a production-oriented UI prototype with typed local demo data, German public pages, vehicle browsing, comparison state in the browser, UI-only forms, auth screens, and an admin back office prototype.
 
 Important boundary: there is no real backend yet. Authentication, sessions, database persistence, CRM/email delivery, media uploads, booking, inventory mutations, and account services are not implemented. Most submit/action handlers show Sonner toasts and intentionally remain UI-only.
 
@@ -72,10 +72,7 @@ Public canonical URLs:
 - `/` -> home
 - `/fahrzeuge` -> vehicle listing
 - `/fahrzeuge/[slug]` -> vehicle detail via route builder
-- `/fahrzeugsuche` -> advanced search
-- `/merkliste` -> favourites
 - `/fahrzeugvergleich` -> comparison
-- `/fahrzeug-verkaufen` -> sell/valuation flow
 - `/services` -> services
 - `/ueber-uns` -> about
 - `/kontakt` -> contact
@@ -88,10 +85,7 @@ Internal physical routes:
 
 - `/vehicles`
 - `/vehicles/[slug]`
-- `/vehicle-search`
-- `/favourites`
 - `/vehicle-comparison`
-- `/sell-vehicle`
 - `/about-us`
 - `/contact`
 - `/imprint`
@@ -104,7 +98,7 @@ Internal physical routes:
 - Rewrites German public routes to English internal route files.
 - Redirects direct English internal public-route requests back to German canonical URLs with 308.
 - Preserves vehicle slugs and query strings by cloning `request.nextUrl`.
-- Excludes API routes, Next static/image routes, favicon, images/fonts/assets, and file-extension paths.
+- Excludes API routes, Next static/image routes, favicon, images/fonts/assets, and file-extension paths, except explicit vehicle-route matchers so dotted slugs such as `volkswagen-id.4-17` are localized correctly.
 
 Do not link to `internalRoutes` from user-facing UI. Public links should use `publicRoutes`, `routes`, or `routeBuilders`.
 
@@ -142,7 +136,7 @@ Public layout:
 
 Marketplace layout:
 
-- `src/app/(public)/(marketplace)/layout.tsx`: adds a horizontal marketplace nav for all vehicles, advanced search, favourites, and comparison.
+- `src/app/(public)/(marketplace)/layout.tsx`: adds a horizontal marketplace nav for all vehicles and comparison.
 - Marketplace has its own loading/error boundaries plus listing/detail specific loading/error/not-found files.
 
 Legal layout:
@@ -166,19 +160,16 @@ Admin layout:
 
 Marketing:
 
-- `src/app/(public)/(marketing)/page.tsx`: home page. Uses hero video, quick search, vehicle discovery search, featured vehicles, benefits, and valuation CTA.
+- `src/app/(public)/(marketing)/page.tsx`: home page. Uses hero video, featured vehicles, and benefits.
 - `src/app/(public)/(marketing)/about-us/page.tsx`: about page with stats and showroom image.
 - `src/app/(public)/(marketing)/services/page.tsx`: service cards for trade-in, purchase, warranty, insurance, registration, workshop.
 - `src/app/(public)/(marketing)/contact/page.tsx`: contact form plus dealer contact panel using `siteConfig`.
 
 Marketplace:
 
-- `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Parses `searchParams` for make, model, body type, fuel type, location, maximum price. Passes local vehicles to `VehicleSearchResults`.
-- `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. Shows gallery, facts, features, description, dealer contact card, actions, similar vehicles, and mobile sticky CTA.
-- `src/app/(public)/(marketplace)/vehicle-search/page.tsx`: advanced search UI stub with many select fields. The fields are not wired to filtering yet; CTA links to `/fahrzeuge`.
-- `src/app/(public)/(marketplace)/favourites/page.tsx`: reads browser-local favourites through `FavouritesGrid`.
+- `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Reads the initial keyword search from the `q` URL parameter and passes local vehicles to `VehicleSearchResults`.
+- `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. No standalone page header: the side column contains the breadcrumb, title, variant, availability, location, price, and dealer contact/actions. It appears before the gallery on mobile. Equipment and description share a divided panel with a responsive equipment list. Also shows facts, similar vehicles, and mobile sticky CTA.
 - `src/app/(public)/(marketplace)/vehicle-comparison/page.tsx`: reads browser-local comparison selections through `ComparisonTable`.
-- `src/app/(public)/(marketplace)/sell-vehicle/page.tsx`: vehicle valuation form and benefit panel.
 
 Legal:
 
@@ -228,7 +219,7 @@ Public mock data:
 
 Admin contract: `src/types/admin.ts`
 
-- Extends vehicles into `AdminVehicle` with stock number, status, inspection status, acquisition/published/reserved/sold timestamps, updater, VIN ending, owner count, views, inquiries, favourites, margin estimate.
+- Extends vehicles into `AdminVehicle` with stock number, status, inspection status, acquisition/published/reserved/sold timestamps, updater, VIN ending, owner count, views, inquiries, margin estimate.
 - Defines leads, appointments, users, activity events, media assets, and stats.
 
 Admin mock data:
@@ -240,9 +231,9 @@ Admin mock data:
 
 Vehicle filtering:
 
-- `src/lib/vehicle-filters.ts` exports `VehicleFilters` and `filterVehicles`.
-- Supports make, model, bodyType, fuelType, location substring, maximumPrice.
-- Sort modes: `price-asc`, `price-desc`, `newest`; default sorts featured vehicles first.
+- `src/lib/vehicle-filters.ts` exports `filterVehicles(input, query)` for the listing's single live keyword search.
+- Matches all whitespace-separated terms across make, model, variant, German body/fuel/transmission labels, color, location, registration, equipment, and labels; ignores case and accents.
+- Results sort featured vehicles first. Former structured filter and sort controls are removed.
 - Uses `toSorted`, so it does not mutate the source array.
 
 Formatting:
@@ -256,13 +247,11 @@ Route helpers:
 
 Browser state:
 
-- `src/components/providers/vehicle-state-provider.tsx`: client context storing `favourites` and `comparison` as Sets.
-- Persistence keys:
-  - `kuraishi-favourites`
-  - `kuraishi-comparison`
+- `src/components/providers/vehicle-state-provider.tsx`: client context storing `comparison` as a Set.
+- Persistence key: `kuraishi-comparison`.
 - Comparison limit is 3 vehicles.
 - Mutations write to `localStorage` and show German toasts.
-- Provider is mounted globally in `src/app/layout.tsx`, so public header and vehicle actions can use it.
+- Provider is mounted globally in `src/app/layout.tsx`, so vehicle actions and the comparison page can use it.
 
 ## 10. Forms and Validation
 
@@ -272,11 +261,6 @@ All forms are client-side UI prototypes.
   - Schema: `src/app/(public)/(marketing)/contact/_schemas/contact-form.schema.ts`
   - Component: `src/app/(public)/(marketing)/contact/_components/contact-form.tsx`
   - Fields include name, email, phone, appointment type, preferred date, message, consent.
-
-- Vehicle valuation form:
-  - Schema: `src/app/(public)/(marketplace)/sell-vehicle/_schemas/vehicle-valuation.schema.ts`
-  - Component: `src/app/(public)/(marketplace)/sell-vehicle/_components/vehicle-valuation-form.tsx`
-  - Fields include make, model, first registration, mileage, optional email.
 
 - Auth forms:
   - Schema: `src/app/(auth)/_schemas/auth.schema.ts`
@@ -292,27 +276,19 @@ All forms are client-side UI prototypes.
 
 Shared layout:
 
-- `src/components/layout/site-header.tsx`: sticky glass header, desktop/mobile nav, theme toggle, favourites count.
-- `src/components/layout/site-footer.tsx`: newsletter, contact links, legal links, social icons, QR code.
-- `src/components/layout/page-header.tsx`: common page header/breadcrumb.
-- `src/components/layout/newsletter-form.tsx`: UI-only newsletter signup toast.
+- `src/components/layout/site-header.tsx`: sticky glass header, desktop/mobile nav, theme toggle.
+- `src/components/layout/site-footer.tsx`: contact links, legal links, social icons, QR code.
+- `src/components/layout/page-header.tsx`: compact shared page header/breadcrumb with reduced title size and vertical spacing on all consuming pages.
 - `src/components/layout/dealership-qr-code.tsx`: client QR code component.
 
 Vehicle components:
 
 - `src/components/vehicle/vehicle-card.tsx`: public vehicle card linking to canonical detail route.
-- `src/components/vehicle/vehicle-actions.tsx`: favourite/compare buttons using `useVehicleState`.
+- `src/components/vehicle/vehicle-actions.tsx`: compare buttons using `useVehicleState`.
 - `src/components/vehicle/vehicle-card-skeleton.tsx`: loading placeholder.
-- `src/app/(public)/(marketplace)/vehicles/_components/vehicle-filter-bar.tsx`: listing filters.
-- `src/app/(public)/(marketplace)/vehicles/_components/vehicle-search-results.tsx`: filtered results.
+- `src/app/(public)/(marketplace)/vehicles/_components/vehicle-search-results.tsx`: compact left-aligned keyword search field, clear action, and filtered results without a vehicle-count label.
 - `src/app/(public)/(marketplace)/vehicles/[slug]/_components/vehicle-image-gallery.tsx`: detail gallery.
-- `src/app/(public)/(marketplace)/favourites/_components/favourites-grid.tsx`: saved vehicles grid.
 - `src/app/(public)/(marketplace)/vehicle-comparison/_components/vehicle-comparison-table.tsx`: comparison table.
-
-Marketing components:
-
-- `src/app/(public)/(marketing)/_components/quick-search-form.tsx`: compact hero search.
-- `src/app/(public)/(marketing)/_components/vehicle-discovery-search.tsx`: interactive discovery/category search.
 
 Admin components:
 
@@ -329,14 +305,14 @@ Admin components:
 
 Design system:
 
-- `src/components/ui/*`: Button, Card, Input, Label, Textarea, Select, Checkbox, Switch, Dialog, Dropdown, Popover, Sheet, Tabs, Table, Tooltip, Avatar, Badge, Calendar, DatePicker, MonthPicker, ScrollArea, Separator, Skeleton.
+- `src/components/ui/*`: Button, Card, Input, Label, Textarea, Select, Checkbox, Switch, Dialog, Dropdown, Popover, Sheet, Tabs, Table, Tooltip, Avatar, Badge, Calendar, DatePicker, ScrollArea, Separator, Skeleton.
 - `src/components/brand-logo.tsx`, `src/components/theme-provider.tsx`, `src/components/theme-toggle.tsx`, `src/components/motion/animated-section.tsx`, and `src/components/shared/*` support the common UI.
 
 ## 12. Configuration Details
 
 Site identity:
 
-- `src/config/site.config.ts`: name, shortName, tagline, description, public URL, map URL, contact, address, opening hours, social URLs.
+- `src/config/site.config.ts`: name, shortName, tagline, description, public URL, map URL, contact, address, opening hours, social URLs. Contact includes a primary phone and additional phones; the footer and contact QR code include all numbers.
 
 Navigation:
 
@@ -390,7 +366,7 @@ Current tests:
 
 - `src/config/routes.config.test.ts`: checks German public vs English internal route config and vehicle route builder.
 - `src/lib/formatters.test.ts`: checks German formatting for currency, mileage, registration.
-- `src/lib/vehicle-filters.test.ts`: checks filtering/sorting without source mutation and homepage make/model/location filtering.
+- `src/lib/vehicle-filters.test.ts`: checks multi-term search, German labels/equipment, accents, empty/unmatched queries, and featured ordering without source mutation.
 
 Recommended validation commands before/after code changes:
 
@@ -406,10 +382,9 @@ Recommended validation commands before/after code changes:
 - No server actions for form submissions.
 - No real uploads or media storage.
 - No email/CRM/booking/inventory integrations.
-- Contact, valuation, auth, admin actions, settings, media upload, appointment operations, and admin vehicle save actions are UI-only toasts.
+- Contact, auth, admin actions, settings, media upload, appointment operations, and admin vehicle save actions are UI-only toasts.
 - Legal pages are placeholders and must be replaced before production.
 - README and routing documentation are partially outdated relative to current admin/auth implementation.
-- Advanced vehicle search page is mostly static select UI; the real filtering happens on `/fahrzeuge` and homepage discovery/search components.
 - Browser local state is anonymous per device and stored in `localStorage`, not tied to users.
 
 ## 17. Guidance for Future Agents

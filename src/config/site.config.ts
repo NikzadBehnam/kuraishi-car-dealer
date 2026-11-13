@@ -5,13 +5,14 @@ export const siteConfig = {
   description:
     "Geprüfte Gebrauchtwagen, transparente Angebote und persönliche Beratung in Wien.",
   url: "https://www.kuraishi-autohandel.at",
-  mapUrl: "https://maps.google.com/?q=Treuestraße+57%2F4%2F3%2C+1200+Wien",
+  mapUrl: "https://maps.google.com/?q=Treustraße+57%2F4%2F3%2C+1200+Wien",
   contact: {
-    phone: "+43 664 123 45 67",
-    email: "office@kuraishi-autohandel.at",
+    phone: "+43 676 989 0630",
+    additionalPhones: ["+90 536 677 12 63", "+43 676 660 1985"],
+    email: "ali.shawkat2014@yahoo.com",
   },
   address: {
-    street: "Treuestraße 57/4/3",
+    street: "Treustraße 57/4/3",
     postalCode: "1200",
     city: "Wien",
     country: "Österreich",

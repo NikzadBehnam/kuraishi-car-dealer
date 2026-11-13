@@ -82,7 +82,6 @@ const priorityLabels: Record<AdminLeadPriority, string> = {
 
 const sourceLabels: Record<AdminLeadSource, string> = {
   contact: "Contact",
-  valuation: "Valuation",
   "test-drive": "Test drive",
   callback: "Callback",
 };
@@ -124,8 +123,6 @@ export function LeadsInbox({
           lead.message,
           vehicle?.make ?? "",
           vehicle?.model ?? "",
-          lead.valuationVehicle?.make ?? "",
-          lead.valuationVehicle?.model ?? "",
         ]
           .join(" ")
           .toLocaleLowerCase("de")
@@ -144,7 +141,7 @@ export function LeadsInbox({
           <div className="min-w-0">
             <h2 className="text-base font-extrabold">Leads inbox</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              UI-only intake board for contact, valuation, and test-drive
+              UI-only intake board for contact and test-drive
               requests.
             </p>
           </div>
@@ -280,7 +277,7 @@ function LeadTableRow({
         )}
       </TableCell>
       <TableCell className="min-w-56 px-3">
-        <LeadVehicleInterest lead={lead} vehicle={vehicle} />
+        <LeadVehicleInterest vehicle={vehicle} />
       </TableCell>
       <TableCell className="px-3">
         <StatusBadge status={lead.status} />
@@ -329,7 +326,7 @@ function LeadCard({
           <p className="text-sm text-muted-foreground">{lead.customerPhone}</p>
         )}
       </div>
-      <LeadVehicleInterest lead={lead} vehicle={vehicle} />
+      <LeadVehicleInterest vehicle={vehicle} />
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs font-bold text-muted-foreground">
           {formatDateTime(lead.createdAt)}
@@ -449,7 +446,7 @@ function LeadDetailSheet({
             </DetailSection>
 
             <DetailSection title="Vehicle interest">
-              <LeadVehicleInterest lead={lead} vehicle={vehicle} expanded />
+              <LeadVehicleInterest vehicle={vehicle} expanded />
             </DetailSection>
 
             <DetailSection title="Message">
@@ -565,11 +562,9 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 function LeadVehicleInterest({
-  lead,
   vehicle,
   expanded = false,
 }: {
-  lead: AdminLead;
   vehicle?: AdminVehicle;
   expanded?: boolean;
 }) {
@@ -585,24 +580,6 @@ function LeadVehicleInterest({
         {expanded && (
           <p className="text-sm text-muted-foreground">
             {formatMileage(vehicle.mileage)} - {vehicle.location}
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  if (lead.valuationVehicle) {
-    return (
-      <div className={cn("min-w-0", expanded && "grid gap-2")}>
-        <p className="truncate font-bold">
-          {lead.valuationVehicle.make} {lead.valuationVehicle.model}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">
-          Trade-in valuation - {formatMileage(lead.valuationVehicle.mileage)}
-        </p>
-        {expanded && (
-          <p className="text-sm text-muted-foreground">
-            First registration {lead.valuationVehicle.firstRegistration}
           </p>
         )}
       </div>

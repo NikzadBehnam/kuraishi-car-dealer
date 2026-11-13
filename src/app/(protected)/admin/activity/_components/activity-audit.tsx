@@ -3,9 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   Activity,
-  CarFront,
   Eye,
-  Heart,
   Inbox,
   ListFilter,
   Scale,
@@ -56,10 +54,8 @@ type SeverityFilter = "all" | AdminActivitySeverity;
 
 const typeLabels: Record<AdminActivityType, string> = {
   login: "Login",
-  favourite: "Favourite",
   comparison: "Comparison",
   inquiry: "Inquiry",
-  valuation: "Valuation",
   update: "Update",
 };
 
@@ -78,10 +74,8 @@ const severityLabels: Record<AdminActivitySeverity, string> = {
 
 const typeIcons: Record<AdminActivityType, LucideIcon> = {
   login: UserRound,
-  favourite: Heart,
   comparison: Scale,
   inquiry: Inbox,
-  valuation: CarFront,
   update: Activity,
 };
 

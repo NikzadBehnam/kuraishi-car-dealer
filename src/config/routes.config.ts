@@ -1,10 +1,7 @@
 export const publicRoutes = {
   home: "/",
   vehicles: "/fahrzeuge",
-  vehicleSearch: "/fahrzeugsuche",
-  favourites: "/merkliste",
   comparison: "/fahrzeugvergleich",
-  sellVehicle: "/fahrzeug-verkaufen",
   services: "/services",
   about: "/ueber-uns",
   contact: "/kontakt",
@@ -17,10 +14,7 @@ export const publicRoutes = {
 export const internalRoutes = {
   home: "/",
   vehicles: "/vehicles",
-  vehicleSearch: "/vehicle-search",
-  favourites: "/favourites",
   comparison: "/vehicle-comparison",
-  sellVehicle: "/sell-vehicle",
   services: "/services",
   about: "/about-us",
   contact: "/contact",

@@ -53,7 +53,7 @@ export function AuthShell({
               Future account workspace
             </p>
             <h1 className="mt-4 text-3xl font-extrabold tracking-tight">
-              Manage saved vehicles, comparisons, and inquiries from one place.
+              Manage comparisons and inquiries from one place.
             </h1>
             <p className="mt-4 text-sm leading-6 text-muted-foreground">
               This is a UI-only authentication surface prepared for the later

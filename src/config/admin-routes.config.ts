@@ -43,7 +43,7 @@ export const adminNavigation: AdminNavigationItem[] = [
   },
   {
     label: "Leads",
-    description: "Review inquiries, valuations, and contact requests.",
+    description: "Review inquiries and contact requests.",
     href: adminRoutes.leads,
     Icon: Inbox,
   },

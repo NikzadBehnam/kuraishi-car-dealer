@@ -52,14 +52,19 @@ export function SiteFooter() {
             <address className="mt-5 grid gap-3 text-sm not-italic">
               <ContactLink href={siteConfig.mapUrl} icon={MapPin} external>
                 {siteConfig.address.street}, {siteConfig.address.postalCode}{" "}
-                {siteConfig.address.city}
+                {siteConfig.address.city}, {siteConfig.address.country}
               </ContactLink>
-              <ContactLink
-                href={`tel:${siteConfig.contact.phone.replace(/\s/g, "")}`}
-                icon={Phone}
-              >
-                {siteConfig.contact.phone}
-              </ContactLink>
+              {[siteConfig.contact.phone, ...siteConfig.contact.additionalPhones].map(
+                (phone) => (
+                  <ContactLink
+                    key={phone}
+                    href={`tel:${phone.replace(/\s/g, "")}`}
+                    icon={Phone}
+                  >
+                    {phone}
+                  </ContactLink>
+                ),
+              )}
               <ContactLink
                 href={`mailto:${siteConfig.contact.email}`}
                 icon={Mail}

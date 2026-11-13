@@ -10,7 +10,9 @@ const qrValue = [
   "VERSION:3.0",
   `FN:${siteConfig.name}`,
   `ORG:${siteConfig.name}`,
-  `TEL:${siteConfig.contact.phone}`,
+  ...[siteConfig.contact.phone, ...siteConfig.contact.additionalPhones].map(
+    (phone) => `TEL:${phone.replace(/\s/g, "")}`,
+  ),
   `EMAIL:${siteConfig.contact.email}`,
   `ADR:;;${siteConfig.address.street};${siteConfig.address.city};;${siteConfig.address.postalCode};${siteConfig.address.country}`,
   `URL:${siteConfig.url}`,

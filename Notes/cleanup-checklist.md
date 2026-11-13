@@ -10,7 +10,7 @@
 - [+] 5- remove or change the size of the hero section the hero section "Fahrzeuge entdecken" (compact header)
 - [+] 6- chage the fiters, one general seach field is enough
 - [+] 7- on the footer, remove the section "Neue Fahrzeuge direkt in Ihr Postfach"
-- [-] 8- update the entire data in the footer with the recent supplied
+- [+] 8- update the entire data in the footer with the recent supplied
 
 ## `/fahrzeuge/[slug]` | Vehicle details — try `/fahrzeuge/volkswagen-tiguan-1` |
 

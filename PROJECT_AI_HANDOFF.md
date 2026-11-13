@@ -323,7 +323,7 @@ Design system:
 
 Site identity:
 
-- `src/config/site.config.ts`: name, shortName, tagline, description, public URL, map URL, contact, address, opening hours, social URLs.
+- `src/config/site.config.ts`: name, shortName, tagline, description, public URL, map URL, contact, address, opening hours, social URLs. Contact includes a primary phone and additional phones; the footer and contact QR code include all numbers.
 
 Navigation:
 

@@ -98,7 +98,7 @@ Internal physical routes:
 - Rewrites German public routes to English internal route files.
 - Redirects direct English internal public-route requests back to German canonical URLs with 308.
 - Preserves vehicle slugs and query strings by cloning `request.nextUrl`.
-- Excludes API routes, Next static/image routes, favicon, images/fonts/assets, and file-extension paths.
+- Excludes API routes, Next static/image routes, favicon, images/fonts/assets, and file-extension paths, except explicit vehicle-route matchers so dotted slugs such as `volkswagen-id.4-17` are localized correctly.
 
 Do not link to `internalRoutes` from user-facing UI. Public links should use `publicRoutes`, `routes`, or `routeBuilders`.
 

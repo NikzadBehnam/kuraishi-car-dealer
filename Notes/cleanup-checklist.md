@@ -35,6 +35,6 @@
 ## ...............
 
 - [-] 15- check the entire project once more if there is anything else should get refatored
-- [-] 16- check all the links, there should not be a link in the UI that is getting error due to removing the feature
+- [+] 16- check all the links, there should not be a link in the UI that is getting error due to removing the feature (125 internal URLs checked; fixed dotted vehicle-slug routing)
 
 - [-] 17- remove any logic in the project related to this featur inlcuding

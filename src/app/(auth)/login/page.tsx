@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { AuthShell } from "@/app/(auth)/_components/auth-shell";
 import { LoginForm } from "@/app/(auth)/login/login-form";
@@ -17,7 +18,9 @@ export default function LoginPage() {
         <p>Forgot your password? Contact the administrator.</p>
       }
     >
-      <LoginForm />
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </AuthShell>
   );
 }

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LoaderCircle, LogIn } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -16,9 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
+import { getSafeReturnPath } from "@/lib/safe-redirect";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -50,7 +52,7 @@ export function LoginForm() {
       return;
     }
 
-    router.replace("/admin");
+    router.replace(getSafeReturnPath(searchParams.get("next")));
     router.refresh();
   };
 

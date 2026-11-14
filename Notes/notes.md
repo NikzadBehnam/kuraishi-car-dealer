@@ -60,10 +60,10 @@ The checklist interprets “registration” as creating additional accounts, not
 ### 4. Add the Next.js server and client integrations
 
 - [x] Add the App Router catch-all handler at `src/app/api/auth/[...all]/route.ts`, exporting the Better Auth Next.js handler for `GET` and `POST`. _Done and tested on the dev server: `/api/auth/ok` returns 200, public sign-up returns 400, sign-in from an untrusted origin returns 403, a wrong password returns 401, and unauthenticated `admin/create-user` returns 401._
-- [ ] Preserve the current locale behavior in `src/proxy.ts`. Ensure `/api` remains excluded from locale rewrites, and do not make proxy cookie checks the sole access-control mechanism.
-- [ ] Create the browser auth client in a separate client-safe module using Better Auth's React client. Keep database and secret-bearing configuration in server-only modules.
-- [ ] Add the Admin client plugin only if the account-creation UI calls Admin plugin endpoints from the browser. Regardless of client setup, rely on Better Auth's server-side admin authorization and verify the master-admin role on the protected account-creation page/action.
-- [ ] Use the session hook/client state only for UX (for example, showing a user name or hiding a sign-in button). Client-side state is not a security boundary.
+- [x] Preserve the current locale behavior in `src/proxy.ts`. Ensure `/api` remains excluded from locale rewrites, and do not make proxy cookie checks the sole access-control mechanism. _Verified: matcher already excludes `api`; proxy left unchanged and is not used for auth._
+- [x] Create the browser auth client in a separate client-safe module using Better Auth's React client. Keep database and secret-bearing configuration in server-only modules. _Done: `src/lib/auth-client.ts`._
+- [x] Add the Admin client plugin only if the account-creation UI calls Admin plugin endpoints from the browser. Regardless of client setup, rely on Better Auth's server-side admin authorization and verify the master-admin role on the protected account-creation page/action. _Skipped the plugin for now: account creation will run through a server action using `auth.api` (Section 5/6), so no browser Admin calls are needed._
+- [x] Use the session hook/client state only for UX (for example, showing a user name or hiding a sign-in button). Client-side state is not a security boundary. _Noted: `authClient.useSession` will be used only for UX; guards are server-side (Section 6)._
 
 ### 5. Connect the existing forms to real authentication
 

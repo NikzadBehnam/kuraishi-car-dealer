@@ -87,14 +87,14 @@ The checklist interprets “registration” as creating additional accounts, not
 
 ### 7. Verify behavior and deployment
 
-- [ ] Anonymous visit to `/admin` and a nested admin URL redirects to login without rendering protected content.
-- [ ] A valid regular user can open every ordinary dashboard area, refresh, and navigate between admin routes; the session remains valid according to the configured session policy.
-- [ ] A regular user cannot access the account-creation page or invoke its action/Admin endpoint directly. The master admin can access that workflow and create a regular user.
-- [ ] Accounts created by the master admin receive only the `user` role. Verify that neither the form payload nor a direct request can assign the `admin` role.
-- [ ] Anonymous public sign-up is rejected by the server even when the sign-up API is called directly; hiding the registration link alone is not sufficient.
-- [ ] Sign-out, expired sessions, invalid/tampered cookies, and revoked sessions do not render protected pages.
+- [x] Anonymous visit to `/admin` and a nested admin URL redirects to login without rendering protected content.
+- [x] A valid regular user can open every ordinary dashboard area, refresh, and navigate between admin routes; the session remains valid according to the configured session policy.
+- [x] A regular user cannot access the account-creation page or invoke its action/Admin endpoint directly. The master admin can access that workflow and create a regular user.
+- [x] Accounts created by the master admin receive only the `user` role. Verify that neither the form payload nor a direct request can assign the `admin` role.
+- [x] Anonymous public sign-up is rejected by the server even when the sign-up API is called directly; hiding the registration link alone is not sufficient.
+- [x] Sign-out, expired sessions, invalid/tampered cookies, and revoked sessions do not render protected pages.
 - [ ] Email verification and public password reset are absent as planned. Verify the documented master-admin recovery process for regular accounts.
-- [ ] Auth API requests work without locale rewriting. Requests from untrusted origins are rejected, and legitimate local/production origins work.
+- [x] Auth API requests work without locale rewriting. Requests from untrusted origins are rejected, and legitimate local/production origins work.
 - [ ] Test failed database/auth requests and confirm they fail closed: an auth/database error must not render the dashboard as if the user were signed in.
 - [ ] Check session behavior in the target deployment, including HTTPS cookie flags, origin configuration, environment variables, and applied database migrations.
 - [ ] Add focused tests for anonymous, regular-user, and master-admin access to dashboard and account-creation routes/actions. Run the existing type-check, lint, and production build after implementation.

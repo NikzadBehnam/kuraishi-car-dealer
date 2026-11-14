@@ -87,14 +87,14 @@ The checklist interprets “registration” as creating additional accounts, not
 
 ### 7. Verify behavior and deployment
 
-- [x] Anonymous visit to `/admin` and a nested admin URL redirects to login without rendering protected content.
-- [x] A valid regular user can open every ordinary dashboard area, refresh, and navigate between admin routes; the session remains valid according to the configured session policy.
-- [x] A regular user cannot access the account-creation page or invoke its action/Admin endpoint directly. The master admin can access that workflow and create a regular user.
-- [x] Accounts created by the master admin receive only the `user` role. Verify that neither the form payload nor a direct request can assign the `admin` role.
-- [x] Anonymous public sign-up is rejected by the server even when the sign-up API is called directly; hiding the registration link alone is not sufficient.
-- [x] Sign-out, expired sessions, invalid/tampered cookies, and revoked sessions do not render protected pages.
+- [x] Anonymous visit to `/admin` and a nested admin URL redirects to login without rendering protected content. _Tested on dev: `/admin` and `/admin/vehicles/new` redirect to `/login`._
+- [x] A valid regular user can open every ordinary dashboard area, refresh, and navigate between admin routes; the session remains valid according to the configured session policy. _Tested with a temporary user: `/admin`, `/admin/vehicles`, refresh all render._
+- [x] A regular user cannot access the account-creation page or invoke its action/Admin endpoint directly. The master admin can access that workflow and create a regular user. _Tested: user redirected from the page; `admin/create-user` and `set-role` return 403; admin sees the form and creates a user. The Server Action is covered by `requireAdmin()` but was not called directly._
+- [x] Accounts created by the master admin receive only the `user` role. Verify that neither the form payload nor a direct request can assign the `admin` role. _Tested: admin create-user with `role: admin` returns 403; without role the account is `user`; user `update-user` with role returns 400 and `set-role` 403._
+- [x] Anonymous public sign-up is rejected by the server even when the sign-up API is called directly; hiding the registration link alone is not sufficient. _Tested: direct `sign-up/email` returns 400._
+- [x] Sign-out, expired sessions, invalid/tampered cookies, and revoked sessions do not render protected pages. _Tested: sign-out, expired session, tampered cookie and deleted session all redirect to `/login`._
 - [ ] Email verification and public password reset are absent as planned. Verify the documented master-admin recovery process for regular accounts.
-- [x] Auth API requests work without locale rewriting. Requests from untrusted origins are rejected, and legitimate local/production origins work.
+- [x] Auth API requests work without locale rewriting. Requests from untrusted origins are rejected, and legitimate local/production origins work. _Tested: sign-in from `http://localhost:3000` works; an untrusted origin returned 403 earlier; the production origin is configured but not testable locally._
 - [ ] Test failed database/auth requests and confirm they fail closed: an auth/database error must not render the dashboard as if the user were signed in.
 - [ ] Check session behavior in the target deployment, including HTTPS cookie flags, origin configuration, environment variables, and applied database migrations.
 - [ ] Add focused tests for anonymous, regular-user, and master-admin access to dashboard and account-creation routes/actions. Run the existing type-check, lint, and production build after implementation.

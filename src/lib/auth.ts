@@ -2,6 +2,7 @@ import "server-only";
 
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
+import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 
 import { prisma } from "@/lib/db";
@@ -52,6 +53,8 @@ export const auth = betterAuth({
       defaultRole: "user",
       adminRoles: ["admin"],
     }),
+    // Must stay last so cookies set from Server Actions are applied.
+    nextCookies(),
   ],
   rateLimit: {
     // Counters in the database, because serverless instances do not share memory.

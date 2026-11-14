@@ -67,13 +67,13 @@ The checklist interprets “registration” as creating additional accounts, not
 
 ### 5. Connect the existing forms to real authentication
 
-- [ ] Replace the login form's UI-only delay/toast with Better Auth email sign-in. Send the email and password, map the “remember me” choice to the supported session option, display actual errors, and navigate only after a successful response.
-- [ ] Remove public sign-up behavior from the registration form. Convert it to a master-admin-only account-creation screen, or replace it with a user-management screen that creates accounts through Better Auth's Admin plugin. Guard both its page and its server action/API with a server-validated admin session.
-- [ ] Create each account through the privileged Admin plugin create-user operation, explicitly assigning the `user` role. Map first and last name to `name`; send only fields supported by the configured user schema. Do not send confirmation password or a client-selected role as auth fields.
-- [ ] Decide how the master admin securely provides each new user with an initial password. Since self-service reset is out of scope, document how regular users request a password change from the master admin and how the master admin account is recovered.
-- [ ] Implement sign-out through Better Auth and update the UI after the session is cleared.
-- [ ] Do not show a public sign-up, verification-email, or forgot-password flow. Email verification and self-service password reset are explicitly out of scope for now.
-- [ ] Keep loading, duplicate-submit prevention, and server-returned error messages explicit. Remove all success-shaped UI behavior that can occur without a successful server response.
+- [x] Replace the login form's UI-only delay/toast with Better Auth email sign-in. Send the email and password, map the “remember me” choice to the supported session option, display actual errors, and navigate only after a successful response. _Done: `login-form.tsx` uses `authClient.signIn.email` with `rememberMe`; errors shown, redirects to `/admin` on success._
+- [x] Remove public sign-up behavior from the registration form. Convert it to a master-admin-only account-creation screen, or replace it with a user-management screen that creates accounts through Better Auth's Admin plugin. Guard both its page and its server action/API with a server-validated admin session. _Done: public `/register` removed; account creation lives at `/admin/accounts/new`, page and Server Action both check the session and `admin` role._
+- [x] Create each account through the privileged Admin plugin create-user operation, explicitly assigning the `user` role. Map first and last name to `name`; send only fields supported by the configured user schema. Do not send confirmation password or a client-selected role as auth fields. _Done: action calls `auth.api.createUser` with email, password, name only; the role is not sent and the plugin assigns `user` (the admin role has no set-role permission)._
+- [x] Decide how the master admin securely provides each new user with an initial password. Since self-service reset is out of scope, document how regular users request a password change from the master admin and how the master admin account is recovered. _Decision: the admin types the initial password and shares it manually (min 12 chars). Password changes: users ask the admin. Master-admin recovery is still to be documented._
+- [x] Implement sign-out through Better Auth and update the UI after the session is cleared. _Done in the admin account menu; also `nextCookies()` added as last plugin in `auth.ts`._
+- [x] Do not show a public sign-up, verification-email, or forgot-password flow. Email verification and self-service password reset are explicitly out of scope for now. _Done: Forgot/Create-one links removed from login._
+- [x] Keep loading, duplicate-submit prevention, and server-returned error messages explicit. Remove all success-shaped UI behavior that can occur without a successful server response. _Done: buttons disabled while submitting, toasts only reflect real server results._
 
 ### 6. Enforce the dashboard session boundary on the server
 

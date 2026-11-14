@@ -6,24 +6,15 @@ export const loginSchema = z.object({
   remember: z.boolean(),
 });
 
-export const registerSchema = z
-  .object({
-    firstName: z.string().min(2, "Enter your first name."),
-    lastName: z.string().min(2, "Enter your last name."),
-    email: z.email("Enter a valid email address."),
-    phone: z.string().optional(),
-    password: z.string().min(8, "Password must be at least 8 characters."),
-    confirmPassword: z
-      .string()
-      .min(8, "Confirm your password with at least 8 characters."),
-    consent: z
-      .boolean()
-      .refine(Boolean, "Consent is required for account creation."),
-  })
-  .refine((values) => values.password === values.confirmPassword, {
-    message: "Passwords must match.",
-    path: ["confirmPassword"],
-  });
+export const createAccountSchema = z.object({
+  firstName: z.string().trim().min(2, "Enter the first name.").max(60),
+  lastName: z.string().trim().min(2, "Enter the last name.").max(60),
+  email: z.email("Enter a valid email address."),
+  password: z
+    .string()
+    .min(12, "Password must be at least 12 characters.")
+    .max(128, "Password must be at most 128 characters."),
+});
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
-export type RegisterFormValues = z.infer<typeof registerSchema>;
+export type CreateAccountFormValues = z.infer<typeof createAccountSchema>;

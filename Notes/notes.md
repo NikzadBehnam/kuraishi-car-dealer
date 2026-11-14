@@ -77,7 +77,7 @@ The checklist interprets “registration” as creating additional accounts, not
 
 ### 6. Enforce the dashboard session boundary on the server
 
-- [ ] Update the admin layout so it obtains the current request headers and calls Better Auth's server API to validate the session before rendering `AdminShell`. Redirect users with no valid session to the login page.
+- [x] Update the admin layout so it obtains the current request headers and calls Better Auth's server API to validate the session before rendering `AdminShell`. Redirect users with no valid session to the login page. _Done in `src/app/(protected)/admin/layout.tsx`; anonymous `/admin` and `/admin/vehicles` redirect to `/login` with no shell rendered._
 - [ ] Use the server-validated session on every request. Do not treat the presence of a cookie alone as proof of authentication; it may be expired, invalid, or revoked.
 - [ ] Ensure every dashboard route is nested under the guarded admin layout. Keep login public. Do not keep account registration public; put account creation under a master-admin-guarded route.
 - [ ] If redirecting back to the requested page after login, accept only safe local paths; do not allow an untrusted external redirect target.

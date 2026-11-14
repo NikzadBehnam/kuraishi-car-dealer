@@ -59,7 +59,7 @@ The checklist interprets “registration” as creating additional accounts, not
 
 ### 4. Add the Next.js server and client integrations
 
-- [ ] Add the App Router catch-all handler at `src/app/api/auth/[...all]/route.ts`, exporting the Better Auth Next.js handler for `GET` and `POST`.
+- [x] Add the App Router catch-all handler at `src/app/api/auth/[...all]/route.ts`, exporting the Better Auth Next.js handler for `GET` and `POST`. _Done and tested on the dev server: `/api/auth/ok` returns 200, public sign-up returns 400, sign-in from an untrusted origin returns 403, a wrong password returns 401, and unauthenticated `admin/create-user` returns 401._
 - [ ] Preserve the current locale behavior in `src/proxy.ts`. Ensure `/api` remains excluded from locale rewrites, and do not make proxy cookie checks the sole access-control mechanism.
 - [ ] Create the browser auth client in a separate client-safe module using Better Auth's React client. Keep database and secret-bearing configuration in server-only modules.
 - [ ] Add the Admin client plugin only if the account-creation UI calls Admin plugin endpoints from the browser. Regardless of client setup, rely on Better Auth's server-side admin authorization and verify the master-admin role on the protected account-creation page/action.

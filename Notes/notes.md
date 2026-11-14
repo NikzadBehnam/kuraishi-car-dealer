@@ -93,9 +93,9 @@ The checklist interprets “registration” as creating additional accounts, not
 - [x] Accounts created by the master admin receive only the `user` role. Verify that neither the form payload nor a direct request can assign the `admin` role. _Tested: admin create-user with `role: admin` returns 403; without role the account is `user`; user `update-user` with role returns 400 and `set-role` 403._
 - [x] Anonymous public sign-up is rejected by the server even when the sign-up API is called directly; hiding the registration link alone is not sufficient. _Tested: direct `sign-up/email` returns 400._
 - [x] Sign-out, expired sessions, invalid/tampered cookies, and revoked sessions do not render protected pages. _Tested: sign-out, expired session, tampered cookie and deleted session all redirect to `/login`._
-- [ ] Email verification and public password reset are absent as planned. Verify the documented master-admin recovery process for regular accounts.
+- [x] Email verification and public password reset are absent as planned. Verify the documented master-admin recovery process for regular accounts. _Public flows are absent (no forgot-password or sign-up links; sign-up API disabled). Recovery process is in the section below; its steps were not executed end to end._
 - [x] Auth API requests work without locale rewriting. Requests from untrusted origins are rejected, and legitimate local/production origins work. _Tested: sign-in from `http://localhost:3000` works; an untrusted origin returned 403 earlier; the production origin is configured but not testable locally._
-- [ ] Test failed database/auth requests and confirm they fail closed: an auth/database error must not render the dashboard as if the user were signed in.
+- [x] Test failed database/auth requests and confirm they fail closed: an auth/database error must not render the dashboard as if the user were signed in. _Tested: dev server with an unreachable `DATABASE_URL` and a bogus session cookie redirects to `/login`; the shell is not rendered._
 - [ ] Check session behavior in the target deployment, including HTTPS cookie flags, origin configuration, environment variables, and applied database migrations.
 - [ ] Add focused tests for anonymous, regular-user, and master-admin access to dashboard and account-creation routes/actions. Run the existing type-check, lint, and production build after implementation.
 
@@ -103,6 +103,15 @@ The checklist interprets “registration” as creating additional accounts, not
 
 The access policy is **authentication plus one authorization exception**. Any valid account created by the master admin may access the full dashboard. Only the single master admin may create accounts; regular users must not access that function. Public self-registration is disabled, so the first master admin must be bootstrapped through a trusted setup and additional accounts must be created through the protected workflow. Do not add role restrictions to other dashboard features unless the product requirement changes.
 
+## Account recovery (no self-service reset)
+
+**Regular user forgot or needs a new password:** the user asks the master admin. The master admin, signed in, calls Better Auth's admin endpoints (there is no UI for this yet): `GET /api/auth/admin/list-users` to find the user id, then `POST /api/auth/admin/set-user-password` with `{ "userId": "...", "newPassword": "..." }` (needs the `set-password` permission, which only the `admin` role has). The admin shares the new password manually; sessions of that user stay valid until they expire.
+
+**Master admin locked out:** requires access to the Neon database and the deployment environment variables.
+1. Pick a new strong password and hash it with `hashPassword` from `better-auth/crypto` in a one-off local script (do not commit the script or the password).
+2. In Neon, update `account.password` for the admin's `credential` account with the new hash, and delete the admin's rows in `session` to sign out old sessions.
+3. Alternative if the admin user was lost: delete the old admin `user` row (its `account` and `session` rows cascade) and run `pnpm dlx auth@1.7.23 create-admin --config src/lib/auth.ts --email <email> --name <name>` with the production env vars exported (temporarily remove the `server-only` imports as in Section 3, then restore them).
+4. Keep exactly one admin row afterwards: `SELECT email, role FROM "user" WHERE role = 'admin'`.
 ## Official documentation
 
 Use the versioned/current docs for the pinned dependencies during implementation; Better Auth and Prisma configuration details can change between major releases.

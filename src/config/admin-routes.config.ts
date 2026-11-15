@@ -13,6 +13,7 @@ export const adminRoutes = {
   leads: "/admin/leads",
   media: "/admin/media",
   settings: "/admin/settings",
+  newAccount: "/admin/accounts/new",
 } as const;
 
 export interface AdminNavigationItem {

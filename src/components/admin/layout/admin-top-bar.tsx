@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { CarFront, Menu, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { AdminMobileSidebar } from "@/components/admin/layout/admin-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -25,9 +27,34 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { adminRoutes } from "@/config/admin-routes.config";
+import { authClient } from "@/lib/auth-client";
 
 export function AdminTopBar() {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const { data: session } = authClient.useSession();
+  // UX only: the account-creation page and action re-check the role on the server.
+  const displayName = session?.user.name ?? "Account";
+  const initials =
+    displayName
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "A";
+  const isMaster = session?.user.role === "admin";
+
+  const signOut = async () => {
+    const { error } = await authClient.signOut();
+
+    if (error) {
+      toast.error(error.message || "Sign out failed. Please try again.");
+      return;
+    }
+
+    router.replace("/login");
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b bg-surface/95 backdrop-blur">
@@ -89,38 +116,36 @@ export function AdminTopBar() {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="hidden items-center gap-2 rounded-[var(--radius-sm)] border bg-background px-2.5 py-1.5 transition-colors hover:bg-surface-muted focus-visible:outline-none lg:flex"
+                className="flex items-center gap-2 rounded-[var(--radius-sm)] border bg-background px-2.5 py-1.5 transition-colors hover:bg-surface-muted focus-visible:outline-none"
                 aria-label="Open admin account menu"
               >
                 <Avatar className="size-7">
                   <AvatarFallback className="bg-accent text-xs text-accent-foreground">
-                    KA
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
-                <span className="grid text-left leading-tight">
-                  <span className="text-xs font-extrabold">
-                    Kuraishi Admin
-                  </span>
+                <span className="hidden text-left leading-tight lg:grid">
+                  <span className="text-xs font-extrabold">{displayName}</span>
                   <span className="text-[0.68rem] text-muted-foreground">
-                    Operations Manager
+                    {isMaster ? "Administrator" : "User"}
                   </span>
                 </span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
-                <span className="block text-foreground">Kuraishi Admin</span>
+                <span className="block text-foreground">{displayName}</span>
                 <span className="mt-1 block font-semibold">
-                  UI-only account menu
+                  {session?.user.email}
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile preview</DropdownMenuItem>
-              <DropdownMenuItem>Admin preferences</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>
-                Sign out unavailable in UI phase
-              </DropdownMenuItem>
+              {isMaster ? (
+                <DropdownMenuItem asChild>
+                  <Link href={adminRoutes.newAccount}>Create account</Link>
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onSelect={signOut}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

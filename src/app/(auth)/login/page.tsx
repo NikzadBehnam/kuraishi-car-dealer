@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
 
 import { AuthShell } from "@/app/(auth)/_components/auth-shell";
 import { LoginForm } from "@/app/(auth)/login/login-form";
@@ -13,17 +13,14 @@ export default function LoginPage() {
     <AuthShell
       eyebrow="Login"
       title="Welcome back"
-      description="Access the future client area for comparisons and inquiries."
+      description="Sign in to the Kuraishi admin dashboard. Accounts are created by the administrator."
       footer={
-        <p>
-          No account yet?{" "}
-          <Link className="font-bold text-primary hover:underline" href="/register">
-            Create one
-          </Link>
-        </p>
+        <p>Forgot your password? Contact the administrator.</p>
       }
     >
-      <LoginForm />
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </AuthShell>
   );
 }

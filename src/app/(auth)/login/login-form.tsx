@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LoaderCircle, LogIn } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -14,8 +15,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
+import { getSafeReturnPath } from "@/lib/safe-redirect";
 
 export function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -31,9 +36,24 @@ export function LoginForm() {
     },
   });
 
-  const submit = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    toast.success("Login is UI-only. No session was created.");
+  const submit = async (values: LoginFormValues) => {
+    const { error } = await authClient.signIn.email({
+      email: values.email,
+      password: values.password,
+      rememberMe: values.remember,
+    });
+
+    if (error) {
+      toast.error(
+        error.status === 429
+          ? "Too many attempts. Please wait and try again."
+          : error.message || "Login failed. Check your email and password.",
+      );
+      return;
+    }
+
+    router.replace(getSafeReturnPath(searchParams.get("next")));
+    router.refresh();
   };
 
   return (
@@ -93,13 +113,6 @@ export function LoginForm() {
             </label>
           )}
         />
-        <button
-          type="button"
-          className="shrink-0 font-bold text-primary hover:underline"
-          onClick={() => toast.info("Password reset is UI-only.")}
-        >
-          Forgot?
-        </button>
       </div>
 
       <Button
@@ -109,7 +122,7 @@ export function LoginForm() {
         className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
       >
         {isSubmitting ? <LoaderCircle className="animate-spin" /> : <LogIn />}
-        {isSubmitting ? "Checking mock credentials" : "Login"}
+        {isSubmitting ? "Signing in" : "Login"}
       </Button>
     </form>
   );

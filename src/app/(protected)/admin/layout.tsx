@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/layout/admin-shell";
+import { hasAuthenticatedSession } from "@/lib/auth-access";
 import { getSafeReturnPath } from "@/lib/safe-redirect";
 import { getSession } from "@/lib/session";
 
@@ -20,8 +21,10 @@ export default async function AdminLayout({
   // Validates the session against the database; a cookie alone is not enough.
   const session = await getSession();
 
-  if (!session) {
-    const returnPath = getSafeReturnPath((await headers()).get("x-return-path"));
+  if (!hasAuthenticatedSession(session)) {
+    const returnPath = getSafeReturnPath(
+      (await headers()).get("x-return-path"),
+    );
     redirect(
       returnPath === "/admin"
         ? "/login"

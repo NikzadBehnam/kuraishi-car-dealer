@@ -83,7 +83,7 @@ Section numbers are stable references, not a requirement to ignore dependencies.
 - [x] **01.02** Define public eligibility independently from frontend filtering: visibility on the homepage, listing, detail page, comparison, similar vehicles, sitemap, and inquiry form must all agree. Decide whether reserved/sold vehicles keep a public detail page or disappear. _Approved 2026-11-16; the public-surface matrix below is the implementation contract. Runtime enforcement remains pending._
 - [x] **01.03** Reconcile lifecycle status, `isAvailable`, `isFeatured`, and inspection state (`pending`, `in_progress`, `passed`, `failed`). Decide whether a passed inspection is a publishing prerequisite and what happens to reserved/featured cars when sold or archived. _Approved 2026-11-16; availability is derived, publication requires Passed, and non-published states cannot remain featured. See the rules below; runtime enforcement remains pending._
 - [x] **01.04** Confirm single dealership versus multiple dealers. Current fixtures expose a dealer relation but only one dealer; start with the actual business requirement, not a multi-tenant marketplace design. _Approved 2026-11-16: one dealership with shared staff inventory; see the scope below._
-- [ ] **01.05** Confirm currency/price precision, margin visibility, stock-number uniqueness, slug change policy, delete versus archive, and whether acquisition/reservation dates are managed automatically or editable.
+- [x] **01.05** Confirm currency/price precision, margin visibility, stock-number uniqueness, slug change policy, delete versus archive, and whether acquisition/reservation dates are managed automatically or editable. _Approved 2026-11-16; the exact-money, identifier, deletion, and date rules below guide later schema/mutations._
 - [ ] **01.06** Confirm the canonical public domain, media provider and file limits, notification expectations, appointment timezone, customer-data retention, and legal/cookie ownership. Request credentials privately only when the corresponding integration is being implemented.
 
 #### Approved decision 01.01: vehicle lifecycle
@@ -135,6 +135,16 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Vehicles retain a stable relationship to the dealership record, so business identity/contact settings have one source of truth.
 - No independent vendor accounts, tenant isolation, dealer marketplace, or per-dealer staff permissions are included. A future multi-dealership requirement needs its own design and approval.
 - Verification: explicitly approved by the user on 2026-11-16; checked against the existing single-dealer fixture and shared staff authorization model. No tenancy schema or Production changes were made.
+
+#### Approved decision 01.05: money, identifiers, deletion and dates
+
+- Currency is EUR, with exact two-decimal storage/calculation semantics, not binary floating-point money arithmetic. Format at the display boundary; margin estimates are staff-only.
+- Trim/normalize stock-number case and enforce uniqueness across active and archived vehicles. Never silently reuse a stock number.
+- Slugs are unique and editable only on never-published drafts; lock them after first publication to preserve public URLs. Sold/archived records retain their slug.
+- Permanent deletion is permitted only for a never-published draft after explicit confirmation. Previously published stock must be archived rather than hard-deleted. Preserve inquiry history and shared media.
+- Acquisition date defaults to today in the dealership timezone and is staff-correctable. Creation/update timestamps are server-owned; first publication is set once. Set the sale timestamp on a completed sale and clear it on an explicit return to Draft, while recording the change for traceability.
+- Reservation expiry is optional and, when set, must be a future date. Automatic expiry/republication is not included; staff explicitly release or update a reservation.
+- Verification: explicitly approved by the user on 2026-11-16; reviewed for consistency with lifecycle corrections, retained sold URLs, and later inquiry/media relationships. Database constraints and mutation enforcement are not implemented by this documentation point.
 
 **Commit 2: `refactor: define server-side business operation boundaries`**
 
@@ -601,6 +611,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.04** are approved and documented; runtime business rules are not implemented yet.
-- **Next:** point **01.05**: approve money, identifiers, deletion policy, and lifecycle dates. Points **01.05-01.10** remain pending.
+- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.05** are approved and documented; runtime business rules are not implemented yet.
+- **Next:** point **01.06**: confirm the canonical domain and integration/privacy decision boundaries. Points **01.06-01.10** remain pending.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

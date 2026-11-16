@@ -81,7 +81,7 @@ Section numbers are stable references, not a requirement to ignore dependencies.
 
 - [x] **01.01** Confirm what `draft`, `published`, `reserved`, `sold`, and `archived` mean; define legal transitions and who may trigger them under the existing staff policy. _Approved 2026-11-16; meanings and transitions are recorded below. This completes the decision/documentation point, not runtime lifecycle enforcement, which is covered by 01.07-01.10 and the inventory implementation._
 - [x] **01.02** Define public eligibility independently from frontend filtering: visibility on the homepage, listing, detail page, comparison, similar vehicles, sitemap, and inquiry form must all agree. Decide whether reserved/sold vehicles keep a public detail page or disappear. _Approved 2026-11-16; the public-surface matrix below is the implementation contract. Runtime enforcement remains pending._
-- [ ] **01.03** Reconcile lifecycle status, `isAvailable`, `isFeatured`, and inspection state (`pending`, `in_progress`, `passed`, `failed`). Decide whether a passed inspection is a publishing prerequisite and what happens to reserved/featured cars when sold or archived.
+- [x] **01.03** Reconcile lifecycle status, `isAvailable`, `isFeatured`, and inspection state (`pending`, `in_progress`, `passed`, `failed`). Decide whether a passed inspection is a publishing prerequisite and what happens to reserved/featured cars when sold or archived. _Approved 2026-11-16; availability is derived, publication requires Passed, and non-published states cannot remain featured. See the rules below; runtime enforcement remains pending._
 - [ ] **01.04** Confirm single dealership versus multiple dealers. Current fixtures expose a dealer relation but only one dealer; start with the actual business requirement, not a multi-tenant marketplace design.
 - [ ] **01.05** Confirm currency/price precision, margin visibility, stock-number uniqueness, slug change policy, delete versus archive, and whether acquisition/reservation dates are managed automatically or editable.
 - [ ] **01.06** Confirm the canonical public domain, media provider and file limits, notification expectations, appointment timezone, customer-data retention, and legal/cookie ownership. Request credentials privately only when the corresponding integration is being implemented.
@@ -119,6 +119,15 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Reserved inventory must not be presented as immediately available; an informational inquiry is not a confirmed test drive, purchase, or reservation.
 - Retain sold detail URLs and eligible sitemap entries to preserve existing links, but never advertise those cars in active stock or recommendations. General contact remains available.
 - Verification for this point: explicit user approval and review across all five statuses and all seven public surfaces. This is a policy decision; the current UI/queries have not been changed to implement it yet.
+
+#### Approved decision 01.03: availability, inspection and featured placement
+
+- Availability is derived from lifecycle: only `published` is available. `draft`, `reserved`, `sold`, and `archived` are not available. The future form must not offer an independent flag that contradicts lifecycle.
+- Publishing requires inspection `passed`; `pending`, `in_progress`, and `failed` cannot be published.
+- Changing an advertised (`published`) or `reserved` vehicle's inspection away from `passed` withdraws it to `draft` in the same operation. Runtime readers must also fail closed on inconsistent legacy records rather than publicly advertise them.
+- Featured is an editorial choice valid only for `published`, inspection-passed inventory. Any transition away from `published` clears it; restoration/relisting never automatically restores Featured.
+- Sold detail pages remain eligible under 01.02 but never claim availability. Inspection badges must be supported by actual inspection data, not unconditional text.
+- Verification: explicitly approved by the user on 2026-11-16. The withdrawal transitions are allowed by 01.01 and these rules preserve 01.02 reserved/sold visibility without advertising unavailable inventory as available. Code and regression tests remain future points.
 
 **Commit 2: `refactor: define server-side business operation boundaries`**
 
@@ -585,6 +594,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.02** are approved and documented; runtime business rules are not implemented yet.
-- **Next:** point **01.03**: reconcile availability, featured placement, and inspection prerequisites with the approved lifecycle and visibility matrix. Points **01.03-01.10** remain pending.
+- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.03** are approved and documented; runtime business rules are not implemented yet.
+- **Next:** point **01.04**: confirm the dealership ownership scope. Points **01.04-01.10** remain pending.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

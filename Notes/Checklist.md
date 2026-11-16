@@ -156,9 +156,19 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Business/legal approval of customer-data retention and final legal/cookie content is required before public inquiry launch. No retention period or claim of legal compliance is invented here; mark that later launch gate unresolved until approved.
 - Verification: the user explicitly supplied/approved each value on 2026-11-16. No provider package, key, storage bucket, email integration, Production configuration, or data was changed.
 
+#### Implementation 01.07: domain and server boundaries
+
+- `src/lib/inventory-policy.ts` contains pure, typed eligibility/projection rules and no secrets, request headers, database clients, or provider keys. Pure functions are testable with the existing Node runner and are not an authorization boundary.
+- `getPublicVehicleVisibility()` implements 01.02 and fails closed for inspection-ineligible advertised/reserved stock. `toPublicInventoryVehicle()` explicitly selects public fields, corrects availability/featured output, and excludes existing or future staff/customer fields.
+- Future staff query/mutation modules must import `server-only`, call the existing `requireSession()` themselves, and reuse `prisma` from `src/lib/db.ts`. Account provisioning continues to use `requireAdmin()`.
+- Future public query modules must also remain server-only, apply equivalent eligibility in the database query before pagination/counting, and project only public fields before crossing a client/API boundary. Post-query projection is defense in depth, not a substitute for database filtering.
+- Do not add a second Prisma client, speculative empty query functions, mock successful mutations, or a new transport layer. Implement real `prisma.vehicle` calls only after Section 02 creates the model, with the appropriate server auth/projection boundary.
+- Section 01 policy helpers do not automatically enforce these rules in current fixture-backed pages; wiring and live database enforcement remain explicit later sections.
+- Verification: three focused projection/eligibility tests and TypeScript typecheck passed. No database or live UI changes.
+
 **Commit 2: `refactor: define server-side business operation boundaries`**
 
-- [ ] **01.07** Establish server-only query/mutation modules using the existing shared Prisma client. Define public read projections separately from staff projections; private margin, partial VIN, internal inspection workflow, notes, and customer data must not leak into public payloads.
+- [x] **01.07** Establish server-only query/mutation boundaries using the existing shared Prisma client and define public projections separately from staff data. _Foundation implemented in `src/lib/inventory-policy.ts`: shared public-surface eligibility and an explicit public-field allowlist, with focused projection tests. Concrete Prisma queries/mutations are deliberately deferred to 02/04 because the current schema has auth tables only; the server-only boundary contract above governs those implementations. No live inventory consumer has been migrated yet._
 - [ ] **01.08** Reuse Zod/server validation and the repository's error/UI patterns. Reject unsupported enum values and malformed IDs; return actionable failures, never artificial success or fallback demo data on database errors.
 - [ ] **01.09** Define transaction boundaries, uniqueness/conflict handling, pagination limits, and cache invalidation ownership. Add actor/change timestamps where business changes require traceability, without introducing a generic event system unnecessarily.
 
@@ -621,6 +631,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.06** are approved and documented; runtime business rules are not implemented yet.
-- **Next:** point **01.07**: implement the agreed domain policy/public projection foundation and document server-only query/mutation boundaries using the existing shared Prisma client. Concrete vehicle database reads/writes remain Section 02 and Section 04, after their models/migrations exist. Points **01.07-01.10** remain pending.
+- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.06** are approved; **01.07** implements and tests reusable visibility/projection policy, not live database/UI integration.
+- **Next:** point **01.08**: implement validated lifecycle input boundaries and explicit domain errors. Points **01.08-01.10** remain pending.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

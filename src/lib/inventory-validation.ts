@@ -33,3 +33,18 @@ export const inventoryPolicyUpdateSchema = inventoryPolicyStateSchema
   .refine((value) => Object.values(value).some((item) => item !== undefined), {
     message: "Provide at least one inventory policy change.",
   });
+
+export const inventoryPaginationSchema = z
+  .strictObject({
+    page: z.number().int().min(1).default(1),
+    pageSize: z.number().int().min(1).max(100).default(8),
+  })
+  .transform(({ page, pageSize }) => ({
+    page,
+    pageSize,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  }))
+  .refine(({ skip }) => Number.isSafeInteger(skip) && skip <= 2_147_483_647, {
+    message: "Pagination offset is too large.",
+  });

@@ -9,6 +9,7 @@ import {
 import type { InventoryPolicyState } from "./inventory-policy.ts";
 import {
   inventoryIdSchema,
+  inventoryPaginationSchema,
   inventoryPolicyUpdateSchema,
 } from "./inventory-validation.ts";
 
@@ -19,6 +20,31 @@ const published: InventoryPolicyState = {
 };
 
 describe("inventory input and lifecycle boundary", () => {
+  it("bounds database pagination without silently clamping invalid requests", () => {
+    assert.deepEqual(inventoryPaginationSchema.parse({}), {
+      page: 1,
+      pageSize: 8,
+      skip: 0,
+      take: 8,
+    });
+    assert.deepEqual(
+      inventoryPaginationSchema.parse({ page: 3, pageSize: 100 }),
+      { page: 3, pageSize: 100, skip: 200, take: 100 },
+    );
+    for (const input of [
+      { page: 0 },
+      { page: 1.5 },
+      { page: "1" },
+      { pageSize: 0 },
+      { pageSize: 101 },
+      { page: Number.MAX_SAFE_INTEGER, pageSize: 100 },
+      { page: 2_147_483_649, pageSize: 1 },
+      { take: 1000 },
+    ]) {
+      assert.equal(inventoryPaginationSchema.safeParse(input).success, false);
+    }
+  });
+
   it("rejects malformed IDs, unsupported enums, empty and forged policy inputs", () => {
     for (const id of [
       "",

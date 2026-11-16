@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { z } from "zod";
 
+import type { AdminVehicleStatus } from "../types/admin.ts";
 import {
   InventoryPolicyError,
   resolveInventoryPolicyUpdate,
@@ -102,18 +103,24 @@ describe("inventory input and lifecycle boundary", () => {
 
   it("withdraws advertised/reserved stock and clears promotion in one result", () => {
     for (const status of ["published", "reserved"] as const) {
-      const current = { ...published, status };
-      assert.deepEqual(
-        resolveInventoryPolicyUpdate(current, { inspectionStatus: "failed" }),
-        {
-          status: "draft",
-          inspectionStatus: "failed",
-          isFeatured: false,
-          isAvailable: false,
-        },
-      );
-      assert.equal(current.status, status);
-      assert.equal(current.inspectionStatus, "passed");
+      for (const inspectionStatus of [
+        "pending",
+        "in_progress",
+        "failed",
+      ] as const) {
+        const current = { ...published, status };
+        assert.deepEqual(
+          resolveInventoryPolicyUpdate(current, { inspectionStatus }),
+          {
+            status: "draft",
+            inspectionStatus,
+            isFeatured: false,
+            isAvailable: false,
+          },
+        );
+        assert.equal(current.status, status);
+        assert.equal(current.inspectionStatus, "passed");
+      }
     }
   });
 
@@ -121,6 +128,7 @@ describe("inventory input and lifecycle boundary", () => {
     const reserved = resolveInventoryPolicyUpdate(published, {
       status: "reserved",
     });
+
     const restored = resolveInventoryPolicyUpdate(reserved, {
       status: "published",
     });
@@ -128,5 +136,104 @@ describe("inventory input and lifecycle boundary", () => {
     assert.equal(reserved.isFeatured, false);
     assert.equal(restored.isAvailable, true);
     assert.equal(restored.isFeatured, false);
+    assert.equal(
+      resolveInventoryPolicyUpdate(
+        { ...reserved, isFeatured: true },
+        { status: "published" },
+      ).isFeatured,
+      false,
+    );
+  });
+
+  it("does not bypass inspection withdrawal with a simultaneous sale or archive", () => {
+    for (const status of ["published", "reserved"] as const) {
+      for (const requestedStatus of ["sold", "archived"] as const) {
+        assert.deepEqual(
+          resolveInventoryPolicyUpdate(
+            { ...published, status },
+            { status: requestedStatus, inspectionStatus: "failed" },
+          ),
+          {
+            status: "draft",
+            inspectionStatus: "failed",
+            isFeatured: false,
+            isAvailable: false,
+          },
+        );
+      }
+    }
+  });
+
+  const allowed: Record<AdminVehicleStatus, readonly AdminVehicleStatus[]> = {
+    draft: ["published", "archived"],
+    published: ["draft", "reserved", "sold", "archived"],
+    reserved: ["published", "draft", "sold", "archived"],
+    sold: ["archived", "draft"],
+    archived: ["draft"],
+  };
+  const statuses: AdminVehicleStatus[] = [
+    "draft",
+    "published",
+    "reserved",
+    "sold",
+    "archived",
+  ];
+
+  for (const from of statuses) {
+    it(`enforces all lifecycle destinations from ${from}`, () => {
+      for (const to of statuses) {
+        const current = { ...published, status: from };
+        if (from === to || allowed[from].includes(to)) {
+          const result = resolveInventoryPolicyUpdate(current, { status: to });
+          assert.equal(result.status, to);
+          assert.equal(result.isAvailable, to === "published");
+          assert.equal(
+            result.isFeatured,
+            from === "published" && to === "published",
+          );
+        } else {
+          assert.throws(
+            () => resolveInventoryPolicyUpdate(current, { status: to }),
+            (error: unknown) =>
+              error instanceof InventoryPolicyError &&
+              error.code === "INVALID_TRANSITION",
+            `${from} -> ${to}`,
+          );
+        }
+      }
+    });
+  }
+
+  it("permits explicit promotion after inspection passes but rejects premature publication", () => {
+    for (const inspectionStatus of [
+      "pending",
+      "in_progress",
+      "failed",
+    ] as const) {
+      const draft = {
+        ...published,
+        status: "draft",
+        inspectionStatus,
+      } as const;
+      assert.throws(
+        () => resolveInventoryPolicyUpdate(draft, { status: "published" }),
+        (error: unknown) =>
+          error instanceof InventoryPolicyError &&
+          error.code === "INSPECTION_REQUIRED",
+      );
+      assert.deepEqual(
+        resolveInventoryPolicyUpdate(draft, {
+          status: "published",
+          inspectionStatus: "passed",
+          isFeatured: true,
+        }),
+        {
+          status: "published",
+          inspectionStatus: "passed",
+          isFeatured: true,
+          isAvailable: true,
+        },
+      );
+    }
   });
 });

@@ -53,8 +53,7 @@ export function resolveInventoryPolicyUpdate(
   if (
     changingInspection &&
     inspectionStatus !== "passed" &&
-    (stored.status === "published" || stored.status === "reserved") &&
-    (status === "published" || status === "reserved")
+    (stored.status === "published" || stored.status === "reserved")
   ) {
     status = "draft";
   }

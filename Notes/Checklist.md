@@ -174,7 +174,7 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 **Commit 3: `test: lock business policy and authorization contracts`**
 
-- [ ] **01.10** Add focused cases for the agreed visibility/lifecycle matrix and public/private projections; explicitly test that ordinary staff retain business access and account creation remains master-admin-only.
+- [x] **01.10** Add focused cases for the agreed visibility/lifecycle matrix and public/private projections; explicitly test that ordinary staff retain business access and account creation remains master-admin-only. _Matrix regressions cover all five statuses, all four inspection values and featured choices across all public surfaces, plus all 25 lifecycle pairs. Existing authorization tests preserve ordinary staff access and admin-only account creation; they do not prove live business endpoints that do not yet exist._
 
 **Done when:** the decisions above are recorded, shared server conventions are in place, and later sections have an unambiguous contract. This section does not recreate auth or create fake Production records.
 
@@ -198,6 +198,14 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - The server mutation owns invalidation **after** successful commit, never before it. Inventory writes must cover affected staff detail/list/dashboard and public listing/detail/home/related/comparison/metadata/sitemap data, including old and new slug paths when applicable. Later query owners define concrete paths/tags using existing Next facilities; do not add a cache layer or fictitious invalidation calls before those queries exist.
 - Storage/provider side effects cannot be made atomic with a Prisma transaction. Keep provider network calls outside the database transaction and use explicit pending/error/cleanup states as designed in Section 03; never delete shared media merely because a database action failed.
 - Verification: eight focused policy/pagination tests, typecheck and targeted ESLint passed. Actual rollback, concurrent writers, actor persistence and cache freshness require isolated-database/end-to-end tests with the Section 02/04 implementations; this contract is not evidence that those integrations already work.
+
+#### Implementation 01.10: regression coverage
+
+- Public matrix tests exercise every lifecycle/inspection combination with Featured both on and off, including intentionally contradictory stored availability. They verify every surface and the actual projected availability, promotion and inspection badge.
+- Lifecycle tests cover all 25 source/destination pairs, non-passed inspection prerequisites, atomic withdrawal, derived flags, preservation of input state, and explicit promotion only after eligibility is restored.
+- A regression found that simultaneous Sold/Archived plus an inspection downgrade could bypass the approved Draft withdrawal rule. The resolver now consistently withdraws previously Published/Reserved stock to Draft on inspection downgrade, even with those simultaneous status inputs; callers must display the returned effective state rather than assume the requested destination was applied.
+- Existing authorization tests verify anonymous denial, ordinary staff access, and master-admin-only account creation. Live database authorization, public APIs and account-creation endpoint integration are not newly proven by these helper tests.
+- Verification: all **46 tests** passed (35 new policy tests and 11 existing tests); repository ESLint, TypeScript validation, changed-file Prettier and the final Production build passed. The pre-existing local `next-env.d.ts` edit was preserved byte-for-byte and is excluded from all section commits.
 
 ### 02. Vehicle database, reference data and query layer
 
@@ -652,6 +660,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.06** are approved; **01.07-01.09** provide tested policies/validation/pagination and explicit server integration contracts, not live database/UI integration.
-- **Next:** point **01.10**: complete matrix/projection/authorization regression tests, then prepare the section report and retest procedure before merge.
+- **Current:** Section **01**, points **01.01-01.10**, are implemented at their foundation/contract scope on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. This is not live inventory database/UI integration.
+- **Next:** publish the section report/retest procedure; user review/retest is required before merge. Section 02 starts only after the foundation branch is merged.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

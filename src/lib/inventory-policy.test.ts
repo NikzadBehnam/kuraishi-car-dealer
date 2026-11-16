@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import type { AdminVehicle } from "../types/admin.ts";
+import type {
+  AdminInspectionStatus,
+  AdminVehicle,
+  AdminVehicleStatus,
+} from "../types/admin.ts";
 import {
   getPublicVehicleVisibility,
   toPublicInventoryVehicle,
 } from "./inventory-policy.ts";
+import type { PublicVehicleVisibility } from "./inventory-policy.ts";
 
 const vehicle: AdminVehicle = {
   id: "vehicle-1",
@@ -98,4 +103,95 @@ describe("public inventory boundary", () => {
     assert.equal(publicVehicle.isAvailable, false);
     assert.equal(publicVehicle.isFeatured, false);
   });
+
+  const hidden: PublicVehicleVisibility = {
+    catalog: false,
+    detail: false,
+    comparison: false,
+    sitemap: false,
+    featured: false,
+    similar: false,
+    inquiry: null,
+  };
+  const expected: Record<AdminVehicleStatus, PublicVehicleVisibility> = {
+    draft: hidden,
+    published: {
+      catalog: true,
+      detail: true,
+      comparison: true,
+      sitemap: true,
+      featured: true,
+      similar: true,
+      inquiry: "standard",
+    },
+    reserved: {
+      catalog: true,
+      detail: true,
+      comparison: true,
+      sitemap: true,
+      featured: false,
+      similar: false,
+      inquiry: "informational",
+    },
+    sold: {
+      ...hidden,
+      detail: true,
+      sitemap: true,
+    },
+    archived: hidden,
+  };
+  const statuses: AdminVehicleStatus[] = [
+    "draft",
+    "published",
+    "reserved",
+    "sold",
+    "archived",
+  ];
+  const inspections: AdminInspectionStatus[] = [
+    "pending",
+    "in_progress",
+    "passed",
+    "failed",
+  ];
+
+  for (const status of statuses) {
+    for (const inspectionStatus of inspections) {
+      it(`enforces every public surface for ${status}/${inspectionStatus}`, () => {
+        for (const isFeatured of [true, false]) {
+          const current = {
+            ...vehicle,
+            status,
+            inspectionStatus,
+            isFeatured,
+            // Deliberately contradict lifecycle to verify output is derived.
+            isAvailable: status !== "published",
+          };
+          const unavailableInspection =
+            inspectionStatus !== "passed" &&
+            (status === "published" || status === "reserved");
+          const visibility = unavailableInspection
+            ? hidden
+            : {
+                ...expected[status],
+                featured: expected[status].featured && isFeatured,
+              };
+          assert.deepEqual(getPublicVehicleVisibility(current), visibility);
+
+          const result = toPublicInventoryVehicle(current);
+          if (!visibility.detail) {
+            assert.equal(result, null);
+          } else {
+            assert.ok(result);
+            assert.equal(result.status, status);
+            assert.equal(result.isAvailable, status === "published");
+            assert.equal(result.isFeatured, visibility.featured);
+            assert.equal(
+              result.hasPassedInspection,
+              inspectionStatus === "passed",
+            );
+          }
+        }
+      });
+    }
+  }
 });

@@ -80,7 +80,7 @@ Section numbers are stable references, not a requirement to ignore dependencies.
 **Commit 1: `docs: agree inventory lifecycle and launch decisions`**
 
 - [x] **01.01** Confirm what `draft`, `published`, `reserved`, `sold`, and `archived` mean; define legal transitions and who may trigger them under the existing staff policy. _Approved 2026-11-16; meanings and transitions are recorded below. This completes the decision/documentation point, not runtime lifecycle enforcement, which is covered by 01.07-01.10 and the inventory implementation._
-- [ ] **01.02** Define public eligibility independently from frontend filtering: visibility on the homepage, listing, detail page, comparison, similar vehicles, sitemap, and inquiry form must all agree. Decide whether reserved/sold vehicles keep a public detail page or disappear.
+- [x] **01.02** Define public eligibility independently from frontend filtering: visibility on the homepage, listing, detail page, comparison, similar vehicles, sitemap, and inquiry form must all agree. Decide whether reserved/sold vehicles keep a public detail page or disappear. _Approved 2026-11-16; the public-surface matrix below is the implementation contract. Runtime enforcement remains pending._
 - [ ] **01.03** Reconcile lifecycle status, `isAvailable`, `isFeatured`, and inspection state (`pending`, `in_progress`, `passed`, `failed`). Decide whether a passed inspection is a publishing prerequisite and what happens to reserved/featured cars when sold or archived.
 - [ ] **01.04** Confirm single dealership versus multiple dealers. Current fixtures expose a dealer relation but only one dealer; start with the actual business requirement, not a multi-tenant marketplace design.
 - [ ] **01.05** Confirm currency/price precision, margin visibility, stock-number uniqueness, slug change policy, delete versus archive, and whether acquisition/reservation dates are managed automatically or editable.
@@ -102,6 +102,23 @@ Approved by the user on 2026-11-16, with the instruction to use standard, proper
 - Transitions absent from the table are not allowed. The future mutation layer must validate the current stored state, rather than trusting a browser-supplied previous status.
 - Points 01.02 and 01.03 will separately define public visibility, availability, inspection prerequisites, and featured behavior. This decision does not bypass those requirements or make any existing fixture/public page dynamically enforce them.
 - Verification for this point: explicit user approval; all five current status values covered; transition targets checked against those values; existing staff authorization policy preserved. No application, schema, or Production data changed.
+
+#### Approved decision 01.02: public eligibility
+
+Approved by the user on 2026-11-16. These are maximum permissions for each status; publication prerequisites and additional eligibility checks in 01.03 still apply.
+
+| Status      | Catalog              | Detail and its metadata | Comparison           | Sitemap | Homepage featured    | Similar recommendations | Vehicle inquiry             |
+| ----------- | -------------------- | ----------------------- | -------------------- | ------- | -------------------- | ----------------------- | --------------------------- |
+| `draft`     | No                   | No                      | No                   | No      | No                   | No                      | No                          |
+| `published` | Yes                  | Yes                     | Yes                  | Yes     | Eligible if featured | Eligible                | Yes                         |
+| `reserved`  | Yes, marked Reserved | Yes, marked Reserved    | Yes, marked Reserved | Yes     | No                   | No                      | Informational only          |
+| `sold`      | No                   | Yes, marked Sold        | No                   | Yes     | No                   | No                      | No; general contact instead |
+| `archived`  | No                   | No                      | No                   | No      | No                   | No                      | No                          |
+
+- Enforce this matrix on the server for direct ID/slug requests as well as discoverable links. Nonpublic records must not leak through metadata, comparison resolution, or contextual inquiry lookups.
+- Reserved inventory must not be presented as immediately available; an informational inquiry is not a confirmed test drive, purchase, or reservation.
+- Retain sold detail URLs and eligible sitemap entries to preserve existing links, but never advertise those cars in active stock or recommendations. General contact remains available.
+- Verification for this point: explicit user approval and review across all five statuses and all seven public surfaces. This is a policy decision; the current UI/queries have not been changed to implement it yet.
 
 **Commit 2: `refactor: define server-side business operation boundaries`**
 
@@ -568,6 +585,6 @@ Approved by the user on 2026-11-16, with the instruction to use standard, proper
 
 ## Current step and next action
 
-- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Point **01.01** is approved and documented; runtime business rules are not implemented yet.
-- **Next:** point **01.02**: approve public eligibility on the homepage, catalog, detail, comparison, similar vehicles, sitemap, and inquiry form, including reserved/sold vehicles. Points **01.03-01.10** remain pending.
+- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.02** are approved and documented; runtime business rules are not implemented yet.
+- **Next:** point **01.03**: reconcile availability, featured placement, and inspection prerequisites with the approved lifecycle and visibility matrix. Points **01.03-01.10** remain pending.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

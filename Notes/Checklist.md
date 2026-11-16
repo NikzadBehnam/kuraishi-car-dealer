@@ -84,7 +84,7 @@ Section numbers are stable references, not a requirement to ignore dependencies.
 - [x] **01.03** Reconcile lifecycle status, `isAvailable`, `isFeatured`, and inspection state (`pending`, `in_progress`, `passed`, `failed`). Decide whether a passed inspection is a publishing prerequisite and what happens to reserved/featured cars when sold or archived. _Approved 2026-11-16; availability is derived, publication requires Passed, and non-published states cannot remain featured. See the rules below; runtime enforcement remains pending._
 - [x] **01.04** Confirm single dealership versus multiple dealers. Current fixtures expose a dealer relation but only one dealer; start with the actual business requirement, not a multi-tenant marketplace design. _Approved 2026-11-16: one dealership with shared staff inventory; see the scope below._
 - [x] **01.05** Confirm currency/price precision, margin visibility, stock-number uniqueness, slug change policy, delete versus archive, and whether acquisition/reservation dates are managed automatically or editable. _Approved 2026-11-16; the exact-money, identifier, deletion, and date rules below guide later schema/mutations._
-- [ ] **01.06** Confirm the canonical public domain, media provider and file limits, notification expectations, appointment timezone, customer-data retention, and legal/cookie ownership. Request credentials privately only when the corresponding integration is being implemented.
+- [x] **01.06** Confirm the canonical public domain, media provider and file limits, notification expectations, appointment timezone, customer-data retention, and legal/cookie ownership. Request credentials privately only when the corresponding integration is being implemented. _Approved 2026-11-16: canonical Production origin, UploadThing, upload limits, inbox-first scope, Europe/Vienna, and a business/legal approval gate are recorded below._
 
 #### Approved decision 01.01: vehicle lifecycle
 
@@ -145,6 +145,16 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Acquisition date defaults to today in the dealership timezone and is staff-correctable. Creation/update timestamps are server-owned; first publication is set once. Set the sale timestamp on a completed sale and clear it on an explicit return to Draft, while recording the change for traceability.
 - Reservation expiry is optional and, when set, must be a future date. Automatic expiry/republication is not included; staff explicitly release or update a reservation.
 - Verification: explicitly approved by the user on 2026-11-16; reviewed for consistency with lifecycle corrections, retained sold URLs, and later inquiry/media relationships. Database constraints and mutation enforcement are not implemented by this documentation point.
+
+#### Approved decision 01.06: integration and launch boundaries
+
+- Canonical public origin: `https://www.kuraishicars.com`. Coordinate public configuration/metadata with the existing auth origin in the appropriate later sections; no domain or deployment configuration is changed by this decision alone.
+- Media provider: **UploadThing**, selected by the user. Install/configure it in Section 03 using reviewed pinned dependencies and private environment variables; never request tokens in chat.
+- Approved launch upload limits: JPEG/PNG/WebP images up to 10 MB per file and up to 20 photos per vehicle; PDF documents up to 20 MB. Reject SVG, HTML, and executable files. Enforce validated content types, authorization, and provider-compatible server limits during Section 03 implementation.
+- Durable staff inbox handling is required. The requirement for notification emails and any sender/provider/recipient configuration will be decided in Section 10; do not silently promise email delivery.
+- Dealership business timezone: `Europe/Vienna`. Store absolute instants consistently and interpret/display business dates in this timezone.
+- Business/legal approval of customer-data retention and final legal/cookie content is required before public inquiry launch. No retention period or claim of legal compliance is invented here; mark that later launch gate unresolved until approved.
+- Verification: the user explicitly supplied/approved each value on 2026-11-16. No provider package, key, storage bucket, email integration, Production configuration, or data was changed.
 
 **Commit 2: `refactor: define server-side business operation boundaries`**
 
@@ -611,6 +621,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.05** are approved and documented; runtime business rules are not implemented yet.
-- **Next:** point **01.06**: confirm the canonical domain and integration/privacy decision boundaries. Points **01.06-01.10** remain pending.
+- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.06** are approved and documented; runtime business rules are not implemented yet.
+- **Next:** point **01.07**: implement the agreed domain policy/public projection foundation and document server-only query/mutation boundaries using the existing shared Prisma client. Concrete vehicle database reads/writes remain Section 02 and Section 04, after their models/migrations exist. Points **01.07-01.10** remain pending.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

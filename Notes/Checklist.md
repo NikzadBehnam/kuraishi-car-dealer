@@ -207,6 +207,57 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Existing authorization tests verify anonymous denial, ordinary staff access, and master-admin-only account creation. Live database authorization, public APIs and account-creation endpoint integration are not newly proven by these helper tests.
 - Verification: all **46 tests** passed (35 new policy tests and 11 existing tests); repository ESLint, TypeScript validation, changed-file Prettier and the final Production build passed. The pre-existing local `next-env.d.ts` edit was preserved byte-for-byte and is excluded from all section commits.
 
+#### Section 01 delivery report and merge gate
+
+**Status:** foundation implementation complete; **user retest/merge pending**. Branch: `backend/domain-foundation`, based on `master` at `98b66c2`. Every numbered point was validated, committed and pushed separately.
+
+| Point | Delivered scope                                                                               | Commit    |
+| ----- | --------------------------------------------------------------------------------------------- | --------- |
+| 01.01 | Approved lifecycle meanings/transitions and staff permissions                                 | `a2ea0dd` |
+| 01.02 | Approved public-surface eligibility matrix                                                    | `83b274b` |
+| 01.03 | Approved inspection, derived availability and featured rules                                  | `2759611` |
+| 01.04 | Approved single-dealership scope                                                              | `03d14f6` |
+| 01.05 | Approved money, identifier, deletion and date invariants                                      | `7e8e34e` |
+| 01.06 | Approved domain, UploadThing, limits, inbox/timezone/legal boundaries                         | `606f12e` |
+| 01.07 | Typed visibility policies, safe public projections and server-boundary contract               | `c39aea3` |
+| 01.08 | Strict Zod validation, lifecycle resolver, actionable errors and shared form enums            | `397421f` |
+| 01.09 | Approved bounded pagination and atomic-write/conflict/cache/traceability contract             | `0dd0a57` |
+| 01.10 | Full policy matrix regressions, inspection-withdrawal fix and existing auth regression checks | `827c6b3` |
+
+**Implementation delivered**
+
+- [Public inventory policy/projection](../src/lib/inventory-policy.ts) keeps private staff/customer properties out of public objects and derives valid availability/promotion.
+- [Lifecycle resolver](../src/lib/inventory-lifecycle.ts) enforces transitions, inspection prerequisites, withdrawal and featured clearing without mutating its input.
+- [Shared validation](../src/lib/inventory-validation.ts) rejects invalid IDs, unknown/forged policy fields, invalid enums and oversized pagination. The existing vehicle form reuses the same enum schemas.
+- [Public projection/matrix tests](../src/lib/inventory-policy.test.ts) and [validation/lifecycle tests](../src/lib/inventory-lifecycle.test.ts) add 35 tests. The 11 existing tests, including [authorization tests](../src/lib/auth-access.test.ts), continue to pass.
+
+**Verified by automation**
+
+- `pnpm test`: **46 passed, 0 failed**, no skipped tests.
+- `pnpm typecheck`: passed; the final build also reran TypeScript validation.
+- `pnpm lint`: passed with zero warnings.
+- Prettier on every changed source file and this checklist: passed.
+- `pnpm build`: passed; all 46 static pages generated successfully.
+- Git whitespace validation: passed. Pre-existing local `next-env.d.ts` edit remains unchanged and uncommitted.
+
+**Known limits — not represented as completed integration**
+
+- Prisma still has only auth models. No inventory migration, vehicle persistence, actor/history rows, transaction rollback, uniqueness enforcement, concurrency handling or live invalidation was implemented/tested against a database in Section 01.
+- Public/admin inventory still reads fixtures. The new rules are reusable foundations, not yet wired into actual inventory queries/actions or public pages. Existing fixture UI claims and simulated save actions remain work for their listed sections.
+- Exact database money, immutable slugs, deletion restrictions and business timestamp persistence remain Section 02/04 work under the approved contracts. The current legacy frontend money fields still use numbers.
+- Existing auth helper tests do not establish end-to-end authorization for future business endpoints or re-verify the deployed account-creation endpoint.
+- No Production schema/data, auth configuration, domain configuration, provider dependency or credential was changed. No deployment, merge or pull request was created. Git deployments remain disabled by existing configuration.
+
+**Full-section retest procedure before merge**
+
+1. Review the section branch against `master`, especially the six approved decisions and the intentionally deferred database/UI scope above. Preserve unrelated local changes when preparing your checkout.
+2. Run `pnpm test`, `pnpm typecheck`, `pnpm lint` and `pnpm build` on this branch. Expect 46 passing tests and successful checks. Use private local configuration; never put credentials in the report/chat.
+3. Check formatting with `pnpm exec prettier --check src\lib\inventory-policy.ts src\lib\inventory-policy.test.ts src\lib\inventory-validation.ts src\lib\inventory-lifecycle.ts src\lib\inventory-lifecycle.test.ts "src\app\(protected)\admin\vehicles\_schemas\vehicle-form.schema.ts" Notes\Checklist.md`.
+4. With `pnpm serve`, smoke-test public listing/detail/comparison and the admin inventory/new/edit screens for unchanged rendering and form enum options. Existing fixture-based save/status toasts are **not** persistence verification.
+5. Using existing private test accounts, manually check signed-out admin protection, ordinary staff dashboard access and account-creation denial, and master-admin account-page access. Do not create real accounts or share passwords merely to smoke-test this section.
+6. Confirm no unintended files or secrets are in the branch diff. Stop the local development server when finished. Human smoke/retest approval is still pending; the automated results above do not mark it complete.
+7. After acceptance, merge `backend/domain-foundation` into `master` through the agreed review process. This report does not authorize or perform a deployment. Then start **Section 02, point 02.01**, on `backend/vehicle-inventory` from the merged `master`, using isolated development/test Neon for migrations.
+
 ### 02. Vehicle database, reference data and query layer
 
 **Branch:** `backend/vehicle-inventory`.
@@ -661,5 +712,5 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 ## Current step and next action
 
 - **Current:** Section **01**, points **01.01-01.10**, are implemented at their foundation/contract scope on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. This is not live inventory database/UI integration.
-- **Next:** publish the section report/retest procedure; user review/retest is required before merge. Section 02 starts only after the foundation branch is merged.
+- **Next:** user review and full-section retest using the Section 01 delivery report above, then merge `backend/domain-foundation` into `master`. Start **Section 02 / 02.01** on `backend/vehicle-inventory` only after that merge.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  inspectionStatusSchema,
+  vehicleStatusSchema,
+} from "@/lib/inventory-validation";
+
 export const vehicleFormSchema = z.object({
   make: z.string().min(1, "Make is required."),
   model: z.string().min(1, "Model is required."),
@@ -28,8 +33,8 @@ export const vehicleFormSchema = z.object({
   co2Emission: z.number().min(0).optional(),
   featuresText: z.string().min(1, "Add at least one feature."),
   labelsText: z.string().optional(),
-  status: z.enum(["draft", "published", "reserved", "sold", "archived"]),
-  inspectionStatus: z.enum(["pending", "in_progress", "passed", "failed"]),
+  status: vehicleStatusSchema,
+  inspectionStatus: inspectionStatusSchema,
   isFeatured: z.boolean(),
   isAvailable: z.boolean(),
 });

@@ -169,7 +169,7 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 **Commit 2: `refactor: define server-side business operation boundaries`**
 
 - [x] **01.07** Establish server-only query/mutation boundaries using the existing shared Prisma client and define public projections separately from staff data. _Foundation implemented in `src/lib/inventory-policy.ts`: shared public-surface eligibility and an explicit public-field allowlist, with focused projection tests. Concrete Prisma queries/mutations are deliberately deferred to 02/04 because the current schema has auth tables only; the server-only boundary contract above governs those implementations. No live inventory consumer has been migrated yet._
-- [ ] **01.08** Reuse Zod/server validation and the repository's error/UI patterns. Reject unsupported enum values and malformed IDs; return actionable failures, never artificial success or fallback demo data on database errors.
+- [x] **01.08** Reuse Zod/server validation and the repository's error/UI patterns. Reject unsupported enum values and malformed IDs; return actionable failures, never artificial success or fallback demo data on database errors. _Implemented strict policy/ID schemas, reused status schemas in the existing form, and a typed lifecycle resolver with explicit errors. Database/transport error handling is governed below and must be wired with real operations in 02/04._
 - [ ] **01.09** Define transaction boundaries, uniqueness/conflict handling, pagination limits, and cache invalidation ownership. Add actor/change timestamps where business changes require traceability, without introducing a generic event system unnecessarily.
 
 **Commit 3: `test: lock business policy and authorization contracts`**
@@ -177,6 +177,15 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - [ ] **01.10** Add focused cases for the agreed visibility/lifecycle matrix and public/private projections; explicitly test that ordinary staff retain business access and account creation remains master-admin-only.
 
 **Done when:** the decisions above are recorded, shared server conventions are in place, and later sections have an unambiguous contract. This section does not recreate auth or create fake Production records.
+
+#### Implementation 01.08: validation and errors
+
+- Shared Zod status/inspection schemas are used by the existing vehicle form and policy resolver. ID validation accepts bounded opaque URL-safe identifiers without prematurely choosing UUID versus CUID; actual generator/lookup constraints belong to Section 02.
+- Policy update input is a strict, nonempty subset of status, inspection and featured. Reject browser-supplied availability, prior status, timestamps and unknown fields. The full vehicle form will be mapped to validated server commands in Section 04; it is not itself a policy command.
+- `resolveInventoryPolicyUpdate()` validates server-loaded policy state, checks the approved transition graph, requires passed inspection for public/reserved state, and returns inspection withdrawal plus cleared featured/availability together. This is a pure result, not a database write; persistence must commit it atomically.
+- `InventoryPolicyError` exposes a stable code/status/message for illegal transitions (409) and inspection prerequisites (422). Zod errors expose actionable validation issues. Expected failures should map to the existing `{ ok: false, error }` UI result; preserve form values and never toast success on failure.
+- Future database actions must handle known validation/auth/not-found/conflict failures explicitly. Unexpected database/provider errors require server-side logging without secrets/customer payloads and a safe failed UI result, never fixture fallback or fake success. No catch-all is added to pure policies.
+- Verification: seven focused projection/lifecycle tests, typecheck and targeted ESLint passed. No database or live inventory workflow is claimed as tested by these pure tests.
 
 ### 02. Vehicle database, reference data and query layer
 
@@ -631,6 +640,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.06** are approved; **01.07** implements and tests reusable visibility/projection policy, not live database/UI integration.
-- **Next:** point **01.08**: implement validated lifecycle input boundaries and explicit domain errors. Points **01.08-01.10** remain pending.
+- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Points **01.01-01.06** are approved; **01.07-01.08** implement and test reusable visibility/projection and validated lifecycle policy, not live database/UI integration.
+- **Next:** point **01.09**: define transaction/conflict/cache ownership and implement bounded pagination and traceability foundations. Points **01.09-01.10** remain pending.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

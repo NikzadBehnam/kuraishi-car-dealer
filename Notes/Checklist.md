@@ -27,9 +27,9 @@ The public website is called the "client side" in this document. This does **not
 
 1. Confirm the open business decisions for the selected section before coding behavior that depends on them.
 2. Create that section's suggested branch from the latest merged `master`, after its dependencies are merged. Branch names are proposals; this document does not create branches.
-3. Implement the section in the listed commit-sized milestones. A milestone is a meaningful commit boundary, not a requirement to commit broken code.
+3. Implement the section point by point within the listed milestones. Apply and verify each point, then commit and push it on the section branch before starting the next point. Decision/documentation points require explicit approval and documentation checks; code points require focused behavior tests.
 4. Add focused tests for introduced behavior, run the relevant existing validation commands, and verify the actual admin-to-database-to-public flow.
-5. Update this checklist with completed item IDs, evidence, remaining work, and the next section. Commit, push, review, merge, and deploy deliberately.
+5. Update this checklist with completed item IDs, evidence, remaining work, and the next section. At the end of the section, prepare a report with a full-section retest procedure, results, known limits, and commit references. Leave the merge into `master` to the agreed review/retest step; do not merge automatically.
 6. Never use Production as a test database. Use an isolated development/test Neon branch for database integration tests and fixture data; apply reviewed Production migrations through the deployment procedure.
 
 Suggested architecture: retain the existing Next.js App Router, pnpm, Prisma, Neon, and Better Auth stack. Prefer server-only domain queries and Server Actions for the current app. Add Route Handlers only when browser uploads, public submissions, downloads, provider callbacks, or another real integration needs them. Do not add a separate API service, CMS, queue provider, or storage vendor just to satisfy this document.
@@ -79,12 +79,29 @@ Section numbers are stable references, not a requirement to ignore dependencies.
 
 **Commit 1: `docs: agree inventory lifecycle and launch decisions`**
 
-- [ ] **01.01** Confirm what `draft`, `published`, `reserved`, `sold`, and `archived` mean; define legal transitions and who may trigger them under the existing staff policy.
+- [x] **01.01** Confirm what `draft`, `published`, `reserved`, `sold`, and `archived` mean; define legal transitions and who may trigger them under the existing staff policy. _Approved 2026-11-16; meanings and transitions are recorded below. This completes the decision/documentation point, not runtime lifecycle enforcement, which is covered by 01.07-01.10 and the inventory implementation._
 - [ ] **01.02** Define public eligibility independently from frontend filtering: visibility on the homepage, listing, detail page, comparison, similar vehicles, sitemap, and inquiry form must all agree. Decide whether reserved/sold vehicles keep a public detail page or disappear.
 - [ ] **01.03** Reconcile lifecycle status, `isAvailable`, `isFeatured`, and inspection state (`pending`, `in_progress`, `passed`, `failed`). Decide whether a passed inspection is a publishing prerequisite and what happens to reserved/featured cars when sold or archived.
 - [ ] **01.04** Confirm single dealership versus multiple dealers. Current fixtures expose a dealer relation but only one dealer; start with the actual business requirement, not a multi-tenant marketplace design.
 - [ ] **01.05** Confirm currency/price precision, margin visibility, stock-number uniqueness, slug change policy, delete versus archive, and whether acquisition/reservation dates are managed automatically or editable.
 - [ ] **01.06** Confirm the canonical public domain, media provider and file limits, notification expectations, appointment timezone, customer-data retention, and legal/cookie ownership. Request credentials privately only when the corresponding integration is being implemented.
+
+#### Approved decision 01.01: vehicle lifecycle
+
+Approved by the user on 2026-11-16, with the instruction to use standard, proper logic.
+
+| Status      | Meaning                                                                                                | Allowed next statuses                    |
+| ----------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| `draft`     | Stock entry being prepared; may be incomplete according to later draft-validation rules.               | `published`, `archived`                  |
+| `published` | Advertised inventory.                                                                                  | `draft`, `reserved`, `sold`, `archived`  |
+| `reserved`  | Temporarily held for an interested buyer; no completed sale yet.                                       | `published`, `draft`, `sold`, `archived` |
+| `sold`      | Completed sale. Returning to draft is an explicit correction/relisting step, not direct republication. | `archived`, `draft`                      |
+| `archived`  | Inactive historical stock entry, not permanent deletion. Restore to draft before republishing.         | `draft`                                  |
+
+- All signed-in staff, including ordinary `user` accounts and the master admin, may perform these business transitions, subject to server validation. Only staff account creation remains master-admin-only.
+- Transitions absent from the table are not allowed. The future mutation layer must validate the current stored state, rather than trusting a browser-supplied previous status.
+- Points 01.02 and 01.03 will separately define public visibility, availability, inspection prerequisites, and featured behavior. This decision does not bypass those requirements or make any existing fixture/public page dynamically enforce them.
+- Verification for this point: explicit user approval; all five current status values covered; transition targets checked against those values; existing staff authorization policy preserved. No application, schema, or Production data changed.
 
 **Commit 2: `refactor: define server-side business operation boundaries`**
 
@@ -551,6 +568,6 @@ Section numbers are stable references, not a requirement to ignore dependencies.
 
 ## Current step and next action
 
-- **Current:** the whole-project review and theoretical backend roadmap are written; no application/backend feature was implemented by this documentation task.
-- **Next:** Section **01**, commit milestone **1**: agree on the vehicle status/visibility matrix, delete/archive policy, public domain, and single-dealer scope. Then create `backend/domain-foundation` from the latest merged `master`.
+- **Current:** Section **01** is in progress on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. Point **01.01** is approved and documented; runtime business rules are not implemented yet.
+- **Next:** point **01.02**: approve public eligibility on the homepage, catalog, detail, comparison, similar vehicles, sitemap, and inquiry form, including reserved/sold vehicles. Points **01.03-01.10** remain pending.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

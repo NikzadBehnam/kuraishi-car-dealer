@@ -258,6 +258,14 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 6. Confirm no unintended files or secrets are in the branch diff. Stop the local development server when finished. Human smoke/retest approval is still pending; the automated results above do not mark it complete.
 7. After acceptance, merge `backend/domain-foundation` into `master` through the agreed review process. This report does not authorize or perform a deployment. Then start **Section 02, point 02.01**, on `backend/vehicle-inventory` from the merged `master`, using isolated development/test Neon for migrations.
 
+**Retest execution — 2026-11-17**
+
+- Automated checks rerun: all 46 tests passed; typecheck, repository lint, changed-file Prettier, whitespace checks and Production build passed. The pre-existing local `next-env.d.ts` edit was preserved.
+- A temporary local Production server rendered the homepage and login page. Browser navigation while signed out correctly redirected `/admin`, `/admin/vehicles`, `/admin/vehicles/new`, `/admin/vehicles/1/edit` and `/admin/accounts/new` to login, retaining the appropriate return path.
+- **Public smoke-test blocker:** direct browser navigation to `/fahrzeuge`, `/fahrzeuge/volkswagen-tiguan-1` and `/fahrzeugvergleich` failed with `ERR_TOO_MANY_REDIRECTS`. HTTP inspection showed `/fahrzeuge` rewriting to `/vehicles` while responding with a 308 back to `/fahrzeuge`. These routing sources (`src/proxy.ts`, `src/config/routes.config.ts` and `next.config.ts`) are unchanged from `origin/master`; this is not a new Section 01 policy change. Root cause and repair still require a separately approved routing task.
+- Authenticated ordinary-staff/master-admin screen checks were not performed; no credentials were requested or accounts created. Public listing/detail/comparison smoke checks remain blocked, not passed.
+- The temporary server was stopped. No merge/deployment was performed. **Retest is incomplete; do not treat successful unit/build checks as full acceptance.** Resolve the routing blocker and complete private-account checks before approving the merge.
+
 ### 02. Vehicle database, reference data and query layer
 
 **Branch:** `backend/vehicle-inventory`.
@@ -712,5 +720,5 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 ## Current step and next action
 
 - **Current:** Section **01**, points **01.01-01.10**, are implemented at their foundation/contract scope on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. This is not live inventory database/UI integration.
-- **Next:** user review and full-section retest using the Section 01 delivery report above, then merge `backend/domain-foundation` into `master`. Start **Section 02 / 02.01** on `backend/vehicle-inventory` only after that merge.
+- **Next:** resolve the public-route redirect blocker identified in the 2026-11-17 retest, complete private-account smoke checks and obtain user acceptance before merging `backend/domain-foundation` into `master`. Start **Section 02 / 02.01** on `backend/vehicle-inventory` only after that merge.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

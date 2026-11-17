@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
 
@@ -22,6 +23,10 @@ import {
 } from "../src/lib/inventory-eligibility.ts";
 import { getPublicVehicleVisibility } from "../src/lib/inventory-policy.ts";
 import { filterVehicles } from "../src/lib/vehicle-filters.ts";
+import {
+  importInventoryFixtures,
+  inventoryFixtures,
+} from "./inventory-fixtures.ts";
 import { createInventoryTestDatabase } from "./inventory-test-client.ts";
 
 const { prisma } = createInventoryTestDatabase();
@@ -36,6 +41,14 @@ const searchIds = vehicles.map(({ id }) => searchId(id));
 const serializationIds = ["public", "draft"].map(
   (kind) => `dto-${kind}-${prefix}`,
 );
+const fixtureIds = inventoryFixtures.map(({ id }) => id);
+const fixtureConflictId = `fixture-conflict-${prefix}`;
+const fixtureInput = { actorId, dealerId, acquiredOn: "2026-11-17" };
+const importedTestRows = {
+  id: { in: [...fixtureIds, fixtureConflictId] },
+  createdById: actorId,
+  dealerId,
+};
 const slug = (index: number) =>
   index === 7 ? `query-\u0161koda-${ids[index]}` : `query-${ids[index]}`;
 let session: AuthSession | null = null;
@@ -53,6 +66,37 @@ const queryClient = prisma.$extends({
 let queries: typeof import("../src/lib/inventory-queries.ts");
 let dbMock: ReturnType<typeof mock.module> | undefined;
 let sessionMock: ReturnType<typeof mock.module> | undefined;
+
+async function deleteImportedTestRows(tx: Prisma.TransactionClient) {
+  await tx.vehicleChange.deleteMany({ where: { vehicle: importedTestRows } });
+  await tx.vehicle.deleteMany({ where: importedTestRows });
+}
+
+function runFixtureCommand(
+  apply = false,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--env-file=.env.inventory-test.local",
+      "--experimental-strip-types",
+      "prisma\\seed-inventory.ts",
+      "--actor-id",
+      actorId,
+      "--dealer-id",
+      dealerId,
+      "--acquired-on",
+      fixtureInput.acquiredOn,
+      ...(apply ? ["--apply"] : []),
+    ],
+    { encoding: "utf8", env },
+  );
+  if (result.error) {
+    throw result.error;
+  }
+  return result;
+}
 
 describe("isolated inventory queries", { concurrency: false }, () => {
   before(async () => {
@@ -132,6 +176,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
   after(async () => {
     try {
       await prisma.$transaction(async (tx) => {
+        await deleteImportedTestRows(tx);
         await tx.vehicle.deleteMany({
           where: { id: { in: [...ids, ...searchIds, ...serializationIds] } },
         });
@@ -140,7 +185,17 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       });
       assert.equal(
         await prisma.vehicle.count({
-          where: { id: { in: [...ids, ...searchIds, ...serializationIds] } },
+          where: {
+            id: {
+              in: [
+                ...ids,
+                ...searchIds,
+                ...serializationIds,
+                ...fixtureIds,
+                fixtureConflictId,
+              ],
+            },
+          },
         }),
         0,
       );
@@ -687,6 +742,287 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     assert.equal(await queries.getRelatedVehicles({ id: ids[5] }), null);
     assert.equal(await queries.getRelatedVehicles({ id: ids[6] }), null);
     assert.deepEqual(await queries.getRelatedVehicles({ id: ids[7] }), []);
+  });
+
+  it("previews and repeatably imports draft fixtures without overwriting local edits", async () => {
+    const actorBefore = await prisma.user.findUniqueOrThrow({
+      where: { id: actorId },
+    });
+    const dealerBefore = await prisma.dealer.findUniqueOrThrow({
+      where: { id: dealerId },
+    });
+    try {
+      const preview = runFixtureCommand();
+      assert.equal(preview.status, 0, preview.stderr);
+      assert.deepEqual(JSON.parse(preview.stdout), {
+        mode: "preview",
+        total: fixtureIds.length,
+        skipped: 0,
+        wouldCreate: fixtureIds.length,
+        created: 0,
+      });
+      assert.equal(await prisma.vehicle.count({ where: importedTestRows }), 0);
+
+      const apply = runFixtureCommand(true);
+      assert.equal(apply.status, 0, apply.stderr);
+      assert.equal(JSON.parse(apply.stdout).created, fixtureIds.length);
+      const imported = await prisma.vehicle.findMany({
+        where: importedTestRows,
+        include: { changes: true },
+        orderBy: { id: "asc" },
+      });
+      assert.equal(imported.length, fixtureIds.length);
+      for (const row of imported) {
+        const fixture = inventoryFixtures.find(({ id }) => id === row.id);
+        assert.ok(fixture);
+        assert.equal(row.stockNumber, fixture.stockNumber);
+        assert.equal(row.slug, fixture.slug);
+        assert.equal(row.price?.toFixed(2), fixture.price.toFixed(2));
+        assert.equal(row.powerKw?.toString(), fixture.powerKw.toString());
+        assert.equal(row.status, "draft");
+        assert.equal(row.inspectionStatus, "pending");
+        assert.equal(row.isFeatured, false);
+        assert.equal(row.publishedAt, null);
+        assert.equal(row.reservedUntil, null);
+        assert.equal(row.soldAt, null);
+        assert.equal(row.consumption, null);
+        assert.equal(row.consumptionUnit, null);
+        assert.equal(row.marginEstimate, null);
+        assert.equal(row.ownerCount, null);
+        assert.equal(row.vinLastSix, null);
+        assert.equal(
+          row.acquisitionDate.toISOString(),
+          "2026-11-17T00:00:00.000Z",
+        );
+        assert.equal(row.dealerId, dealerId);
+        assert.equal(row.createdById, actorId);
+        assert.equal(row.updatedById, actorId);
+        assert.equal(row.version, 1);
+        assert.equal(row.changes.length, 1);
+        assert.equal(row.changes[0].actorId, actorId);
+        assert.equal(row.changes[0].version, 1);
+        assert.equal(row.changes[0].previousStatus, null);
+        assert.equal(row.changes[0].status, "draft");
+        assert.equal(row.changes[0].previousInspectionStatus, null);
+        assert.equal(row.changes[0].inspectionStatus, "pending");
+      }
+      assert.equal((await queries.listPublicVehicles()).total, 5);
+      assert.equal(
+        await queries.getPublicVehicle(inventoryFixtures[0].slug),
+        null,
+      );
+
+      await prisma.$transaction(async (tx) => {
+        await tx.vehicle.update({
+          where: { id: fixtureIds[0] },
+          data: {
+            make: "Locally edited",
+            slug: `edited-${prefix}`,
+            stockNumber: `EDITED-${prefix.toUpperCase()}`,
+            price: new Prisma.Decimal("123.45"),
+            version: 2,
+          },
+        });
+        await tx.vehicleChange.create({
+          data: {
+            vehicleId: fixtureIds[0],
+            actorId,
+            version: 2,
+            previousStatus: "draft",
+            status: "draft",
+            previousInspectionStatus: "pending",
+            inspectionStatus: "pending",
+          },
+        });
+      });
+      const beforeRepeat = await prisma.vehicle.findMany({
+        where: importedTestRows,
+        include: { changes: { orderBy: { version: "asc" } } },
+        orderBy: { id: "asc" },
+      });
+      const repeat = runFixtureCommand(true);
+      assert.equal(repeat.status, 0, repeat.stderr);
+      assert.deepEqual(JSON.parse(repeat.stdout), {
+        mode: "apply",
+        total: fixtureIds.length,
+        skipped: fixtureIds.length,
+        wouldCreate: 0,
+        created: 0,
+      });
+      assert.deepEqual(
+        await prisma.vehicle.findMany({
+          where: importedTestRows,
+          include: { changes: { orderBy: { version: "asc" } } },
+          orderBy: { id: "asc" },
+        }),
+        beforeRepeat,
+      );
+
+      const removedId = fixtureIds[fixtureIds.length - 1];
+      await prisma.$transaction(async (tx) => {
+        await tx.vehicleChange.deleteMany({ where: { vehicleId: removedId } });
+        await tx.vehicle.delete({ where: { id: removedId } });
+      });
+      const partial = runFixtureCommand(true);
+      assert.equal(partial.status, 0, partial.stderr);
+      assert.deepEqual(JSON.parse(partial.stdout), {
+        mode: "apply",
+        total: fixtureIds.length,
+        skipped: fixtureIds.length - 1,
+        wouldCreate: 1,
+        created: 1,
+      });
+      assert.deepEqual(
+        await prisma.vehicle.findMany({
+          where: {
+            ...importedTestRows,
+            id: { in: fixtureIds.filter((id) => id !== removedId) },
+          },
+          include: { changes: { orderBy: { version: "asc" } } },
+          orderBy: { id: "asc" },
+        }),
+        beforeRepeat.filter(({ id }) => id !== removedId),
+      );
+      assert.equal(
+        await prisma.vehicle.count({ where: importedTestRows }),
+        fixtureIds.length,
+      );
+      assert.deepEqual(
+        await prisma.user.findUniqueOrThrow({ where: { id: actorId } }),
+        actorBefore,
+      );
+      assert.deepEqual(
+        await prisma.dealer.findUniqueOrThrow({ where: { id: dealerId } }),
+        dealerBefore,
+      );
+    } finally {
+      await prisma.$transaction(deleteImportedTestRows);
+    }
+  });
+
+  it("refuses unsafe fixture environments and conflicting or invalid imports without partial writes", async () => {
+    const apply = (input: unknown) =>
+      prisma.$transaction((tx) => importInventoryFixtures(tx, input), {
+        isolationLevel: "Serializable",
+        timeout: 60000,
+      });
+    for (const env of [
+      { ...process.env, NODE_ENV: "production" },
+      { ...process.env, VERCEL_ENV: "production" },
+    ] satisfies NodeJS.ProcessEnv[]) {
+      const blocked = runFixtureCommand(true, env);
+      assert.notEqual(blocked.status, 0);
+      assert.match(
+        blocked.stderr,
+        /production and Vercel execution are refused/,
+      );
+    }
+    await assert.rejects(
+      () =>
+        apply({
+          ...fixtureInput,
+          mode: "apply",
+          actorId: `missing-${prefix}`,
+        }),
+      /existing, unbanned staff actor/,
+    );
+    await assert.rejects(
+      () =>
+        apply({
+          ...fixtureInput,
+          mode: "apply",
+          dealerId: `missing-${prefix}`,
+        }),
+      /existing dealership/,
+    );
+    await assert.rejects(
+      () =>
+        apply({
+          ...fixtureInput,
+          mode: "apply",
+          acquiredOn: "2026-02-31",
+        }),
+      z.ZodError,
+    );
+
+    const historyFailure = new Error("Intentional fixture history failure");
+    await assert.rejects(
+      () =>
+        prisma.$transaction(
+          (tx) =>
+            importInventoryFixtures(
+              {
+                user: tx.user,
+                dealer: tx.dealer,
+                vehicle: tx.vehicle,
+                vehicleChange: new Proxy(tx.vehicleChange, {
+                  get(target, property, receiver) {
+                    if (property === "createMany") {
+                      return () => Promise.reject(historyFailure);
+                    }
+                    return Reflect.get(target, property, receiver);
+                  },
+                }),
+              },
+              { ...fixtureInput, mode: "apply" },
+            ),
+          { isolationLevel: "Serializable", timeout: 60000 },
+        ),
+      (error) => error === historyFailure,
+    );
+    assert.equal(await prisma.vehicle.count({ where: importedTestRows }), 0);
+
+    for (const conflict of [
+      { id: fixtureIds[0] },
+      { stockNumber: inventoryFixtures[fixtureIds.length - 1].stockNumber },
+      { slug: inventoryFixtures[fixtureIds.length - 1].slug },
+    ]) {
+      const conflictId = conflict.id ?? fixtureConflictId;
+      try {
+        await prisma.vehicle.create({
+          data: {
+            id: conflictId,
+            stockNumber: `CONFLICT-${prefix.toUpperCase()}`,
+            slug: `conflict-${prefix}`,
+            make: "Unrelated",
+            model: "Conflict",
+            dealerId,
+            createdById: actorId,
+            updatedById: actorId,
+            acquisitionDate: new Date("2026-11-17T00:00:00.000Z"),
+            ...conflict,
+          },
+        });
+        const before = await prisma.vehicle.findMany({
+          where: importedTestRows,
+        });
+        await assert.rejects(
+          () => apply({ ...fixtureInput, mode: "apply" }),
+          /identifiers.*(overlap|conflict)/,
+        );
+        assert.deepEqual(
+          await prisma.vehicle.findMany({ where: importedTestRows }),
+          before,
+        );
+        assert.equal(
+          await prisma.vehicleChange.count({
+            where: { vehicle: importedTestRows },
+          }),
+          0,
+        );
+      } finally {
+        await prisma.$transaction(deleteImportedTestRows);
+      }
+    }
+    assert.equal(await prisma.vehicle.count({ where: importedTestRows }), 0);
+    assert.equal(
+      await prisma.user.count({ where: { id: `missing-${prefix}` } }),
+      0,
+    );
+    assert.equal(
+      await prisma.dealer.count({ where: { id: `missing-${prefix}` } }),
+      0,
+    );
   });
 
   it("distinguishes malformed input from well-formed not-found lookups", async () => {

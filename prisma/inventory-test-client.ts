@@ -11,6 +11,12 @@ export function createInventoryTestDatabase() {
   if (existsSync(".env.local")) {
     process.loadEnvFile(".env.local");
   }
+  assert.ok(
+    process.env.NODE_ENV !== "production" &&
+      process.env.VERCEL === undefined &&
+      process.env.VERCEL_ENV === undefined,
+    "Inventory test/fixture commands are local development only; production and Vercel execution are refused.",
+  );
   const connectionString = process.env.INVENTORY_TEST_DATABASE_URL;
   const expectedHost = process.env.INVENTORY_TEST_EXPECTED_HOST;
   assert.ok(

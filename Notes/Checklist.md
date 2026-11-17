@@ -415,8 +415,28 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 **Commit 3: `test: verify inventory persistence and fixture import`**
 
-- [ ] **02.12** Prepare a development-only fixture import/seed with stable relationships and repeatable behavior. Demo content must not silently become Production inventory; obtain approval and a real-data import plan separately.
+- [x] **02.12** Prepare a development-only fixture import/seed with stable relationships and repeatable behavior. Demo content must not silently become Production inventory; obtain approval and a real-data import plan separately. _Opt-in preview/apply CLI and transactional create-only importer implemented and exercised on the approved isolated child. The user approved test-only execution, Draft/Pending/not-Featured defaults, edit preservation and conflict rejection; all imported test rows were removed._
 - [ ] **02.13** Test duplicate identifiers, optional fields, numeric/date boundaries, malformed queries, eligible/ineligible records, deterministic pagination, and private-field exclusion using an isolated database branch.
+
+#### Implementation 02.12: controlled development fixture import
+
+- On 2026-11-17 the user approved **implementation/testing only with cleanup**, **Draft + Pending inspection + not Featured** for initial imports, and **create missing / preserve edits / reject identifier conflicts** on repeat runs. No permanent seed of normal development or Production inventory is approved.
+- Added [transactional fixture import](../prisma/inventory-fixtures.ts) and an explicit [CLI entry point](../prisma/seed-inventory.ts), exposed through `pnpm inventory:fixtures`. There is no postinstall/build/migration hook or automatic Prisma seed registration. Omitting `--apply` performs a read-only preview and prints counts, not connection strings, user details or vehicle payloads.
+- The command reuses the existing ignored isolated-target configuration and expected-host/direct-connection guards, including refusal of configured application hosts. The shared setup now also refuses `NODE_ENV=production` and any Vercel execution hints. These guards supplement, not replace, control-plane verification and approval of the chosen non-production endpoint; they do not infer a remote branch's purpose from its hostname.
+- Every call requires an explicit existing unbanned actor ID, existing dealership ID and valid `YYYY-MM-DD` acquisition date. The importer does not create/change staff accounts, roles, passwords, sessions or dealership/contact records. Its writes are limited to missing fixture vehicles and their initial history.
+- The current 24 source fixtures receive stable namespaced IDs, `DEV-FIXTURE-...` stock numbers, namespaced slugs and version-1 creation-history markers tied to the actual supplied actor. All start Draft/Pending/not Featured with no invented publication/reservation/sale dates. Money/kW are constructed as Decimal from canonical source strings; PS remains derived by the read adapter.
+- Descriptive/technical source values with known meaning are copied. The legacy fixture's consumption number has no declared unit, so both consumption and unit remain null rather than inferring a hybrid/fuel measurement. Unknown owner count, partial VIN and private margin also remain null. External demo images and placeholder dealer contact/rating data are not imported.
+- Preflight verifies owned fixture IDs against their initial history, creator and dealership, and rejects ID/stock/slug/history namespace conflicts. Existing imported records are never updated or deleted: local price/stock/slug edits, versions, timestamps, workflow state and later history remain intact. Missing fixtures alone are created. Vehicle and initial history inserts run in one Serializable transaction; failures roll back without silent duplicate skipping or automatic decision retries.
+- Preview syntax, for a separately verified/approved isolated target with existing actor/dealer records:
+
+  ```powershell
+  pnpm inventory:fixtures --actor-id "<existing-staff-id>" --dealer-id "<existing-dealer-id>" --acquired-on "YYYY-MM-DD"
+  ```
+
+  `--apply` is the explicit write opt-in, not part of this preview. **Do not leave a persistent seed in the current test child:** the remaining integration suite requires it empty. Any future persistent development seed needs a separately approved target and actor/dealership setup; Production requires its own real-data import plan, not demo data.
+
+- [Integration tests](../prisma/inventory-queries.test.ts) run the actual CLI for preview, first apply, unchanged reapply and partial missing-row import. They verify all 24 initial states/relations/history, public invisibility, actor/dealer preservation, and exact preservation of edited records plus later version/history. Negative cases exercise production/Vercel refusal, missing actor/dealer, invalid calendar date, unrelated ID/stock/slug conflicts and rollback when a test-only history-write failure occurs after actual vehicle insertion.
+- Cleanup is restricted to known fixture/test IDs owned by the synthetic test actor and dealership, with history removed before its vehicle. The suite confirms all imported/conflict rows are gone; no permanent development seed remains. Verification: **15 isolated database tests** (3 migration + 12 query), **46 unit tests**, standalone typecheck, repository lint and changed-file formatting/whitespace checks passed. Private configuration, normal dev parent and Production were unchanged; no schema/dependency change or deployment was introduced.
 
 **Done when:** a real vehicle can be stored and read through the correct staff/public query boundaries, migrations are reproducible, and no UI has to invent database fields.
 
@@ -843,6 +863,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **02 / 02.01-02.11** is complete through server-only inventory reads, German keyword search, shared public eligibility and explicit serializable DTOs on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). Migration/query tests target only isolated child `br-billowing-field-b9ay9qjo`, not dev or Production. Public/admin pages remain fixture-backed until their integration sections.
-- **Next:** **Section 02 / 02.12**: prepare a controlled, repeatable development-only fixture import with stable relationships and explicit target/data safeguards, never an automatic Production demo import. Then complete wider isolated integration checks (02.13), followed by the section report and agreed pre-/post-merge testing gates before Section 03.
+- **Current:** Section **02 / 02.01-02.12** is complete through inventory schema, guarded reads/search/eligibility, client-safe DTOs and a controlled repeatable fixture importer on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). Database checks target only isolated child `br-billowing-field-b9ay9qjo`, not dev or Production; all temporary fixture imports were removed. Public/admin pages remain fixture-backed until their integration sections.
+- **Next:** **Section 02 / 02.13**: finish the wider isolated integration checks and compile the Section 02 report with a full guided retest checklist. Follow the agreed pre-merge review and post-merge user testing gates; do not begin Section 03 before the user's test confirmation.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

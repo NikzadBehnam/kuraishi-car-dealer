@@ -277,7 +277,7 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 **Commit 1: `feat: add inventory schema and development migration`**
 
 - [x] **02.01** Add a durable `Vehicle` model with stable ID, unique slug, stock number, make, model, variant, description, dealer relationship, location, exterior color, and condition (`used`, `demonstrator`, `annual`). Define the minimal dealer identity/relation required by this model; Section 08 extends/reuses it for business settings instead of adding a competing dealer source. _Prisma model definitions added; schema validation/client generation are the point-level checks. Database migration/persistence verification remains 02.07, after the remaining model fields/constraints are defined._
-- [ ] **02.02** Persist price with exact money semantics and private margin estimate separately; never use formatted currency strings as stored money or expose the margin publicly.
+- [x] **02.02** Persist price with exact money semantics and private margin estimate separately; never use formatted currency strings as stored money or expose the margin publicly. _Added separate nullable `Decimal(12, 2)` source fields for EUR price and private margin. Migration and database round-trip tests remain 02.07/02.13; serialization/server input mapping remains 02.11/04._
 - [ ] **02.03** Persist first registration, mileage, power kW, owner count, partial VIN, fuel type, transmission, body type, optional consumption, and optional CO2 emission. Define units and whether PS is derived from kW rather than independently editable inconsistent data.
 - [ ] **02.04** Persist equipment/features, display labels, status, inspection state, featured/availability decisions, acquisition date, publication timestamp, reservation expiry if used, sold timestamp, and creation/update timestamps.
 - [ ] **02.05** Add appropriate enums/constraints and indexes for actual queries: unique identifiers, public eligibility, updated-date ordering, status filtering, and dealer relationships. Do not make six-character VIN fragments globally unique unless explicitly justified.
@@ -292,6 +292,15 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Deleting the dealership is restricted while vehicles reference it. No vehicle cascade is introduced. Stock normalization, first-publication slug locking, draft-only deletion, publication completeness and additional database constraints remain the explicitly numbered later points.
 - This point changes the source schema, not a live database. No migration, seed, connection-string change or inventory UI wiring is performed here. Existing auth models are unchanged.
 - Verification: `prisma format`, `prisma validate`, `prisma generate`, `pnpm typecheck` and Git whitespace checks passed. The schema diff contains only the new enum/models and formatter removal of a leading blank line; auth definitions are unchanged. Database durability/foreign-key/uniqueness behavior will be tested after the 02.07 migration, not claimed from schema validation alone.
+
+#### Implementation 02.02: exact EUR storage
+
+- `Vehicle.price` and `Vehicle.marginEstimate` are distinct nullable Prisma `Decimal` fields with PostgreSQL `numeric(12,2)` semantics: up to ten integer digits and two fractional digits. There is no zero default; an unfinished draft with no price/margin must remain distinguishable from a genuine zero.
+- The approved currency is EUR only, not a configurable multicurrency feature. The server mutation must reject invalid precision/ranges before the database can round input, and construct Decimal from a canonical decimal string rather than use floating-point arithmetic.
+- Keep Decimal values through server-side money calculations. Section 02.11 defines safe client serialization/display mapping and 04 maps the actual form input. Never persist localized display strings such as `25.000,00 €`.
+- Margin stays staff-only through explicit public query projections and the existing public allowlist. Neither adding the column nor schema validation alone establishes a tested live public-data boundary.
+- These fields are source schema changes only; constraints, migration and real database round-trip tests remain 02.05/02.07/02.13.
+- Verification: Prisma formatting/validation/client generation, TypeScript typecheck, checklist formatting and whitespace checks passed. Auth definitions remain unchanged; no database connection/migration was used for these checks.
 
 **Commit 2: `feat: add staff and public inventory queries`**
 
@@ -730,6 +739,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **01** was retested, accepted and merged into `master` at `a74b574`. Section **02 / 02.01** defines vehicle/dealership identity on `backend/vehicle-inventory`, created from that merged state. No inventory migration or live database/UI integration has run.
-- **Next:** **Section 02 / 02.02**: add exact EUR price and private margin storage, preserving incomplete drafts. Continue validating, committing and pushing each point independently; create/test the combined inventory migration only at **02.07** on isolated development/test Neon.
+- **Current:** Section **01** was retested, accepted and merged into `master` at `a74b574`. Section **02 / 02.01-02.02** defines vehicle/dealership identity and exact EUR money fields on `backend/vehicle-inventory`, created from that merged state. No inventory migration or live database/UI integration has run.
+- **Next:** **Section 02 / 02.03**: agree registration precision and power-unit derivation, then add technical fields. Continue validating, committing and pushing each point independently; create/test the combined inventory migration only at **02.07** on isolated development/test Neon.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

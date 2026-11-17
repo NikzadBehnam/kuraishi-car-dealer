@@ -20,18 +20,20 @@ model Dealer {
 }
 
 model Vehicle {
-  id            String            @id @default(cuid())
-  slug          String            @unique
-  stockNumber   String            @unique
-  make          String
-  model         String
-  variant       String?
-  description   String?
-  location      String?
-  exteriorColor String?
-  condition     VehicleCondition?
-  dealerId      String
-  dealer        Dealer            @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  stockNumber    String            @unique
+  make           String
+  model          String
+  variant        String?
+  description    String?
+  location       String?
+  exteriorColor  String?
+  condition      VehicleCondition?
+  price          Decimal?          @db.Decimal(12, 2)
+  marginEstimate Decimal?          @db.Decimal(12, 2)
+  dealerId       String
+  dealer         Dealer            @relation(fields: [dealerId], references: [id], onDelete: Restrict)
 
   @@index([dealerId])
 }

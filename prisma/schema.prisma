@@ -105,6 +105,11 @@ model Vehicle {
   dealer            Dealer                   @relation(fields: [dealerId], references: [id], onDelete: Restrict)
 
   @@index([dealerId])
+  @@index([updatedAt(sort: Desc), id])
+  @@index([status, updatedAt(sort: Desc), id])
+  @@index([status, inspectionStatus, isFeatured, id])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model VehicleChange {

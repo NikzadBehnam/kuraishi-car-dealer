@@ -13,6 +13,32 @@ enum VehicleCondition {
   annual
 }
 
+enum VehicleFuelType {
+  petrol
+  diesel
+  electric
+  hybrid
+}
+
+enum VehicleTransmissionType {
+  automatic
+  manual
+}
+
+enum VehicleBodyType {
+  suv
+  compact
+  sedan
+  wagon
+  van
+  sports
+}
+
+enum VehicleConsumptionUnit {
+  l_per_100_km
+  kwh_per_100_km
+}
+
 model Dealer {
   id       String    @id @default(cuid())
   name     String
@@ -20,20 +46,31 @@ model Dealer {
 }
 
 model Vehicle {
-  id             String            @id @default(cuid())
-  slug           String            @unique
-  stockNumber    String            @unique
-  make           String
-  model          String
-  variant        String?
-  description    String?
-  location       String?
-  exteriorColor  String?
-  condition      VehicleCondition?
-  price          Decimal?          @db.Decimal(12, 2)
-  marginEstimate Decimal?          @db.Decimal(12, 2)
-  dealerId       String
-  dealer         Dealer            @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  id                String                   @id @default(cuid())
+  slug              String                   @unique
+  stockNumber       String                   @unique
+  make              String
+  model             String
+  variant           String?
+  description       String?
+  location          String?
+  exteriorColor     String?
+  condition         VehicleCondition?
+  price             Decimal?                 @db.Decimal(12, 2)
+  marginEstimate    Decimal?                 @db.Decimal(12, 2)
+  firstRegistration String?                  @db.VarChar(7)
+  mileage           Int?
+  powerKw           Decimal?                 @db.Decimal(7, 2)
+  ownerCount        Int?
+  vinLastSix        String?                  @db.VarChar(6)
+  fuelType          VehicleFuelType?
+  transmissionType  VehicleTransmissionType?
+  bodyType          VehicleBodyType?
+  consumption       Decimal?                 @db.Decimal(6, 2)
+  consumptionUnit   VehicleConsumptionUnit?
+  co2Emission       Int?
+  dealerId          String
+  dealer            Dealer                   @relation(fields: [dealerId], references: [id], onDelete: Restrict)
 
   @@index([dealerId])
 }

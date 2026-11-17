@@ -278,7 +278,7 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 - [x] **02.01** Add a durable `Vehicle` model with stable ID, unique slug, stock number, make, model, variant, description, dealer relationship, location, exterior color, and condition (`used`, `demonstrator`, `annual`). Define the minimal dealer identity/relation required by this model; Section 08 extends/reuses it for business settings instead of adding a competing dealer source. _Prisma model definitions added; schema validation/client generation are the point-level checks. Database migration/persistence verification remains 02.07, after the remaining model fields/constraints are defined._
 - [x] **02.02** Persist price with exact money semantics and private margin estimate separately; never use formatted currency strings as stored money or expose the margin publicly. _Added separate nullable `Decimal(12, 2)` source fields for EUR price and private margin. Migration and database round-trip tests remain 02.07/02.13; serialization/server input mapping remains 02.11/04._
-- [ ] **02.03** Persist first registration, mileage, power kW, owner count, partial VIN, fuel type, transmission, body type, optional consumption, and optional CO2 emission. Define units and whether PS is derived from kW rather than independently editable inconsistent data.
+- [x] **02.03** Persist first registration, mileage, power kW, owner count, partial VIN, fuel type, transmission, body type, optional consumption, and optional CO2 emission. Define units and whether PS is derived from kW rather than independently editable inconsistent data. _Source fields/enums added with explicit units and nullable incomplete-draft values. No independent PS column. Database checks/migration/round-trip verification remain 02.05/02.07/02.13; UI/query mapping remains 02.11/04._
 - [ ] **02.04** Persist equipment/features, display labels, status, inspection state, featured/availability decisions, acquisition date, publication timestamp, reservation expiry if used, sold timestamp, and creation/update timestamps.
 - [ ] **02.05** Add appropriate enums/constraints and indexes for actual queries: unique identifiers, public eligibility, updated-date ordering, status filtering, and dealer relationships. Do not make six-character VIN fragments globally unique unless explicitly justified.
 - [ ] **02.06** Decide which makes/models/options need reference tables and which can remain validated values. Do not create a taxonomy management system just because sample data has arrays.
@@ -301,6 +301,16 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Margin stays staff-only through explicit public query projections and the existing public allowlist. Neither adding the column nor schema validation alone establishes a tested live public-data boundary.
 - These fields are source schema changes only; constraints, migration and real database round-trip tests remain 02.05/02.07/02.13.
 - Verification: Prisma formatting/validation/client generation, TypeScript typecheck, checklist formatting and whitespace checks passed. Auth definitions remain unchanged; no database connection/migration was used for these checks.
+
+#### Implementation 02.03: technical fields and units
+
+- On 2026-11-17 the user approved year/month first registration (`YYYY-MM`), whole kilometres, whole owner counts, authoritative kW with derived rounded metric PS, and explicit fuel-aware consumption units. CO2 is measured in g/km.
+- Registration is a nullable seven-character string, not an invented first-of-month timestamp. Mileage/owner count/CO2 use integers; kW uses `Decimal(7,2)` so fractional power is not silently discarded. PS is derived at the read/display boundary, never stored or independently editable.
+- Fuel, transmission and body types use enums matching current form choices. The six-character VIN fragment is nullable, staff-only and not globally unique.
+- Consumption uses `Decimal(6,2)` plus an explicit `l_per_100_km` or `kwh_per_100_km` enum. No unit is inferred/defaulted for stored numbers. Missing values remain null; real zero consumption/emissions is not the same as unknown.
+- Validation/constraints must keep value and unit paired, use L/100 km for petrol/diesel and kWh/100 km for electric, and preserve the declared unit for hybrid. A hybrid's single existing consumption metric is not a claim that both fuel and electric consumption are recorded.
+- Section 02.05 adds numeric/date/pairing constraints; 02.11 and Section 04 must propagate units into typed read/form contracts before rendering these database values. The existing fixture/UI is not relabelled by this schema-only point.
+- Verification: Prisma formatting, schema validation/client generation, TypeScript typecheck, checklist formatting and whitespace checks passed. These checks do not claim database constraint enforcement or a completed migration.
 
 **Commit 2: `feat: add staff and public inventory queries`**
 
@@ -739,6 +749,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **01** was retested, accepted and merged into `master` at `a74b574`. Section **02 / 02.01-02.02** defines vehicle/dealership identity and exact EUR money fields on `backend/vehicle-inventory`, created from that merged state. No inventory migration or live database/UI integration has run.
-- **Next:** **Section 02 / 02.03**: agree registration precision and power-unit derivation, then add technical fields. Continue validating, committing and pushing each point independently; create/test the combined inventory migration only at **02.07** on isolated development/test Neon.
+- **Current:** Section **02 / 02.01-02.03** defines vehicle/dealership identity, exact EUR money and approved technical fields on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). No inventory migration or live database/UI integration has run.
+- **Next:** **Section 02 / 02.04**: add lifecycle, inspection, features and server-owned date/traceability fields. Continue validating, committing and pushing each point independently; create/test the combined inventory migration only at **02.07** on isolated development/test Neon.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

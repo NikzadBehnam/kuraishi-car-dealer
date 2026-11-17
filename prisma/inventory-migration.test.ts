@@ -93,6 +93,27 @@ async function authFingerprint() {
 
 const rollback = new Error("Roll back isolated test data.");
 
+function hasPostgresCode(error: unknown, code: string): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+  const adapter = error.meta?.driverAdapterError;
+  if (
+    typeof adapter !== "object" ||
+    adapter === null ||
+    !("cause" in adapter)
+  ) {
+    return false;
+  }
+  const cause = adapter.cause;
+  return (
+    typeof cause === "object" &&
+    cause !== null &&
+    "originalCode" in cause &&
+    cause.originalCode === code
+  );
+}
+
 async function withVehicle(
   verify: (tx: Prisma.TransactionClient, vehicleId: string) => Promise<void>,
 ) {
@@ -128,24 +149,31 @@ async function withVehicle(
       },
       { timeout: 60000 },
     ),
-    (error: unknown) => error === rollback,
+    (error: unknown) => {
+      if (error !== rollback) {
+        throw error;
+      }
+      return true;
+    },
   );
   assert.equal(await prisma.vehicle.count({ where: { id: vehicleId } }), 0);
 }
 
 describe("isolated inventory migration", { concurrency: false }, () => {
+  let originalAuthState: string | undefined;
+
   before(async () => {
-    const before = await authFingerprint();
+    originalAuthState = await authFingerprint();
     runPrisma(["migrate", "deploy"]);
     assert.equal(
       await authFingerprint(),
-      before,
+      originalAuthState,
       "Migration changed auth data/schema.",
     );
     runPrisma(["migrate", "deploy"]);
     assert.equal(
       await authFingerprint(),
-      before,
+      originalAuthState,
       "Repeat deploy changed auth data/schema.",
     );
     runPrisma([
@@ -159,7 +187,17 @@ describe("isolated inventory migration", { concurrency: false }, () => {
   });
 
   after(async () => {
-    await prisma.$disconnect();
+    try {
+      if (originalAuthState !== undefined) {
+        assert.equal(
+          await authFingerprint(),
+          originalAuthState,
+          "Database tests changed preserved auth data/schema.",
+        );
+      }
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   it("round-trips incomplete drafts, exact money and explicit technical units", async () => {
@@ -250,10 +288,7 @@ describe("isolated inventory migration", { concurrency: false }, () => {
             tx.$executeRaw(
               Prisma.sql`UPDATE "Vehicle" SET ${assignment} WHERE "id" = ${id}`,
             ),
-            (error: unknown) =>
-              error instanceof Prisma.PrismaClientKnownRequestError &&
-              error.code === "P2010" &&
-              error.meta?.code === sqlState,
+            (error: unknown) => hasPostgresCode(error, sqlState),
             label,
           );
         } finally {

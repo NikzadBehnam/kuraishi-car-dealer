@@ -341,6 +341,19 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - No manufacturer/model CRUD, reference-data synchronization, external catalog provider or taxonomy management interface is introduced. If later requested, design it explicitly without breaking existing inventory.
 - Verification: explicit user approval; checked that current source fields are `make String`, `model String`, the agreed option enums and string arrays, with no make/model reference tables. Documentation-only decision; no extra application or database validation run is needed.
 
+#### Point 02.07 in progress: isolated migration verification
+
+- The user approved preserving inquiries (block hard delete while referenced; Archive instead), deleting attachment links rather than shared media/files, and creating an isolated child of the supplied development branch for tests.
+- Verified project `twilight-bread-36837209`, development branch `dev` (`br-plain-surf-b9e05n7g`), non-default/unprotected. Created and verified child `test-section02-inventory-20261117` (`br-billowing-field-b9ay9qjo`), endpoint `ep-lucky-silence-b9323aux.c-7.eu-central-1.aws.neon.tech`. No writes to the parent or Production are authorized.
+- Neon rejected a custom suspend-timeout parameter on this account; confirmed no partial branch existed and retried without that parameter. The child uses the account's default suspension policy and 0.25 CU.
+- Added an isolated migration test harness: explicit direct URL/expected-host guards, refusal to use the configured application database, additive/repeat deployment plus schema-drift checks, auth data/schema fingerprints, rollback-only synthetic data, exact-money/draft round trips, unique identifiers and SQL constraint rejection cases.
+- **Safety stop:** the current private local direct URL did not match the verified dev parent, so credential reuse was refused **before any database connection or migration command**. No inventory migration or test data has been applied. Do not repoint the normal application env or substitute a Production connection.
+- To continue, privately create ignored `.env.inventory-test.local` with `INVENTORY_TEST_DATABASE_URL` set to the **direct** Connect URL for the isolated child/database `kuraishi-car-dealer-db`, and `INVENTORY_TEST_EXPECTED_HOST=ep-lucky-silence-b9323aux.c-7.eu-central-1.aws.neon.tech`. Never paste connection strings/credentials into chat or commit this file.
+- Run `pnpm test:inventory-db` only after that private test configuration is ready. This command applies pending migrations **to the explicitly configured isolated target**, checks repeatability/drift, then runs rollback-only tests; it is not a read-only test command. Point 02.07 remains unchecked until execution passes.
+- **Current blocker:** the private test file was initially absent; a correctly named, ignored empty template was created. The latest run still sees an empty `INVENTORY_TEST_DATABASE_URL` and fails the explicit guard before opening a database connection. Save the direct child URL into that existing template privately. Repeated readiness confirmations alone do not establish that configuration is present; do not mark migration verification complete.
+- Harness source formatting, typecheck/lint and existing unit regressions can be checked independently, but its three database cases and migration execution remain unverified until the private connection is available. The retained child is reserved for continued testing; do not delete/reset it or treat it as the normal application target without explicit agreement.
+- Verified while blocked: all 46 existing unit tests, full typecheck, repository lint, changed-file Prettier and whitespace checks passed; the private test file is Git-ignored. The missing/empty-URL guard failed explicitly as intended, with no database writes. These passing source checks do not mark the three database cases as passed.
+
 **Commit 2: `feat: add staff and public inventory queries`**
 
 - [ ] **02.08** Add staff list/detail queries and public list/detail/featured/related queries with explicit projections. Validate ID/slug lookups, stable ordering, counts, result limits, and invalid input handling.
@@ -779,5 +792,5 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 ## Current step and next action
 
 - **Current:** Section **02 / 02.01-02.06** defines source models, query indexes, unapplied migration SQL and approved reference-data scope on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). No inventory migration or live database/UI integration has run.
-- **Next:** **Section 02 / 02.07**: confirm media/inquiry deletion boundaries and an isolated development/test Neon target before applying/testing the combined migration. Production remains out of scope.
+- **Next:** **Section 02 / 02.07** is waiting for private test-only connection configuration for verified child `br-billowing-field-b9ay9qjo`; the initial safety guard correctly refused reuse of a nonmatching local direct URL before connecting. Apply/test only the isolated child, never the dev parent or Production.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

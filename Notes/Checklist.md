@@ -266,6 +266,7 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Repeating the test with the normal server binding (`pnpm exec next start --port 3102`) returned 200 for listing, vehicle detail and comparison. A fresh port was necessary to avoid browser-cached 308 redirects from the initial test. Browser checks confirmed all three pages render, adding a vehicle to comparison survives navigation, and English listing/detail/comparison URLs redirect to their German canonical URLs and finish at 200.
 - A separate `fix/localized-route-redirects` branch was opened from `master` to investigate, but **no application fix or commit was necessary**. Returned to `backend/domain-foundation`; no routing source was changed.
 - Authenticated ordinary-staff/master-admin screen checks were not performed by the assistant; no credentials were requested or accounts created. The temporary servers were stopped; no merge/deployment was performed. **Only private-account smoke checks and user acceptance remain pending.**
+- **Acceptance — 2026-11-17:** the user confirmed both private-role checks passed and explicitly approved merging Section 01 and continuing. The assistant's automated/browser results and the user's private-role verification together satisfy the retest gate. Merge execution is recorded by Git history; no deployment is authorized by this acceptance.
 
 ### 02. Vehicle database, reference data and query layer
 
@@ -721,5 +722,5 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 ## Current step and next action
 
 - **Current:** Section **01**, points **01.01-01.10**, are implemented at their foundation/contract scope on `backend/domain-foundation`, created from `origin/master` at `98b66c2`. This is not live inventory database/UI integration.
-- **Next:** complete private-account smoke checks and obtain user acceptance before merging `backend/domain-foundation` into `master`. The initial redirect-loop finding was a test-server hostname issue and is resolved without application changes. Start **Section 02 / 02.01** on `backend/vehicle-inventory` only after that merge.
+- **Next:** user accepted the full-section retest and approved merging Section 01. Merge `backend/domain-foundation` into `master`, then begin **Section 02 / 02.01** on `backend/vehicle-inventory`. The initial redirect-loop finding was a test-server hostname issue resolved without application changes.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

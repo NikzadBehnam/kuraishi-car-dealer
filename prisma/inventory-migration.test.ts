@@ -194,17 +194,117 @@ describe("isolated inventory migration", { concurrency: false }, () => {
     });
   });
 
+  it("preserves storage boundaries and leap-day acquisition without inventing timestamps", async () => {
+    await withVehicle(async (tx, id) => {
+      const minimum = await tx.vehicle.update({
+        where: { id },
+        data: {
+          price: new Prisma.Decimal("0.01"),
+          marginEstimate: new Prisma.Decimal("0.00"),
+          powerKw: new Prisma.Decimal("0.01"),
+          consumption: new Prisma.Decimal("0.00"),
+          consumptionUnit: "kwh_per_100_km",
+          fuelType: "electric",
+          mileage: 0,
+          ownerCount: 0,
+          co2Emission: 0,
+          acquisitionDate: new Date("2024-02-29T00:00:00.000Z"),
+          firstRegistration: "2024-02",
+        },
+      });
+      assert.equal(minimum.price?.toFixed(2), "0.01");
+      assert.equal(minimum.marginEstimate?.toFixed(2), "0.00");
+      assert.equal(minimum.powerKw?.toFixed(2), "0.01");
+      assert.equal(minimum.consumption?.toFixed(2), "0.00");
+      assert.equal(minimum.mileage, 0);
+      assert.equal(minimum.ownerCount, 0);
+      assert.equal(minimum.co2Emission, 0);
+      assert.equal(
+        minimum.acquisitionDate.toISOString(),
+        "2024-02-29T00:00:00.000Z",
+      );
+      assert.equal(minimum.firstRegistration, "2024-02");
+      assert.equal(minimum.publishedAt, null);
+      assert.equal(minimum.reservedUntil, null);
+      assert.equal(minimum.soldAt, null);
+
+      const maximum = await tx.vehicle.update({
+        where: { id },
+        data: {
+          price: new Prisma.Decimal("9999999999.99"),
+          marginEstimate: new Prisma.Decimal("9999999999.99"),
+          powerKw: new Prisma.Decimal("99999.99"),
+          consumption: new Prisma.Decimal("9999.99"),
+          mileage: 2_147_483_647,
+          ownerCount: 2_147_483_647,
+          co2Emission: 2_147_483_647,
+        },
+      });
+      assert.equal(maximum.price?.toFixed(2), "9999999999.99");
+      assert.equal(maximum.marginEstimate?.toFixed(2), "9999999999.99");
+      assert.equal(maximum.powerKw?.toFixed(2), "99999.99");
+      assert.equal(maximum.consumption?.toFixed(2), "9999.99");
+      assert.equal(maximum.mileage, 2_147_483_647);
+      assert.equal(maximum.ownerCount, 2_147_483_647);
+      assert.equal(maximum.co2Emission, 2_147_483_647);
+    });
+  });
+
   it("rejects malformed values, contradictory publication and broken references", async () => {
     await withVehicle(async (tx, id) => {
       const cases: [string, Prisma.Sql, string][] = [
+        ["zero price", Prisma.sql`"price" = 0`, "23514"],
         ["negative price", Prisma.sql`"price" = -1`, "23514"],
         ["NaN price", Prisma.sql`"price" = 'NaN'::numeric`, "23514"],
+        ["price overflow", Prisma.sql`"price" = 10000000000`, "22003"],
+        ["negative margin", Prisma.sql`"marginEstimate" = -0.01`, "23514"],
+        [
+          "margin overflow",
+          Prisma.sql`"marginEstimate" = 10000000000`,
+          "22003",
+        ],
+        ["zero power", Prisma.sql`"powerKw" = 0`, "23514"],
+        ["power overflow", Prisma.sql`"powerKw" = 100000`, "22003"],
+        ["negative owners", Prisma.sql`"ownerCount" = -1`, "23514"],
+        ["negative emissions", Prisma.sql`"co2Emission" = -1`, "23514"],
+        [
+          "negative consumption",
+          Prisma.sql`"fuelType" = 'electric', "consumption" = -0.01, "consumptionUnit" = 'kwh_per_100_km'`,
+          "23514",
+        ],
+        [
+          "consumption overflow",
+          Prisma.sql`"fuelType" = 'electric', "consumption" = 10000, "consumptionUnit" = 'kwh_per_100_km'`,
+          "22003",
+        ],
         ["negative mileage", Prisma.sql`"mileage" = -1`, "23514"],
+        ["mileage overflow", Prisma.sql`"mileage" = 2147483648`, "22003"],
         ["fractional integer", Prisma.sql`"mileage" = '1.5'`, "22P02"],
         ["invalid month", Prisma.sql`"firstRegistration" = '2024-13'`, "23514"],
+        ["zero month", Prisma.sql`"firstRegistration" = '2024-00'`, "23514"],
+        [
+          "invalid leap day",
+          Prisma.sql`"acquisitionDate" = '2025-02-29'`,
+          "22008",
+        ],
+        [
+          "invalid instant",
+          Prisma.sql`"reservedUntil" = '2026-02-30T12:00:00Z'`,
+          "22008",
+        ],
         ["short VIN", Prisma.sql`"vinLastSix" = '12345'`, "23514"],
         ["lowercase stock", Prisma.sql`"stockNumber" = 'lowercase'`, "23514"],
         ["missing unit", Prisma.sql`"consumption" = 5`, "23514"],
+        [
+          "unit without value",
+          Prisma.sql`"consumptionUnit" = 'l_per_100_km'`,
+          "23514",
+        ],
+        [
+          "unknown consumption fuel",
+          Prisma.sql`"consumption" = 5, "consumptionUnit" = 'l_per_100_km'`,
+          "23514",
+        ],
         [
           "wrong unit",
           Prisma.sql`"fuelType" = 'electric', "consumption" = 5, "consumptionUnit" = 'l_per_100_km'`,
@@ -258,7 +358,7 @@ describe("isolated inventory migration", { concurrency: false }, () => {
     });
   });
 
-  it("enforces unique stock/slugs without making VIN fragments unique", async () => {
+  it("keeps archived identifiers unique without making VIN fragments unique", async () => {
     await withVehicle(async (tx, id) => {
       const source = await tx.vehicle.findUniqueOrThrow({ where: { id } });
       const second = await tx.vehicle.create({
@@ -272,7 +372,7 @@ describe("isolated inventory migration", { concurrency: false }, () => {
       });
       await tx.vehicle.update({
         where: { id },
-        data: { vinLastSix: "123456" },
+        data: { vinLastSix: "123456", status: "archived" },
       });
       for (const field of ["slug", "stockNumber"] as const) {
         await tx.$executeRaw`SAVEPOINT unique_case`;

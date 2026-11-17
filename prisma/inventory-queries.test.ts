@@ -428,6 +428,71 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       staff.items.map((row) => row.id),
       ids,
     );
+    for (const [read, filter, total] of [
+      [queries.listStaffVehicles, {}, 8],
+      [queries.listPublicVehicles, {}, 5],
+      [queries.listPublicVehicles, { search: "Example" }, 5],
+      [queries.listPublicVehicleSitemapEntries, {}, 6],
+    ] as const) {
+      const maximumSize = await read({ ...filter, page: 1, pageSize: 100 });
+      assert.equal(maximumSize.items.length, total);
+      assert.equal(maximumSize.total, total);
+      assert.equal(maximumSize.pageSize, 100);
+      const maximumOffset = await read({
+        ...filter,
+        page: 2_147_483_648,
+        pageSize: 1,
+      });
+      assert.deepEqual(maximumOffset.items, []);
+      assert.equal(maximumOffset.total, total);
+      assert.equal(maximumOffset.page, 2_147_483_648);
+      assert.equal(maximumOffset.pageSize, 1);
+      assert.equal(maximumOffset.totalPages, total);
+    }
+  });
+
+  it("orders staff by update time while public stock retains featured priority", async () => {
+    const changedIds = [ids[6], ids[7]];
+    const originals = await prisma.vehicle.findMany({
+      where: { id: { in: changedIds } },
+      select: { id: true, updatedAt: true },
+    });
+    session = { user: { role: "user" } };
+    try {
+      await prisma.$transaction([
+        prisma.vehicle.update({
+          where: { id: ids[6] },
+          data: { updatedAt: new Date("2026-03-01T10:00:00.000Z") },
+        }),
+        prisma.vehicle.update({
+          where: { id: ids[7] },
+          data: { updatedAt: new Date("2026-02-01T10:00:00.000Z") },
+        }),
+      ]);
+      const staff = await queries.listStaffVehicles({ pageSize: 100 });
+      assert.deepEqual(
+        staff.items.map(({ id }) => id),
+        [ids[6], ids[7], ...ids.slice(0, 6)],
+      );
+      for (const search of ["", "Example"]) {
+        const pages = await Promise.all(
+          [1, 2, 3].map((page) =>
+            queries.listPublicVehicles({ search, page, pageSize: 2 }),
+          ),
+        );
+        assert.deepEqual(
+          pages.flatMap(({ items }) => items.map(({ id }) => id)),
+          [ids[0], ids[1], ids[7], ids[2], ids[3]],
+        );
+        assert.ok(pages.every(({ total }) => total === 5));
+      }
+    } finally {
+      await prisma.$transaction(
+        originals.map(({ id, updatedAt }) =>
+          prisma.vehicle.update({ where: { id }, data: { updatedAt } }),
+        ),
+      );
+    }
   });
 
   it("matches the existing German filter in SQL, before pagination and counts", async () => {
@@ -1049,6 +1114,35 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     for (const operation of invalid) {
       await assert.rejects(operation, z.ZodError);
     }
+    databaseFailure = new Error(
+      "Malformed pagination must fail before database access.",
+    );
+    try {
+      for (const read of [
+        queries.listStaffVehicles,
+        queries.listPublicVehicles,
+        queries.listPublicVehicleSitemapEntries,
+      ]) {
+        for (const input of [
+          null,
+          { page: "1" },
+          { page: 1.5 },
+          { page: NaN },
+          { page: Infinity },
+          { page: Number.MAX_SAFE_INTEGER + 1 },
+          { page: 2_147_483_649, pageSize: 1 },
+          { pageSize: 0 },
+          { pageSize: -1 },
+          { pageSize: 1.5 },
+          { pageSize: "8" },
+          { privateFilter: true },
+        ]) {
+          await assert.rejects(() => read(input), z.ZodError);
+        }
+      }
+    } finally {
+      databaseFailure = undefined;
+    }
     assert.equal(await queries.getStaffVehicle(`missing-${prefix}`), null);
     assert.equal(await queries.getPublicVehicle(`missing-${prefix}`), null);
     assert.equal(
@@ -1070,12 +1164,18 @@ describe("isolated inventory queries", { concurrency: false }, () => {
   });
 
   it("propagates database failures instead of returning demo or success-shaped data", async () => {
+    session = { user: { role: "user" } };
     const failure = new Error("Intentional query failure");
     databaseFailure = failure;
     try {
       for (const operation of [
+        () => queries.listStaffVehicles(),
+        () => queries.getStaffVehicle(ids[0]),
+        () => queries.listPublicVehicles(),
+        () => queries.getPublicVehicle(slug(0)),
         () => queries.getFeaturedVehicles(),
         () => queries.listPublicVehicles({ search: "Example" }),
+        () => queries.getRelatedVehicles({ id: ids[0] }),
         () => queries.getPublicComparisonVehicle(ids[0]),
         () => queries.getPublicVehicleMetadata(slug(0)),
         () => queries.getPublicVehicleForInquiry(slug(0)),

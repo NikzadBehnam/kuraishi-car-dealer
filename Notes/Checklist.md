@@ -11,7 +11,7 @@ The public website is called the "client side" in this document. This does **not
 ### What already works
 
 - Better Auth email/password login, database sessions, sign-out, protected dashboard access, and master-admin-only account creation have been implemented. Preserve this work rather than rebuilding authentication.
-- Prisma and Neon are configured. The current [schema](../prisma/schema.prisma) contains auth models only: `User`, `Session`, `Account`, `Verification`, and `RateLimit`. Inventory, media, business settings, and inquiries do not yet have database models.
+- Prisma and Neon are configured. Alongside the existing auth models, the current [schema](../prisma/schema.prisma) now includes `Dealer`, `Vehicle` and `VehicleChange` from Section 02. Their migration has been verified only on the approved isolated child, not applied to normal dev or Production. Media, extended business settings and inquiries remain later sections.
 - Local UI state, demo vehicle rendering, localized routes, comparison controls, validation schemas, and browser utilities are useful foundations, not evidence that business data is persisted.
 - The [auth implementation record](./BetterAuthConfiguration.md) contains previous checks. Its historical "current project state" paragraphs, the [README](../README.md), and the [handoff](../PROJECT_AI_HANDOFF.md) contain stale prototype descriptions; current source takes precedence.
 
@@ -416,7 +416,7 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 **Commit 3: `test: verify inventory persistence and fixture import`**
 
 - [x] **02.12** Prepare a development-only fixture import/seed with stable relationships and repeatable behavior. Demo content must not silently become Production inventory; obtain approval and a real-data import plan separately. _Opt-in preview/apply CLI and transactional create-only importer implemented and exercised on the approved isolated child. The user approved test-only execution, Draft/Pending/not-Featured defaults, edit preservation and conflict rejection; all imported test rows were removed._
-- [ ] **02.13** Test duplicate identifiers, optional fields, numeric/date boundaries, malformed queries, eligible/ineligible records, deterministic pagination, and private-field exclusion using an isolated database branch.
+- [x] **02.13** Test duplicate identifiers, optional fields, numeric/date boundaries, malformed queries, eligible/ineligible records, deterministic pagination, and private-field exclusion using an isolated database branch. _Completed the focused coverage review and expanded the existing migration/query suites: 17 isolated database tests and 46 unit tests pass. Full-section results, limitations and the user retest/merge gates follow below._
 
 #### Implementation 02.12: controlled development fixture import
 
@@ -437,6 +437,93 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 - [Integration tests](../prisma/inventory-queries.test.ts) run the actual CLI for preview, first apply, unchanged reapply and partial missing-row import. They verify all 24 initial states/relations/history, public invisibility, actor/dealer preservation, and exact preservation of edited records plus later version/history. Negative cases exercise production/Vercel refusal, missing actor/dealer, invalid calendar date, unrelated ID/stock/slug conflicts and rollback when a test-only history-write failure occurs after actual vehicle insertion.
 - Cleanup is restricted to known fixture/test IDs owned by the synthetic test actor and dealership, with history removed before its vehicle. The suite confirms all imported/conflict rows are gone; no permanent development seed remains. Verification: **15 isolated database tests** (3 migration + 12 query), **46 unit tests**, standalone typecheck, repository lint and changed-file formatting/whitespace checks passed. Private configuration, normal dev parent and Production were unchanged; no schema/dependency change or deployment was introduced.
+
+#### Implementation 02.13: final persistence and query coverage
+
+- Reviewed existing migration/query/policy tests against every 02.13 requirement rather than duplicating their assertions. Added two focused cases in the existing database test files and extended related cases; no runtime query/schema/dependency changes were needed.
+- Persistence now verifies exact minimum positive price/kW, zero margin/consumption/integer metrics, maximum Decimal/integer storage values, a valid leap-day acquisition date and nullable lifecycle instants. Rejection cases cover numeric overflow, zero price/power, negative optional metrics, invalid leap day/instant, invalid month, unmatched consumption units and unknown consumption fuel. These are storage boundaries, not claims that unrealistic owner counts or future registrations will pass the later business form.
+- Identifier collision tests now collide with an Archived vehicle, proving its stock number/slug remain reserved while VIN fragments may repeat.
+- Query tests now verify newer non-Featured stock does not outrank Featured stock, staff ordering follows update time, and search/non-search pages preserve identical deterministic ordering. All four paginated read paths accept page size 100 and offset 2,147,483,647; the next offset, unsafe/nonfinite/fractional/string inputs, invalid sizes and unknown filters fail validation before database access.
+- Expanded failure injection to every exported inventory query, including both catalog paths and authenticated reads, to prove errors propagate instead of returning demo/empty success data. Existing tests retain optional-field/zero/null handling, all seven public-surface rules, German literal search, privacy projections, exact DTO output, repeatable import and transactional history-failure rollback.
+- Final database run used process-local `TZ=America/Los_Angeles` and the explicitly rechecked approved child/database. **17/17 database tests** (4 migration + 13 query) and **46/46 unit tests** passed, none skipped. Typecheck, repository lint, Production build (46 static pages), changed-file formatting and whitespace checks passed. Build-only route-type regeneration was restored to its clean pre-build state; private configuration remains ignored. Temporary test data was cleaned up; normal dev/Production were not test or migration targets.
+
+#### Section 02 completion report - 2026-11-17
+
+**Engineering status:** **02.01-02.13 complete** on `backend/vehicle-inventory`; ready for user pre-merge review/retesting. This is completion of the database/query foundation, **not** release acceptance, a merge, a deployment or a claim that the website is dynamic.
+
+| Delivered area                                | Evidence and verified outcome                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity, money, technical fields and history | [Schema](../prisma/schema.prisma), [additive migration](../prisma/migrations/20261117180000_vehicle_inventory/migration.sql), [migration tests](../prisma/inventory-migration.test.ts): nullable drafts, exact EUR Decimals, explicit units, date/instant types, restrictive references, unique identifiers including Archived stock, constraints and storage boundaries. |
+| Migration repeatability                       | Isolated deploy, repeat deploy and empty live-schema diff pass; preserved auth row/column fingerprints remain unchanged around migration/rollback tests. Custom CHECK SQL remains authoritative where Prisma cannot model it.                                                                                                                                             |
+| Staff/public reads                            | [Queries](../src/lib/inventory-queries.ts), [integration tests](../prisma/inventory-queries.test.ts): per-query staff session assertion, explicit public projections, bounded snapshot-consistent lists/counts, stable ordering and validated lookups.                                                                                                                    |
+| Search and public eligibility                 | [Eligibility predicates](../src/lib/inventory-eligibility.ts) derive from [shared policy](../src/lib/inventory-policy.ts). Real stored examples plus a read-only 40-combination SQL matrix cover seven public surfaces without disabling constraints. German search is compared with the existing filter for 29 examples.                                                 |
+| Client-safe output                            | [DTO contracts](../src/types/inventory.ts), [adapters](../src/lib/inventory-dto.ts): exact money strings, UTC instant/date-only strings, nullable metrics, derived PS and private-field exclusion; actual query results survive JSON round-trip.                                                                                                                          |
+| Controlled demo import                        | [Importer](../prisma/inventory-fixtures.ts), [CLI](../prisma/seed-inventory.ts): preview by default, explicit write opt-in, existing actor/dealer, stable initial history, create-only reruns, preserved edits, conflict refusal and atomic rollback. Test-only imports were removed.                                                                                     |
+
+**Commit references**
+
+- Schema/decisions: `9be448c`, `70863c3`, `382e2e2`, `b58223b`, `3e46496`, `863623d`.
+- Isolated migration harness/verification: `cc145bb`, `3bde3be`.
+- Staff/public reads: `b423da9`; German search: `1c4b3db`; shared eligibility: `f2028d8`; DTOs: `69cede2`; controlled fixtures: `dd6960f`.
+- Final coverage/report: use `git log --oneline --grep="complete Section 02 verification"` to locate the 02.13 delivery commit containing this record.
+
+**Known limits and release safety**
+
+- Public/admin pages, forms, comparison, sitemap and metadata still consume their previous fixtures. There is no new inventory HTTP endpoint or live admin-to-database-to-public save flow. Persistence from the UI is Section 04; public integration is Sections 05-07/15. Images/references require Section 03.
+- Query tests run actual Prisma/database logic, but replace session retrieval and the shared-client binding in the test process. They test the real authorization assertion, not live cookies, expired-session handling or the deployed Better Auth endpoints. Those live checks must not be reported as newly proven here.
+- Stateful mutation rules remain Section 04: input precision before database rounding, realistic/time-relative values, publication completeness, legal transitions, immutable published slugs, optimistic conflict handling, version/history changes and authorized draft-only deletion. Schema columns/checks and the fixture import are not substitutes for those commands.
+- Only `test-section02-inventory-20261117` (`br-billowing-field-b9ay9qjo`) was migrated/tested. Neither normal dev nor Production has received this migration through this work. Do not apply it there or seed demo stock merely because this branch is merged; use a separately reviewed migration/release procedure when authorized. Never replace custom constraints with `db push` or reset a target to make tests pass.
+- No Production deployment, auth/provider reconfiguration, persistent demo seed, merge or new credentials were introduced. Existing Vercel configuration disables Git deployments; merging does not imply deployment.
+
+#### Full Section 02 guided user retest
+
+Use this guide **before merge**, then repeat it on merged `master` when notified. Post-merge confirmation is a separate required gate, not permission to start Section 03 immediately.
+
+**A. Prerequisites and target checks**
+
+1. Use a clean local working copy and the repository's existing pnpm/Node setup. Preserve unrelated edits; do not switch branches over them. Fetch/pull the latest `backend/vehicle-inventory` for pre-merge testing; use the approved merged `master` for post-merge testing. Reuse installed dependencies; only restore them with `pnpm install --frozen-lockfile` if missing.
+2. Keep the existing private `.env.inventory-test.local` ignored and uncommitted. In the Neon Console, select project `twilight-bread-36837209`, then child `test-section02-inventory-20261117`, database `kuraishi-car-dealer-db`. Confirm its direct endpoint is `ep-lucky-silence-b9323aux.c-7.eu-central-1.aws.neon.tech`; the private URL and `INVENTORY_TEST_EXPECTED_HOST` must match that exact endpoint. Never paste connection strings/passwords into chat.
+3. This child must have no existing vehicles. The suite refuses existing inventory rather than deleting it. **`pnpm test:inventory-db` is not read-only:** it deploys pending migrations to this guarded target and temporarily writes synthetic rows before rollback/cleanup. Do not run it against the dev parent, default/Production branch, Vercel or a production-mode process. Do not disable guards, reset/delete a branch or manually clear unfamiliar rows after a refusal.
+4. Do not repoint normal application URLs at the child to run these tests: the harness deliberately refuses configured application hosts. For the optional browser smoke checks below, independently confirm the normal app is using an approved **non-production** environment; stop and agree that setup first if its target is unknown. No private accounts are needed for the automated database suite.
+
+**B. Automated checks - run individually in PowerShell; stop on any failure**
+
+```powershell
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm build
+pnpm test:inventory-db
+pnpm exec prettier --check prisma\inventory-migration.test.ts prisma\inventory-queries.test.ts Notes\Checklist.md
+git diff --check
+git status --short
+```
+
+- Expected: **46 unit tests**, **17 database tests**, no failed/skipped tests, successful typecheck/lint/build and formatting/whitespace checks. The database runner's experimental module-mocking warning is expected.
+- To repeat the timezone-independence check, run the database command in a fresh PowerShell process with `$env:TZ='America/Los_Angeles'` set for that process only. The reported assistant run used that setting.
+- The database suite checks deploy/redeploy/drift, auth preservation during migration, positive/negative boundaries, Archived identity conflicts, staff/public access, search/order/pagination, DTO privacy, error propagation, CLI repeatability and rollback. Successful teardown confirms its known vehicle/import rows are gone. In the selected child only, Vehicle/VehicleChange should again be empty.
+- A build may regenerate the tracked route-types import in `next-env.d.ts`. Review that known generated-only difference against your pre-build copy; preserve unrelated edits and do not include build artifacts or private configuration in the merge. A failed cleanup/assertion is a failed retest, not permission to delete/reset data.
+- Do **not** run a separate `inventory:fixtures --apply`: persistent seeding is not approved and would make the next database run correctly refuse the nonempty child.
+
+**C. Manual regression smoke - only on the confirmed non-production app**
+
+1. Start `pnpm serve`; open the displayed local origin. Verify `/`, `/fahrzeuge`, an existing vehicle detail reached from the listing, and `/fahrzeugvergleich` render without new errors. Search for `skoda` or `Automatik`, open a result and use the existing comparison controls. Expected: the same fixture-based UI/search/comparison behavior, not newly persisted database inventory.
+2. Signed out, visit `/admin`, `/admin/vehicles`, `/admin/vehicles/new` and `/admin/accounts/new`. Expected: login redirect with the return path, no protected data displayed.
+3. With an existing private ordinary-staff test account, check the dashboard and inventory/new/edit screens render; `/admin/accounts/new` must remain denied. With the existing master-admin test account, check access to the account-creation screen. Do not create real accounts, save cars or rely on simulated success toasts as database proof.
+4. Stop your local server with Ctrl+C. Do not share credentials, auth-table contents or unredacted environment/error screenshots.
+
+**D. Retest record and gates**
+
+| Gate/check                                        | Assistant evidence for this milestone                            | User record                          |
+| ------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------ |
+| Correct isolated target; no private files in diff | Rechecked target before tests; private file remains ignored      | Pending: pass/fail                   |
+| Database tests and cleanup                        | 17 passed, 0 skipped; scoped teardown passed                     | Pending: pass/fail                   |
+| Unit/typecheck/lint/build/format/whitespace       | All passed; 46 unit tests, 46 static pages                       | Pending: pass/fail                   |
+| Browser regression/private-role smoke             | Not rerun by assistant for 02.13; no UI behavior changed         | Pending: pass/fail or blocked reason |
+| Pre-merge review/acceptance                       | Report ready; merge not performed                                | Pending: user approval               |
+| Post-merge `master` retest                        | Not applicable until approved merge; same guide must be reissued | Pending: user confirmation           |
+
+If anything fails, report only the check name, expected/actual result and a redacted error; keep the section open for repair. After successful pre-merge retest and explicit approval, merge through the agreed process without assuming deployment. **After merge, notify the user to repeat this full guide on `master` and wait for confirmation. Only then begin Section 03 / 03.01 on its section branch.**
 
 **Done when:** a real vehicle can be stored and read through the correct staff/public query boundaries, migrations are reproducible, and no UI has to invent database fields.
 
@@ -863,6 +950,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **02 / 02.01-02.12** is complete through inventory schema, guarded reads/search/eligibility, client-safe DTOs and a controlled repeatable fixture importer on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). Database checks target only isolated child `br-billowing-field-b9ay9qjo`, not dev or Production; all temporary fixture imports were removed. Public/admin pages remain fixture-backed until their integration sections.
-- **Next:** **Section 02 / 02.13**: finish the wider isolated integration checks and compile the Section 02 report with a full guided retest checklist. Follow the agreed pre-merge review and post-merge user testing gates; do not begin Section 03 before the user's test confirmation.
+- **Current:** Section **02 / 02.01-02.13 engineering work is complete** on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). Final verification: 17 isolated database tests, 46 unit tests, typecheck/lint/build/format/whitespace passed. Only the approved child was migrated/tested; temporary imports were removed. The Section 02 report and full guided user retest above are ready. Public/admin pages remain fixture-backed; no merge or deployment was performed.
+- **Next:** **Section 02 user pre-merge retest/review and explicit acceptance**, then the approved merge into `master`. Reissue the full section test guide after merge and wait for the user's post-merge confirmation before starting **Section 03 / 03.01**. Do not migrate normal dev/Production or leave a persistent demo seed without separate approval.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

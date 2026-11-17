@@ -486,7 +486,7 @@ Use this guide **before merge**, then repeat it on merged `master` when notified
 3. This child must have no existing vehicles. The suite refuses existing inventory rather than deleting it. **`pnpm test:inventory-db` is not read-only:** it deploys pending migrations to this guarded target and temporarily writes synthetic rows before rollback/cleanup. Do not run it against the dev parent, default/Production branch, Vercel or a production-mode process. Do not disable guards, reset/delete a branch or manually clear unfamiliar rows after a refusal.
 4. Do not repoint normal application URLs at the child to run these tests: the harness deliberately refuses configured application hosts. For the optional browser smoke checks below, independently confirm the normal app is using an approved **non-production** environment; stop and agree that setup first if its target is unknown. No private accounts are needed for the automated database suite.
 
-**B. Automated checks - run individually in PowerShell; stop on any failure**
+**B. Automated checks - run individually in PowerShell or Git Bash on Windows; stop on any failure**
 
 ```powershell
 pnpm test
@@ -494,12 +494,13 @@ pnpm typecheck
 pnpm lint
 pnpm build
 pnpm test:inventory-db
-pnpm exec prettier --check prisma\inventory-migration.test.ts prisma\inventory-queries.test.ts Notes\Checklist.md
+pnpm exec prettier --check 'prisma\inventory-migration.test.ts' 'prisma\inventory-queries.test.ts' 'Notes\Checklist.md'
 git diff --check
 git status --short
 ```
 
 - Expected: **46 unit tests**, **17 database tests**, no failed/skipped tests, successful typecheck/lint/build and formatting/whitespace checks. The database runner's experimental module-mocking warning is expected.
+- Keep Windows path arguments quoted as shown. Git Bash treats unquoted backslashes as escapes, turning `prisma\inventory-migration.test.ts` into `prismainventory-migration.test.ts`. Prettier's "No files matching the pattern" errors mean that check failed, even if its final line says all matched files use the correct style.
 - To repeat the timezone-independence check, run the database command in a fresh PowerShell process with `$env:TZ='America/Los_Angeles'` set for that process only. The reported assistant run used that setting.
 - The database suite checks deploy/redeploy/drift, auth preservation during migration, positive/negative boundaries, Archived identity conflicts, staff/public access, search/order/pagination, DTO privacy, error propagation, CLI repeatability and rollback. Successful teardown confirms its known vehicle/import rows are gone. In the selected child only, Vehicle/VehicleChange should again be empty.
 - A build may regenerate the tracked route-types import in `next-env.d.ts`. Review that known generated-only difference against your pre-build copy; preserve unrelated edits and do not include build artifacts or private configuration in the merge. A failed cleanup/assertion is a failed retest, not permission to delete/reset data.
@@ -514,16 +515,18 @@ git status --short
 
 **D. Retest record and gates**
 
-| Gate/check                                        | Assistant evidence for this milestone                            | User record                          |
-| ------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------ |
-| Correct isolated target; no private files in diff | Rechecked target before tests; private file remains ignored      | Pending: pass/fail                   |
-| Database tests and cleanup                        | 17 passed, 0 skipped; scoped teardown passed                     | Pending: pass/fail                   |
-| Unit/typecheck/lint/build/format/whitespace       | All passed; 46 unit tests, 46 static pages                       | Pending: pass/fail                   |
-| Browser regression/private-role smoke             | Not rerun by assistant for 02.13; no UI behavior changed         | Pending: pass/fail or blocked reason |
-| Pre-merge review/acceptance                       | Report ready; merge not performed                                | Pending: user approval               |
-| Post-merge `master` retest                        | Not applicable until approved merge; same guide must be reissued | Pending: user confirmation           |
+| Gate/check                                        | Assistant evidence for this milestone                            | User record                                               |
+| ------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------- |
+| Correct isolated target; no private files in diff | Rechecked target before tests; private file remains ignored      | Pending: pass/fail                                        |
+| Database tests and cleanup                        | 17 passed, 0 skipped; scoped teardown passed                     | Passed: user screenshot, 17 passed / 0 failed / 0 skipped |
+| Unit/typecheck/lint/build/format/whitespace       | All passed; 46 unit tests, 46 static pages                       | Pending: pass/fail                                        |
+| Browser regression/private-role smoke             | Not rerun by assistant for 02.13; no UI behavior changed         | Pending: pass/fail or blocked reason                      |
+| Pre-merge review/acceptance                       | Report ready; merge not performed                                | Pending: user approval                                    |
+| Post-merge `master` retest                        | Not applicable until approved merge; same guide must be reissued | Pending: user confirmation                                |
 
 If anything fails, report only the check name, expected/actual result and a redacted error; keep the section open for repair. After successful pre-merge retest and explicit approval, merge through the agreed process without assuming deployment. **After merge, notify the user to repeat this full guide on `master` and wait for confirmation. Only then begin Section 03 / 03.01 on its section branch.**
+
+**User retest follow-up - 2026-11-17:** the supplied terminal screenshot confirms 17 database tests passed. Its formatting command failed because unquoted Windows paths were pasted into Git Bash, not because of an inventory-code failure. The quoted command above was verified in Git Bash and PowerShell. The sole local `next-env.d.ts` difference is the expected build-generated route-types import; it was left untouched and excluded from this documentation correction. Rerun formatting with quoted paths, then finish the remaining automated/manual checks and explicit pre-merge acceptance; those gates are not inferred from the screenshot.
 
 **Done when:** a real vehicle can be stored and read through the correct staff/public query boundaries, migrations are reproducible, and no UI has to invent database fields.
 
@@ -951,5 +954,5 @@ If anything fails, report only the check name, expected/actual result and a reda
 ## Current step and next action
 
 - **Current:** Section **02 / 02.01-02.13 engineering work is complete** on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). Final verification: 17 isolated database tests, 46 unit tests, typecheck/lint/build/format/whitespace passed. Only the approved child was migrated/tested; temporary imports were removed. The Section 02 report and full guided user retest above are ready. Public/admin pages remain fixture-backed; no merge or deployment was performed.
-- **Next:** **Section 02 user pre-merge retest/review and explicit acceptance**, then the approved merge into `master`. Reissue the full section test guide after merge and wait for the user's post-merge confirmation before starting **Section 03 / 03.01**. Do not migrate normal dev/Production or leave a persistent demo seed without separate approval.
+- **Next:** **Section 02 user pre-merge retest/review and explicit acceptance**: the user's database rerun passed all 17 tests; rerun formatting using the shell-safe quoted paths above and complete the remaining checks. Then perform only an explicitly approved merge into `master`. Reissue the full section test guide after merge and wait for the user's post-merge confirmation before starting **Section 03 / 03.01**. Do not migrate normal dev/Production or leave a persistent demo seed without separate approval.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

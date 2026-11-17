@@ -2,8 +2,18 @@ import "server-only";
 
 import { z } from "zod";
 
-import type { Prisma } from "../generated/prisma/client.ts";
+import {
+  Prisma,
+  VehicleBodyType,
+  VehicleFuelType,
+  VehicleTransmissionType,
+} from "../generated/prisma/client.ts";
 import { prisma } from "./db.ts";
+import {
+  formatBodyType,
+  formatFuelType,
+  formatTransmission,
+} from "./formatters.ts";
 import {
   inventoryIdSchema,
   inventoryPaginationInputSchema,
@@ -12,6 +22,7 @@ import {
   vehicleStatusSchema,
 } from "./inventory-validation.ts";
 import { requireSession } from "./session.ts";
+import { getVehicleSearchTerms } from "./vehicle-filters.ts";
 
 const publicVehicleSelect = {
   id: true,
@@ -85,6 +96,9 @@ const publicOrder = [
 const staffListSchema = inventoryPaginationInputSchema.extend({
   status: vehicleStatusSchema.optional(),
 });
+const publicListSchema = inventoryPaginationInputSchema.extend({
+  search: z.string().default(""),
+});
 
 const limitSchema = inventoryPaginationInputSchema.shape.pageSize.unwrap();
 const featuredInputSchema = z.strictObject({ limit: limitSchema.default(8) });
@@ -107,6 +121,77 @@ function projectPublicVehicle(row: PublicVehicleRow) {
     isFeatured: isAvailable && vehicle.isFeatured,
     hasPassedInspection,
   };
+}
+
+function searchLabel(
+  column: Prisma.Sql,
+  values: string[],
+  format: (value: string) => string,
+) {
+  return Prisma.sql`CASE ${column}::text
+    ${Prisma.join(
+      values.map((value) => Prisma.sql`WHEN ${value} THEN ${format(value)}`),
+      " ",
+    )}
+    ELSE '' END`;
+}
+
+// Match filterVehicles' German lowercase/NFD/combining-mark rules, not stemming or transliteration.
+const publicSearchText = Prisma.sql`regexp_replace(
+  normalize(lower(concat_ws(' ',
+    "make", "model", "variant",
+    "bodyType"::text,
+    ${searchLabel(Prisma.sql`"bodyType"`, Object.values(VehicleBodyType), formatBodyType)},
+    "fuelType"::text,
+    ${searchLabel(Prisma.sql`"fuelType"`, Object.values(VehicleFuelType), formatFuelType)},
+    "transmissionType"::text,
+    ${searchLabel(Prisma.sql`"transmissionType"`, Object.values(VehicleTransmissionType), formatTransmission)},
+    "exteriorColor", "location", "firstRegistration",
+    array_to_string("features", ' '), array_to_string("labels", ' ')
+  ) COLLATE "de-x-icu"), NFD),
+  ${"[\u0300-\u036f]"}, '', 'g'
+)`;
+
+async function searchPublicVehicles(
+  terms: string[],
+  skip: number,
+  take: number,
+) {
+  const where = Prisma.sql`
+    "status"::text IN (${Prisma.join(catalogEligibility.status.in)})
+    AND "inspectionStatus"::text = ${catalogEligibility.inspectionStatus}
+    AND NOT EXISTS (
+      SELECT 1 FROM unnest(${terms}::text[]) AS term(value)
+      WHERE strpos(${publicSearchText}, term.value) = 0
+    )
+  `;
+  return prisma.$transaction(
+    async (tx) => {
+      const matches = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+        SELECT "id" FROM "Vehicle" WHERE ${where}
+        ORDER BY "isFeatured" DESC, "updatedAt" DESC, "id" ASC
+        LIMIT ${take} OFFSET ${skip}
+      `);
+      const [{ total }] = await tx.$queryRaw<{ total: number }[]>(
+        Prisma.sql`SELECT count(*)::int AS total FROM "Vehicle" WHERE ${where}`,
+      );
+      const rows = matches.length
+        ? await tx.vehicle.findMany({
+            where: {
+              AND: [
+                catalogEligibility,
+                { id: { in: matches.map(({ id }) => id) } },
+              ],
+            },
+            select: publicVehicleSelect,
+            orderBy: publicOrder,
+            take,
+          })
+        : [];
+      return [rows, total] as const;
+    },
+    { isolationLevel: "RepeatableRead" },
+  );
 }
 
 export async function listStaffVehicles(input: unknown = {}) {
@@ -146,20 +231,25 @@ export async function getStaffVehicle(id: unknown) {
 }
 
 export async function listPublicVehicles(input: unknown = {}) {
-  const { page, pageSize, skip, take } = inventoryPaginationSchema.parse(input);
-  const [rows, total] = await prisma.$transaction(
-    [
-      prisma.vehicle.findMany({
-        where: catalogEligibility,
-        select: publicVehicleSelect,
-        orderBy: publicOrder,
-        skip,
-        take,
-      }),
-      prisma.vehicle.count({ where: catalogEligibility }),
-    ],
-    { isolationLevel: "RepeatableRead" },
-  );
+  const { search, ...pageInput } = publicListSchema.parse(input);
+  const { page, pageSize, skip, take } =
+    inventoryPaginationSchema.parse(pageInput);
+  const terms = getVehicleSearchTerms(search);
+  const [rows, total] = terms.length
+    ? await searchPublicVehicles(terms, skip, take)
+    : await prisma.$transaction(
+        [
+          prisma.vehicle.findMany({
+            where: catalogEligibility,
+            select: publicVehicleSelect,
+            orderBy: publicOrder,
+            skip,
+            take,
+          }),
+          prisma.vehicle.count({ where: catalogEligibility }),
+        ],
+        { isolationLevel: "RepeatableRead" },
+      );
   return {
     items: rows.map(projectPublicVehicle),
     total,

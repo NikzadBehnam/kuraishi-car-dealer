@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -6,6 +5,35 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum VehicleCondition {
+  used
+  demonstrator
+  annual
+}
+
+model Dealer {
+  id       String    @id @default(cuid())
+  name     String
+  vehicles Vehicle[]
+}
+
+model Vehicle {
+  id            String            @id @default(cuid())
+  slug          String            @unique
+  stockNumber   String            @unique
+  make          String
+  model         String
+  variant       String?
+  description   String?
+  location      String?
+  exteriorColor String?
+  condition     VehicleCondition?
+  dealerId      String
+  dealer        Dealer            @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+
+  @@index([dealerId])
 }
 
 model User {

@@ -1,53 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
 import { after, before, describe, it } from "node:test";
 
-import { PrismaNeon } from "@prisma/adapter-neon";
-import { neonConfig } from "@neondatabase/serverless";
-import ws from "ws";
+import { Prisma } from "../src/generated/prisma/client.ts";
+import { createInventoryTestDatabase } from "./inventory-test-client.ts";
 
-import { Prisma, PrismaClient } from "../src/generated/prisma/client.ts";
-
-neonConfig.webSocketConstructor = ws;
-
-if (existsSync(".env.local")) {
-  process.loadEnvFile(".env.local");
-}
-
-const connectionString = process.env.INVENTORY_TEST_DATABASE_URL;
-const expectedHost = process.env.INVENTORY_TEST_EXPECTED_HOST;
-
-assert.ok(connectionString, "Provide an explicit isolated inventory-test URL.");
-assert.ok(
-  expectedHost,
-  "Provide the control-plane-verified test endpoint host.",
-);
-const target = new URL(connectionString);
-assert.equal(target.hostname, expectedHost, "Unexpected test database host.");
-assert.match(
-  target.hostname,
-  /^ep-[a-z0-9-]+\.c-\d+\.[a-z0-9-]+\.aws\.neon\.tech$/,
-);
-assert.equal(
-  target.hostname.includes("-pooler."),
-  false,
-  "Use a direct connection.",
-);
-for (const configured of [process.env.DATABASE_URL, process.env.DIRECT_URL]) {
-  if (configured) {
-    assert.notEqual(
-      new URL(configured).hostname.replace("-pooler.", "."),
-      target.hostname,
-      "Refusing to test against the configured application database.",
-    );
-  }
-}
-
-const prisma = new PrismaClient({
-  adapter: new PrismaNeon({ connectionString }),
-});
+const { prisma, connectionString } = createInventoryTestDatabase();
 
 function runPrisma(args: string[]) {
   const result = spawnSync(

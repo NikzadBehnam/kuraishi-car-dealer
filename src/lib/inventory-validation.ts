@@ -34,11 +34,12 @@ export const inventoryPolicyUpdateSchema = inventoryPolicyStateSchema
     message: "Provide at least one inventory policy change.",
   });
 
-export const inventoryPaginationSchema = z
-  .strictObject({
-    page: z.number().int().min(1).default(1),
-    pageSize: z.number().int().min(1).max(100).default(8),
-  })
+export const inventoryPaginationInputSchema = z.strictObject({
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(100).default(8),
+});
+
+export const inventoryPaginationSchema = inventoryPaginationInputSchema
   .transform(({ page, pageSize }) => ({
     page,
     pageSize,
@@ -48,3 +49,9 @@ export const inventoryPaginationSchema = z
   .refine(({ skip }) => Number.isSafeInteger(skip) && skip <= 2_147_483_647, {
     message: "Pagination offset is too large.",
   });
+
+export const inventorySlugSchema = z
+  .string()
+  .min(1, "Vehicle slug is required.")
+  .max(200, "Vehicle slug is too long.")
+  .regex(/^[\p{L}\p{N}]+(?:[-_][\p{L}\p{N}]+)*$/u, "Invalid vehicle slug.");

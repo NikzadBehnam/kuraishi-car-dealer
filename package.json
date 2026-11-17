@@ -14,7 +14,7 @@
     "format:check": "prettier --check .",
     "test": "node --test --test-isolation=none --experimental-strip-types src/**/*.test.ts",
     "test:watch": "node --test --watch --test-isolation=none --experimental-strip-types src/**/*.test.ts",
-    "test:inventory-db": "node --env-file=.env.inventory-test.local --test --test-isolation=none --experimental-strip-types prisma\\inventory-migration.test.ts"
+    "test:inventory-db": "node --env-file=.env.inventory-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\inventory-migration.test.ts prisma\\inventory-queries.test.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "1.7.23",

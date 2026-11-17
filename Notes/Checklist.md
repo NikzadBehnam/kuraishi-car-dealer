@@ -281,7 +281,7 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - [x] **02.03** Persist first registration, mileage, power kW, owner count, partial VIN, fuel type, transmission, body type, optional consumption, and optional CO2 emission. Define units and whether PS is derived from kW rather than independently editable inconsistent data. _Source fields/enums added with explicit units and nullable incomplete-draft values. No independent PS column. Database checks/migration/round-trip verification remain 02.05/02.07/02.13; UI/query mapping remains 02.11/04._
 - [x] **02.04** Persist equipment/features, display labels, status, inspection state, featured/availability decisions, acquisition date, publication timestamp, reservation expiry if used, sold timestamp, and creation/update timestamps. _Source fields, actor relations, version and minimal vehicle-change history added. Availability remains derived. Schema/type checks do not replace the 02.07 migration or transactional persistence tests._
 - [x] **02.05** Add appropriate enums/constraints and indexes for actual queries: unique identifiers, public eligibility, updated-date ordering, status filtering, and dealer relationships. Do not make six-character VIN fragments globally unique unless explicitly justified. _Indexes and additive migration SQL authored, including CHECK constraints Prisma cannot express. Generated offline against the unchanged auth baseline; no migration has been applied. Executable verification on isolated Neon remains the explicit 02.07 gate._
-- [ ] **02.06** Decide which makes/models/options need reference tables and which can remain validated values. Do not create a taxonomy management system just because sample data has arrays.
+- [x] **02.06** Decide which makes/models/options need reference tables and which can remain validated values. Do not create a taxonomy management system just because sample data has arrays. _Approved 2026-11-17: validated make/model text and existing option enums; no new reference tables or taxonomy UI._
 - [ ] **02.07** Create and test the Prisma migration against development/test Neon, preserving all existing auth tables. Define media and inquiry relationship deletion rules before dependent migrations are finalized.
 
 #### Implementation 02.01: vehicle identity and dealership relation
@@ -332,6 +332,14 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 - Prisma does not model these CHECK constraints; retain/review the custom SQL on future migrations. Database checks reject invalid state rather than silently normalizing it. Actual normalization and atomic lifecycle effects remain the Section 04 server command's responsibility.
 - Time-relative rules (future reservation when set, realistic nonfuture first registration), publication completeness, old/new transition legality, slug immutability and draft-only deletion require stateful server validation. Do not claim CHECK constraints enforce them.
 - Verification: Prisma validation/client generation, TypeScript typecheck, checklist formatting and whitespace checks passed. Static migration review confirmed transaction wrapping and inventory-only ALTER statements, with no DROP/TRUNCATE/data writes. SQL execution/constraint rejection tests remain pending 02.07 on a confirmed isolated target; this is not a claim that the unapplied migration has passed database tests.
+
+#### Approved decision 02.06: reference-data scope
+
+- The user approved validated text for make/model and the existing fuel/transmission/body/condition/consumption-unit enums. The source schema already implements that shape; no additional reference tables or migration changes are required.
+- Trim/validate make/model on the server and reject blank values; database checks already reject blank identity text. Do not force names into uppercase or strip meaningful accents. German case/accent-insensitive search remains the separate 02.09 contract.
+- Features and labels remain vehicle-owned string arrays, not global taxonomy tables. Existing selection suggestions may remain UI conveniences, not proof that arbitrary raw form values are trusted.
+- No manufacturer/model CRUD, reference-data synchronization, external catalog provider or taxonomy management interface is introduced. If later requested, design it explicitly without breaking existing inventory.
+- Verification: explicit user approval; checked that current source fields are `make String`, `model String`, the agreed option enums and string arrays, with no make/model reference tables. Documentation-only decision; no extra application or database validation run is needed.
 
 **Commit 2: `feat: add staff and public inventory queries`**
 
@@ -770,6 +778,6 @@ Approved by the user on 2026-11-16. These are maximum permissions for each statu
 
 ## Current step and next action
 
-- **Current:** Section **02 / 02.01-02.05** defines source models, query indexes and unapplied inventory migration SQL on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). No inventory migration or live database/UI integration has run.
-- **Next:** **Section 02 / 02.06**: approve reference-data scope. Then verify media/inquiry deletion boundaries and an isolated development/test Neon target before applying/testing the combined migration at **02.07**.
+- **Current:** Section **02 / 02.01-02.06** defines source models, query indexes, unapplied migration SQL and approved reference-data scope on `backend/vehicle-inventory`, based on merged Section 01 (`a74b574`). No inventory migration or live database/UI integration has run.
+- **Next:** **Section 02 / 02.07**: confirm media/inquiry deletion boundaries and an isolated development/test Neon target before applying/testing the combined migration. Production remains out of scope.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

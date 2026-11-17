@@ -15,6 +15,7 @@ import {
   AuthorizationError,
 } from "../src/lib/auth-access.ts";
 import type { AuthSession } from "../src/lib/auth-access.ts";
+import { serializePublicVehicle } from "../src/lib/inventory-dto.ts";
 import {
   getPublicVehicleEligibilitySql,
   getPublicVehicleWhere,
@@ -32,6 +33,9 @@ const ids = ["a", "b", "c", "d", "e", "f", "g", "h"].map(
 );
 const searchId = (id: string) => `search-${prefix}-${id.padStart(2, "0")}`;
 const searchIds = vehicles.map(({ id }) => searchId(id));
+const serializationIds = ["public", "draft"].map(
+  (kind) => `dto-${kind}-${prefix}`,
+);
 const slug = (index: number) =>
   index === 7 ? `query-\u0161koda-${ids[index]}` : `query-${ids[index]}`;
 let session: AuthSession | null = null;
@@ -129,14 +133,14 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     try {
       await prisma.$transaction(async (tx) => {
         await tx.vehicle.deleteMany({
-          where: { id: { in: [...ids, ...searchIds] } },
+          where: { id: { in: [...ids, ...searchIds, ...serializationIds] } },
         });
         await tx.dealer.deleteMany({ where: { id: dealerId } });
         await tx.user.deleteMany({ where: { id: actorId } });
       });
       assert.equal(
         await prisma.vehicle.count({
-          where: { id: { in: [...ids, ...searchIds] } },
+          where: { id: { in: [...ids, ...searchIds, ...serializationIds] } },
         }),
         0,
       );
@@ -168,7 +172,174 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       );
       const detail = await queries.getStaffVehicle(ids[5]);
       assert.equal(detail?.stockNumber, `TEST-${ids[5].toUpperCase()}`);
-      assert.equal(detail?.marginEstimate?.toFixed(2), "2500.10");
+      assert.equal(detail?.marginEstimate, "2500.10");
+    }
+  });
+
+  it("serializes every query as plain DTOs with exact money, dates and nullable metrics", async () => {
+    session = { user: { role: "user" } };
+    const instant = new Date("2026-10-25T01:30:45.123Z");
+    try {
+      await prisma.vehicle.createMany({
+        data: serializationIds.map((id, index) => ({
+          id,
+          slug: id,
+          stockNumber: id.toUpperCase(),
+          make: "DTO",
+          model: "Serialization",
+          dealerId,
+          createdById: actorId,
+          updatedById: actorId,
+          acquisitionDate: new Date("2026-03-29T00:00:00.000Z"),
+          createdAt: instant,
+          updatedAt: instant,
+          ...(index === 0
+            ? {
+                status: "published",
+                inspectionStatus: "passed",
+                publishedAt: instant,
+                reservedUntil: new Date("2026-12-01T22:15:00.000Z"),
+                isFeatured: true,
+                price: new Prisma.Decimal("9999999999.99"),
+                marginEstimate: new Prisma.Decimal("0.00"),
+                powerKw: new Prisma.Decimal("132.01"),
+                consumption: new Prisma.Decimal("5.20"),
+                consumptionUnit: "l_per_100_km",
+                fuelType: "petrol",
+                bodyType: "suv",
+                mileage: 0,
+                ownerCount: 0,
+                co2Emission: 0,
+                firstRegistration: "2026-03",
+                features: ["Navigation"],
+                labels: ["Example"],
+              }
+            : {}),
+        })),
+      });
+      const [
+        staffList,
+        staff,
+        draft,
+        catalog,
+        detail,
+        comparison,
+        metadata,
+        sitemap,
+        inquiry,
+        featured,
+        related,
+        sold,
+      ] = await Promise.all([
+        queries.listStaffVehicles({ pageSize: 100 }),
+        queries.getStaffVehicle(serializationIds[0]),
+        queries.getStaffVehicle(serializationIds[1]),
+        queries.listPublicVehicles({ search: "DTO Serialization" }),
+        queries.getPublicVehicle(serializationIds[0]),
+        queries.getPublicComparisonVehicle(serializationIds[0]),
+        queries.getPublicVehicleMetadata(serializationIds[0]),
+        queries.listPublicVehicleSitemapEntries({ pageSize: 100 }),
+        queries.getPublicVehicleForInquiry(serializationIds[0]),
+        queries.getFeaturedVehicles(),
+        queries.getRelatedVehicles({ id: serializationIds[0] }),
+        queries.getStaffVehicle(ids[4]),
+      ]);
+      for (const result of [
+        staffList,
+        staff,
+        draft,
+        catalog,
+        detail,
+        comparison,
+        metadata,
+        sitemap,
+        inquiry,
+        featured,
+        related,
+        sold,
+      ]) {
+        assert.deepEqual(JSON.parse(JSON.stringify(result)), result);
+      }
+      assert.ok(staff && draft && detail && comparison && metadata && sold);
+      assert.equal(staff.price, "9999999999.99");
+      assert.equal(staff.marginEstimate, "0.00");
+      assert.equal(staff.powerKw, 132.01);
+      assert.equal(staff.powerPs, 179);
+      assert.equal(staff.consumption, 5.2);
+      assert.equal(staff.consumptionUnit, "l_per_100_km");
+      assert.equal(staff.mileage, 0);
+      assert.equal(staff.ownerCount, 0);
+      assert.equal(staff.co2Emission, 0);
+      assert.equal(staff.firstRegistration, "2026-03");
+      assert.equal(staff.acquisitionDate, "2026-03-29");
+      assert.equal(staff.createdAt, instant.toISOString());
+      assert.equal(staff.updatedAt, instant.toISOString());
+      assert.equal(staff.publishedAt, instant.toISOString());
+      assert.equal(staff.reservedUntil, "2026-12-01T22:15:00.000Z");
+      assert.equal(staff.soldAt, null);
+      assert.equal(sold.soldAt, "2026-01-01T10:00:00.000Z");
+      assert.equal(detail.price, staff.price);
+      assert.equal(comparison.price, staff.price);
+      assert.equal(metadata.price, staff.price);
+      assert.equal(catalog.items[0]?.price, staff.price);
+      assert.equal(metadata.updatedAt, instant.toISOString());
+      assert.deepEqual(detail.features, ["Navigation"]);
+      assert.deepEqual(detail.labels, ["Example"]);
+      for (const field of [
+        "price",
+        "marginEstimate",
+        "powerKw",
+        "powerPs",
+        "consumption",
+        "consumptionUnit",
+        "mileage",
+        "ownerCount",
+        "co2Emission",
+        "firstRegistration",
+        "publishedAt",
+        "reservedUntil",
+        "soldAt",
+        "variant",
+        "description",
+        "fuelType",
+        "transmissionType",
+        "bodyType",
+        "exteriorColor",
+        "condition",
+        "location",
+        "vinLastSix",
+      ] as const) {
+        assert.equal(draft[field], null, field);
+      }
+      assert.deepEqual(draft.features, []);
+      assert.deepEqual(draft.labels, []);
+      const rawDraft = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: serializationIds[1] },
+      });
+      assert.throws(
+        () => serializePublicVehicle(rawDraft),
+        /ineligible public inventory/,
+      );
+      const rawStaff = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: serializationIds[0] },
+      });
+      const projected = serializePublicVehicle(rawStaff);
+      assert.deepEqual(projected, detail);
+      for (const field of [
+        "stockNumber",
+        "marginEstimate",
+        "vinLastSix",
+        "inspectionStatus",
+        "createdById",
+        "updatedById",
+        "version",
+      ]) {
+        assert.equal(Object.hasOwn(projected, field), false, field);
+      }
+    } finally {
+      await prisma.vehicle.deleteMany({
+        where: { id: { in: serializationIds } },
+      });
     }
   });
 
@@ -484,8 +655,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       [ids[0], ids[1], ids[2], ids[3], ids[4], ids[7]],
     );
     for (const entry of pages) {
-      assert.ok(entry.updatedAt instanceof Date);
-      assert.equal(entry.updatedAt.toISOString(), "2026-01-01T10:00:00.000Z");
+      assert.equal(entry.updatedAt, "2026-01-01T10:00:00.000Z");
       assert.equal(entry.slug, slug(ids.indexOf(entry.id)));
       assert.deepEqual(Object.keys(entry).toSorted(), [
         "id",

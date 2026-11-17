@@ -8,12 +8,27 @@ import {
   VehicleFuelType,
   VehicleTransmissionType,
 } from "../generated/prisma/client.ts";
+import type {
+  InventoryPageDTO,
+  PublicInventoryVehicleDTO,
+  PublicVehicleInquiryDTO,
+  PublicVehicleMetadataDTO,
+  PublicVehicleSitemapEntryDTO,
+  StaffInventoryVehicleDTO,
+} from "../types/inventory.ts";
 import { prisma } from "./db.ts";
 import {
   formatBodyType,
   formatFuelType,
   formatTransmission,
 } from "./formatters.ts";
+import {
+  publicVehicleSelect,
+  serializePublicVehicle,
+  serializeStaffVehicle,
+  serializeVehicleMetadata,
+  staffVehicleSelect,
+} from "./inventory-dto.ts";
 import {
   getPublicVehicleEligibilitySql,
   getPublicVehicleWhere,
@@ -28,51 +43,6 @@ import {
 } from "./inventory-validation.ts";
 import { requireSession } from "./session.ts";
 import { getVehicleSearchTerms } from "./vehicle-filters.ts";
-
-const publicVehicleSelect = {
-  id: true,
-  slug: true,
-  make: true,
-  model: true,
-  variant: true,
-  description: true,
-  price: true,
-  firstRegistration: true,
-  mileage: true,
-  powerKw: true,
-  ownerCount: true,
-  fuelType: true,
-  transmissionType: true,
-  bodyType: true,
-  exteriorColor: true,
-  condition: true,
-  consumption: true,
-  consumptionUnit: true,
-  co2Emission: true,
-  features: true,
-  labels: true,
-  status: true,
-  inspectionStatus: true,
-  isFeatured: true,
-  dealerId: true,
-  location: true,
-  publishedAt: true,
-  updatedAt: true,
-} satisfies Prisma.VehicleSelect;
-
-const staffVehicleSelect = {
-  ...publicVehicleSelect,
-  stockNumber: true,
-  marginEstimate: true,
-  vinLastSix: true,
-  acquisitionDate: true,
-  reservedUntil: true,
-  soldAt: true,
-  createdAt: true,
-  createdById: true,
-  updatedById: true,
-  version: true,
-} satisfies Prisma.VehicleSelect;
 
 const staffOrder = [
   { updatedAt: "desc" },
@@ -97,23 +67,6 @@ const relatedInputSchema = z.strictObject({
   id: inventoryIdSchema,
   limit: limitSchema.default(3),
 });
-
-type PublicVehicleRow = Prisma.VehicleGetPayload<{
-  select: typeof publicVehicleSelect;
-}>;
-
-function projectPublicVehicle(row: PublicVehicleRow) {
-  const visibility = getPublicVehicleVisibility(row);
-  const { inspectionStatus, ...vehicle } = row;
-  const hasPassedInspection = inspectionStatus === "passed";
-  const isAvailable = vehicle.status === "published" && hasPassedInspection;
-  return {
-    ...vehicle,
-    isAvailable,
-    isFeatured: visibility.featured,
-    hasPassedInspection,
-  };
-}
 
 function searchLabel(
   column: Prisma.Sql,
@@ -185,7 +138,9 @@ async function searchPublicVehicles(
   );
 }
 
-export async function listStaffVehicles(input: unknown = {}) {
+export async function listStaffVehicles(
+  input: unknown = {},
+): Promise<InventoryPageDTO<StaffInventoryVehicleDTO>> {
   await requireSession();
   const { status, ...pageInput } = staffListSchema.parse(input);
   const { page, pageSize, skip, take } =
@@ -205,7 +160,7 @@ export async function listStaffVehicles(input: unknown = {}) {
     { isolationLevel: "RepeatableRead" },
   );
   return {
-    items,
+    items: items.map(serializeStaffVehicle),
     total,
     page,
     pageSize,
@@ -213,15 +168,20 @@ export async function listStaffVehicles(input: unknown = {}) {
   };
 }
 
-export async function getStaffVehicle(id: unknown) {
+export async function getStaffVehicle(
+  id: unknown,
+): Promise<StaffInventoryVehicleDTO | null> {
   await requireSession();
-  return prisma.vehicle.findUnique({
+  const row = await prisma.vehicle.findUnique({
     where: { id: inventoryIdSchema.parse(id) },
     select: staffVehicleSelect,
   });
+  return row ? serializeStaffVehicle(row) : null;
 }
 
-export async function listPublicVehicles(input: unknown = {}) {
+export async function listPublicVehicles(
+  input: unknown = {},
+): Promise<InventoryPageDTO<PublicInventoryVehicleDTO>> {
   const { search, ...pageInput } = publicListSchema.parse(input);
   const { page, pageSize, skip, take } =
     inventoryPaginationSchema.parse(pageInput);
@@ -243,7 +203,7 @@ export async function listPublicVehicles(input: unknown = {}) {
         { isolationLevel: "RepeatableRead" },
       );
   return {
-    items: rows.map(projectPublicVehicle),
+    items: rows.map(serializePublicVehicle),
     total,
     page,
     pageSize,
@@ -251,7 +211,9 @@ export async function listPublicVehicles(input: unknown = {}) {
   };
 }
 
-export async function getPublicVehicle(slug: unknown) {
+export async function getPublicVehicle(
+  slug: unknown,
+): Promise<PublicInventoryVehicleDTO | null> {
   const row = await prisma.vehicle.findFirst({
     where: {
       AND: [
@@ -261,10 +223,12 @@ export async function getPublicVehicle(slug: unknown) {
     },
     select: publicVehicleSelect,
   });
-  return row ? projectPublicVehicle(row) : null;
+  return row ? serializePublicVehicle(row) : null;
 }
 
-export async function getPublicComparisonVehicle(id: unknown) {
+export async function getPublicComparisonVehicle(
+  id: unknown,
+): Promise<PublicInventoryVehicleDTO | null> {
   const row = await prisma.vehicle.findFirst({
     where: {
       AND: [
@@ -274,11 +238,13 @@ export async function getPublicComparisonVehicle(id: unknown) {
     },
     select: publicVehicleSelect,
   });
-  return row ? projectPublicVehicle(row) : null;
+  return row ? serializePublicVehicle(row) : null;
 }
 
-export async function getPublicVehicleMetadata(slug: unknown) {
-  return prisma.vehicle.findFirst({
+export async function getPublicVehicleMetadata(
+  slug: unknown,
+): Promise<PublicVehicleMetadataDTO | null> {
+  const row = await prisma.vehicle.findFirst({
     where: {
       AND: [
         getPublicVehicleWhere("detail"),
@@ -297,9 +263,12 @@ export async function getPublicVehicleMetadata(slug: unknown) {
       updatedAt: true,
     },
   });
+  return row ? serializeVehicleMetadata(row) : null;
 }
 
-export async function listPublicVehicleSitemapEntries(input: unknown = {}) {
+export async function listPublicVehicleSitemapEntries(
+  input: unknown = {},
+): Promise<InventoryPageDTO<PublicVehicleSitemapEntryDTO>> {
   const { page, pageSize, skip, take } = inventoryPaginationSchema.parse(input);
   const where = getPublicVehicleWhere("sitemap");
   const [items, total] = await prisma.$transaction(
@@ -316,7 +285,11 @@ export async function listPublicVehicleSitemapEntries(input: unknown = {}) {
     { isolationLevel: "RepeatableRead" },
   );
   return {
-    items,
+    items: items.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      updatedAt: row.updatedAt.toISOString(),
+    })),
     total,
     page,
     pageSize,
@@ -324,7 +297,9 @@ export async function listPublicVehicleSitemapEntries(input: unknown = {}) {
   };
 }
 
-export async function getPublicVehicleForInquiry(slug: unknown) {
+export async function getPublicVehicleForInquiry(
+  slug: unknown,
+): Promise<PublicVehicleInquiryDTO | null> {
   const row = await prisma.vehicle.findFirst({
     where: {
       AND: [
@@ -346,16 +321,21 @@ export async function getPublicVehicleForInquiry(slug: unknown) {
   if (!row) {
     return null;
   }
-  const { inspectionStatus, isFeatured, ...vehicle } = row;
+  const { status, inspectionStatus, isFeatured, ...vehicle } = row;
+  if (status !== "published" && status !== "reserved") {
+    return null;
+  }
   const inquiryType = getPublicVehicleVisibility({
-    status: vehicle.status,
+    status,
     inspectionStatus,
     isFeatured,
   }).inquiry;
-  return inquiryType ? { ...vehicle, inquiryType } : null;
+  return inquiryType ? { ...vehicle, status, inquiryType } : null;
 }
 
-export async function getFeaturedVehicles(input: unknown = {}) {
+export async function getFeaturedVehicles(
+  input: unknown = {},
+): Promise<PublicInventoryVehicleDTO[]> {
   const { limit } = featuredInputSchema.parse(input);
   const rows = await prisma.vehicle.findMany({
     where: getPublicVehicleWhere("featured"),
@@ -363,10 +343,12 @@ export async function getFeaturedVehicles(input: unknown = {}) {
     orderBy: publicOrder,
     take: limit,
   });
-  return rows.map(projectPublicVehicle);
+  return rows.map(serializePublicVehicle);
 }
 
-export async function getRelatedVehicles(input: unknown) {
+export async function getRelatedVehicles(
+  input: unknown,
+): Promise<PublicInventoryVehicleDTO[] | null> {
   const { id, limit } = relatedInputSchema.parse(input);
   return prisma.$transaction(
     async (tx) => {
@@ -390,7 +372,7 @@ export async function getRelatedVehicles(input: unknown) {
         orderBy: publicOrder,
         take: limit,
       });
-      return rows.map(projectPublicVehicle);
+      return rows.map(serializePublicVehicle);
     },
     { isolationLevel: "RepeatableRead" },
   );

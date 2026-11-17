@@ -39,6 +39,21 @@ enum VehicleConsumptionUnit {
   kwh_per_100_km
 }
 
+enum VehicleStatus {
+  draft
+  published
+  reserved
+  sold
+  archived
+}
+
+enum VehicleInspectionStatus {
+  pending
+  in_progress
+  passed
+  failed
+}
+
 model Dealer {
   id       String    @id @default(cuid())
   name     String
@@ -69,26 +84,65 @@ model Vehicle {
   consumption       Decimal?                 @db.Decimal(6, 2)
   consumptionUnit   VehicleConsumptionUnit?
   co2Emission       Int?
+  features          String[]                 @default([])
+  labels            String[]                 @default([])
+  status            VehicleStatus            @default(draft)
+  inspectionStatus  VehicleInspectionStatus  @default(pending)
+  isFeatured        Boolean                  @default(false)
+  acquisitionDate   DateTime                 @db.Date
+  publishedAt       DateTime?                @db.Timestamptz(3)
+  reservedUntil     DateTime?                @db.Timestamptz(3)
+  soldAt            DateTime?                @db.Timestamptz(3)
+  createdAt         DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime                 @default(now()) @updatedAt @db.Timestamptz(3)
+  version           Int                      @default(1)
+  createdById       String
+  createdBy         User                     @relation("VehicleCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedById       String
+  updatedBy         User                     @relation("VehicleUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  changes           VehicleChange[]
   dealerId          String
   dealer            Dealer                   @relation(fields: [dealerId], references: [id], onDelete: Restrict)
 
   @@index([dealerId])
 }
 
+model VehicleChange {
+  id                       String                   @id @default(cuid())
+  vehicleId                String
+  vehicle                  Vehicle                  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  actorId                  String
+  actor                    User                     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  occurredAt               DateTime                 @default(now()) @db.Timestamptz(3)
+  version                  Int
+  previousStatus           VehicleStatus?
+  status                   VehicleStatus
+  previousInspectionStatus VehicleInspectionStatus?
+  inspectionStatus         VehicleInspectionStatus
+  previousSoldAt           DateTime?                @db.Timestamptz(3)
+  soldAt                   DateTime?                @db.Timestamptz(3)
+
+  @@unique([vehicleId, version])
+  @@index([actorId])
+}
+
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          String?
-  banned        Boolean?  @default(false)
-  banReason     String?
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
+  id              String          @id
+  name            String
+  email           String
+  emailVerified   Boolean         @default(false)
+  image           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  role            String?
+  banned          Boolean?        @default(false)
+  banReason       String?
+  banExpires      DateTime?
+  sessions        Session[]
+  accounts        Account[]
+  createdVehicles Vehicle[]       @relation("VehicleCreator")
+  updatedVehicles Vehicle[]       @relation("VehicleUpdater")
+  vehicleChanges  VehicleChange[]
 
   @@unique([email])
   @@map("user")

@@ -5,12 +5,21 @@ import { after, before, beforeEach, describe, it, mock } from "node:test";
 import { z } from "zod";
 
 import { vehicles } from "../src/data/vehicles.ts";
-import { Prisma } from "../src/generated/prisma/client.ts";
+import {
+  Prisma,
+  VehicleInspectionStatus,
+  VehicleStatus,
+} from "../src/generated/prisma/client.ts";
 import {
   assertAuthenticatedSession,
   AuthorizationError,
 } from "../src/lib/auth-access.ts";
 import type { AuthSession } from "../src/lib/auth-access.ts";
+import {
+  getPublicVehicleEligibilitySql,
+  getPublicVehicleWhere,
+} from "../src/lib/inventory-eligibility.ts";
+import { getPublicVehicleVisibility } from "../src/lib/inventory-policy.ts";
 import { filterVehicles } from "../src/lib/vehicle-filters.ts";
 import { createInventoryTestDatabase } from "./inventory-test-client.ts";
 
@@ -356,6 +365,136 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     }
   });
 
+  it("keeps ORM and raw-SQL eligibility aligned with every public policy surface", async () => {
+    const stored = await prisma.vehicle.findMany({
+      select: {
+        id: true,
+        status: true,
+        inspectionStatus: true,
+        isFeatured: true,
+      },
+      orderBy: { id: "asc" },
+    });
+    const states = Object.values(VehicleStatus).flatMap((status) =>
+      Object.values(VehicleInspectionStatus).flatMap((inspectionStatus) =>
+        [false, true].map((isFeatured) => ({
+          id: `${status}-${inspectionStatus}-${isFeatured}`,
+          status,
+          inspectionStatus,
+          isFeatured,
+        })),
+      ),
+    );
+    const values = Prisma.join(
+      states.map(
+        (state) => Prisma.sql`(
+        ${state.id}::text, ${state.status}::text,
+        ${state.inspectionStatus}::text, ${state.isFeatured}::boolean
+      )`,
+      ),
+    );
+    for (const surface of [
+      "catalog",
+      "detail",
+      "comparison",
+      "sitemap",
+      "featured",
+      "similar",
+      "inquiry",
+    ] as const) {
+      const actual = await prisma.vehicle.findMany({
+        where: getPublicVehicleWhere(surface),
+        select: { id: true },
+        orderBy: { id: "asc" },
+      });
+      assert.deepEqual(
+        actual.map(({ id }) => id),
+        stored
+          .filter((row) => getPublicVehicleVisibility(row)[surface])
+          .map(({ id }) => id),
+        surface,
+      );
+      const hypothetical = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+        WITH "Vehicle"("id", "status", "inspectionStatus", "isFeatured") AS (
+          VALUES ${values}
+        )
+        SELECT "id" FROM "Vehicle"
+        WHERE ${getPublicVehicleEligibilitySql(surface)} ORDER BY "id"
+      `);
+      assert.deepEqual(
+        hypothetical.map(({ id }) => id),
+        states
+          .filter((state) => getPublicVehicleVisibility(state)[surface])
+          .map(({ id }) => id)
+          .toSorted(),
+        surface,
+      );
+    }
+  });
+
+  it("protects guessed comparison IDs, metadata, inquiry context and sitemap pages", async () => {
+    for (let index = 0; index < ids.length; index++) {
+      const [comparison, metadata, inquiry] = await Promise.all([
+        queries.getPublicComparisonVehicle(ids[index]),
+        queries.getPublicVehicleMetadata(slug(index)),
+        queries.getPublicVehicleForInquiry(slug(index)),
+      ]);
+      const inCatalog = [0, 1, 2, 3, 7].includes(index);
+      const hasDetail = inCatalog || index === 4;
+      assert.equal(comparison?.id ?? null, inCatalog ? ids[index] : null);
+      assert.equal(metadata?.id ?? null, hasDetail ? ids[index] : null);
+      assert.equal(inquiry?.id ?? null, inCatalog ? ids[index] : null);
+      if (inquiry) {
+        assert.equal(
+          inquiry.inquiryType,
+          index === 3 ? "informational" : "standard",
+        );
+      }
+      if (comparison) {
+        assert.equal(comparison.isAvailable, index !== 3);
+      }
+      for (const result of [comparison, metadata, inquiry]) {
+        if (result) {
+          for (const field of [
+            "stockNumber",
+            "marginEstimate",
+            "vinLastSix",
+            "inspectionStatus",
+            "createdById",
+            "updatedById",
+            "version",
+          ]) {
+            assert.equal(Object.hasOwn(result, field), false, field);
+          }
+        }
+      }
+    }
+    const pages = [];
+    for (let page = 1; page <= 4; page++) {
+      const result = await queries.listPublicVehicleSitemapEntries({
+        page,
+        pageSize: 2,
+      });
+      assert.equal(result.total, 6);
+      assert.equal(result.totalPages, 3);
+      pages.push(...result.items);
+    }
+    assert.deepEqual(
+      pages.map(({ id }) => id),
+      [ids[0], ids[1], ids[2], ids[3], ids[4], ids[7]],
+    );
+    for (const entry of pages) {
+      assert.ok(entry.updatedAt instanceof Date);
+      assert.equal(entry.updatedAt.toISOString(), "2026-01-01T10:00:00.000Z");
+      assert.equal(entry.slug, slug(ids.indexOf(entry.id)));
+      assert.deepEqual(Object.keys(entry).toSorted(), [
+        "id",
+        "slug",
+        "updatedAt",
+      ]);
+    }
+  });
+
   it("bounds featured/related queries and never recommends private/unavailable/source stock", async () => {
     assert.deepEqual(
       (await queries.getFeaturedVehicles()).map((row) => row.id),
@@ -387,6 +526,10 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       () => queries.getPublicVehicle("../private"),
       () => queries.getPublicVehicle("car?private=true"),
       () => queries.getPublicVehicle(null),
+      () => queries.getPublicComparisonVehicle("../private"),
+      () => queries.getPublicVehicleMetadata("car?private=true"),
+      () => queries.getPublicVehicleForInquiry(null),
+      () => queries.listPublicVehicleSitemapEntries({ pageSize: 101 }),
       () => queries.listPublicVehicles({ page: 0 }),
       () => queries.listPublicVehicles({ pageSize: 101 }),
       () => queries.listPublicVehicles({ search: null }),
@@ -403,6 +546,18 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     assert.equal(await queries.getStaffVehicle(`missing-${prefix}`), null);
     assert.equal(await queries.getPublicVehicle(`missing-${prefix}`), null);
     assert.equal(
+      await queries.getPublicComparisonVehicle(`missing-${prefix}`),
+      null,
+    );
+    assert.equal(
+      await queries.getPublicVehicleMetadata(`missing-${prefix}`),
+      null,
+    );
+    assert.equal(
+      await queries.getPublicVehicleForInquiry(`missing-${prefix}`),
+      null,
+    );
+    assert.equal(
       await queries.getRelatedVehicles({ id: `missing-${prefix}` }),
       null,
     );
@@ -412,14 +567,16 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     const failure = new Error("Intentional query failure");
     databaseFailure = failure;
     try {
-      await assert.rejects(
+      for (const operation of [
         () => queries.getFeaturedVehicles(),
-        (error) => error === failure,
-      );
-      await assert.rejects(
         () => queries.listPublicVehicles({ search: "Example" }),
-        (error) => error === failure,
-      );
+        () => queries.getPublicComparisonVehicle(ids[0]),
+        () => queries.getPublicVehicleMetadata(slug(0)),
+        () => queries.getPublicVehicleForInquiry(slug(0)),
+        () => queries.listPublicVehicleSitemapEntries(),
+      ]) {
+        await assert.rejects(operation, (error) => error === failure);
+      }
     } finally {
       databaseFailure = undefined;
     }

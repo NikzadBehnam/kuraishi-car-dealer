@@ -15,6 +15,11 @@ import {
   formatTransmission,
 } from "./formatters.ts";
 import {
+  getPublicVehicleEligibilitySql,
+  getPublicVehicleWhere,
+} from "./inventory-eligibility.ts";
+import { getPublicVehicleVisibility } from "./inventory-policy.ts";
+import {
   inventoryIdSchema,
   inventoryPaginationInputSchema,
   inventoryPaginationSchema,
@@ -69,20 +74,6 @@ const staffVehicleSelect = {
   version: true,
 } satisfies Prisma.VehicleSelect;
 
-const catalogEligibility = {
-  status: { in: ["published", "reserved"] },
-  inspectionStatus: "passed",
-} satisfies Prisma.VehicleWhereInput;
-
-const activeEligibility = {
-  status: "published",
-  inspectionStatus: "passed",
-} satisfies Prisma.VehicleWhereInput;
-
-const detailEligibility = {
-  OR: [catalogEligibility, { status: "sold" }],
-} satisfies Prisma.VehicleWhereInput;
-
 const staffOrder = [
   { updatedAt: "desc" },
   { id: "asc" },
@@ -112,13 +103,14 @@ type PublicVehicleRow = Prisma.VehicleGetPayload<{
 }>;
 
 function projectPublicVehicle(row: PublicVehicleRow) {
+  const visibility = getPublicVehicleVisibility(row);
   const { inspectionStatus, ...vehicle } = row;
   const hasPassedInspection = inspectionStatus === "passed";
   const isAvailable = vehicle.status === "published" && hasPassedInspection;
   return {
     ...vehicle,
     isAvailable,
-    isFeatured: isAvailable && vehicle.isFeatured,
+    isFeatured: visibility.featured,
     hasPassedInspection,
   };
 }
@@ -158,8 +150,7 @@ async function searchPublicVehicles(
   take: number,
 ) {
   const where = Prisma.sql`
-    "status"::text IN (${Prisma.join(catalogEligibility.status.in)})
-    AND "inspectionStatus"::text = ${catalogEligibility.inspectionStatus}
+    ${getPublicVehicleEligibilitySql("catalog")}
     AND NOT EXISTS (
       SELECT 1 FROM unnest(${terms}::text[]) AS term(value)
       WHERE strpos(${publicSearchText}, term.value) = 0
@@ -179,7 +170,7 @@ async function searchPublicVehicles(
         ? await tx.vehicle.findMany({
             where: {
               AND: [
-                catalogEligibility,
+                getPublicVehicleWhere("catalog"),
                 { id: { in: matches.map(({ id }) => id) } },
               ],
             },
@@ -235,18 +226,19 @@ export async function listPublicVehicles(input: unknown = {}) {
   const { page, pageSize, skip, take } =
     inventoryPaginationSchema.parse(pageInput);
   const terms = getVehicleSearchTerms(search);
+  const where = getPublicVehicleWhere("catalog");
   const [rows, total] = terms.length
     ? await searchPublicVehicles(terms, skip, take)
     : await prisma.$transaction(
         [
           prisma.vehicle.findMany({
-            where: catalogEligibility,
+            where,
             select: publicVehicleSelect,
             orderBy: publicOrder,
             skip,
             take,
           }),
-          prisma.vehicle.count({ where: catalogEligibility }),
+          prisma.vehicle.count({ where }),
         ],
         { isolationLevel: "RepeatableRead" },
       );
@@ -262,17 +254,111 @@ export async function listPublicVehicles(input: unknown = {}) {
 export async function getPublicVehicle(slug: unknown) {
   const row = await prisma.vehicle.findFirst({
     where: {
-      AND: [detailEligibility, { slug: inventorySlugSchema.parse(slug) }],
+      AND: [
+        getPublicVehicleWhere("detail"),
+        { slug: inventorySlugSchema.parse(slug) },
+      ],
     },
     select: publicVehicleSelect,
   });
   return row ? projectPublicVehicle(row) : null;
 }
 
+export async function getPublicComparisonVehicle(id: unknown) {
+  const row = await prisma.vehicle.findFirst({
+    where: {
+      AND: [
+        getPublicVehicleWhere("comparison"),
+        { id: inventoryIdSchema.parse(id) },
+      ],
+    },
+    select: publicVehicleSelect,
+  });
+  return row ? projectPublicVehicle(row) : null;
+}
+
+export async function getPublicVehicleMetadata(slug: unknown) {
+  return prisma.vehicle.findFirst({
+    where: {
+      AND: [
+        getPublicVehicleWhere("detail"),
+        { slug: inventorySlugSchema.parse(slug) },
+      ],
+    },
+    select: {
+      id: true,
+      slug: true,
+      make: true,
+      model: true,
+      variant: true,
+      price: true,
+      mileage: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+}
+
+export async function listPublicVehicleSitemapEntries(input: unknown = {}) {
+  const { page, pageSize, skip, take } = inventoryPaginationSchema.parse(input);
+  const where = getPublicVehicleWhere("sitemap");
+  const [items, total] = await prisma.$transaction(
+    [
+      prisma.vehicle.findMany({
+        where,
+        select: { id: true, slug: true, updatedAt: true },
+        orderBy: { id: "asc" },
+        skip,
+        take,
+      }),
+      prisma.vehicle.count({ where }),
+    ],
+    { isolationLevel: "RepeatableRead" },
+  );
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+  };
+}
+
+export async function getPublicVehicleForInquiry(slug: unknown) {
+  const row = await prisma.vehicle.findFirst({
+    where: {
+      AND: [
+        getPublicVehicleWhere("inquiry"),
+        { slug: inventorySlugSchema.parse(slug) },
+      ],
+    },
+    select: {
+      id: true,
+      slug: true,
+      make: true,
+      model: true,
+      variant: true,
+      status: true,
+      inspectionStatus: true,
+      isFeatured: true,
+    },
+  });
+  if (!row) {
+    return null;
+  }
+  const { inspectionStatus, isFeatured, ...vehicle } = row;
+  const inquiryType = getPublicVehicleVisibility({
+    status: vehicle.status,
+    inspectionStatus,
+    isFeatured,
+  }).inquiry;
+  return inquiryType ? { ...vehicle, inquiryType } : null;
+}
+
 export async function getFeaturedVehicles(input: unknown = {}) {
   const { limit } = featuredInputSchema.parse(input);
   const rows = await prisma.vehicle.findMany({
-    where: { ...activeEligibility, isFeatured: true },
+    where: getPublicVehicleWhere("featured"),
     select: publicVehicleSelect,
     orderBy: publicOrder,
     take: limit,
@@ -285,7 +371,7 @@ export async function getRelatedVehicles(input: unknown) {
   return prisma.$transaction(
     async (tx) => {
       const source = await tx.vehicle.findFirst({
-        where: { AND: [detailEligibility, { id }] },
+        where: { AND: [getPublicVehicleWhere("detail"), { id }] },
         select: { bodyType: true },
       });
       if (!source) {
@@ -296,7 +382,7 @@ export async function getRelatedVehicles(input: unknown) {
       }
       const rows = await tx.vehicle.findMany({
         where: {
-          ...activeEligibility,
+          ...getPublicVehicleWhere("similar"),
           id: { not: id },
           bodyType: source.bodyType,
         },

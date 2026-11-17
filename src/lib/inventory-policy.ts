@@ -16,6 +16,37 @@ export type PublicVehicleVisibility = {
   inquiry: "standard" | "informational" | null;
 };
 
+export type PublicInventorySurface = keyof PublicVehicleVisibility;
+
+export type PublicInventoryRule = {
+  readonly status: InventoryPolicyState["status"];
+  readonly inspectionStatus?: InventoryPolicyState["inspectionStatus"];
+  readonly isFeatured?: boolean;
+};
+
+const availableRule = {
+  status: "published",
+  inspectionStatus: "passed",
+} as const;
+const catalogRules = [
+  availableRule,
+  { status: "reserved", inspectionStatus: "passed" },
+] as const;
+const detailRules = [...catalogRules, { status: "sold" }] as const;
+
+export const publicInventoryRules = {
+  catalog: catalogRules,
+  detail: detailRules,
+  comparison: catalogRules,
+  sitemap: detailRules,
+  featured: [{ ...availableRule, isFeatured: true }],
+  similar: [availableRule],
+  inquiry: catalogRules,
+} as const satisfies Record<
+  PublicInventorySurface,
+  readonly PublicInventoryRule[]
+>;
+
 export type PublicInventoryVehicle = Vehicle & {
   status: "published" | "reserved" | "sold";
   ownerCount: number;
@@ -25,19 +56,30 @@ export type PublicInventoryVehicle = Vehicle & {
 export function getPublicVehicleVisibility(
   vehicle: InventoryPolicyState,
 ): PublicVehicleVisibility {
-  const inspected = vehicle.inspectionStatus === "passed";
-  const available = vehicle.status === "published" && inspected;
-  const reserved = vehicle.status === "reserved" && inspected;
-  const detail = available || reserved || vehicle.status === "sold";
+  const eligible = (surface: PublicInventorySurface) => {
+    const rules: readonly PublicInventoryRule[] = publicInventoryRules[surface];
+    return rules.some(
+      (rule) =>
+        vehicle.status === rule.status &&
+        (rule.inspectionStatus === undefined ||
+          vehicle.inspectionStatus === rule.inspectionStatus) &&
+        (rule.isFeatured === undefined ||
+          vehicle.isFeatured === rule.isFeatured),
+    );
+  };
 
   return {
-    catalog: available || reserved,
-    detail,
-    comparison: available || reserved,
-    sitemap: detail,
-    featured: available && vehicle.isFeatured,
-    similar: available,
-    inquiry: available ? "standard" : reserved ? "informational" : null,
+    catalog: eligible("catalog"),
+    detail: eligible("detail"),
+    comparison: eligible("comparison"),
+    sitemap: eligible("sitemap"),
+    featured: eligible("featured"),
+    similar: eligible("similar"),
+    inquiry: eligible("inquiry")
+      ? vehicle.status === "reserved"
+        ? "informational"
+        : "standard"
+      : null,
   };
 }
 

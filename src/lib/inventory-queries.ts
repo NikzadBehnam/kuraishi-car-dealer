@@ -192,25 +192,27 @@ export async function listStaffVehicles(
   const { page, pageSize, skip, take } =
     inventoryPaginationSchema.parse(pageInput);
   const where = getStaffVehicleWhere({ search, status });
-  const [items, total] = await prisma.$transaction(
-    [
-      prisma.vehicle.findMany({
-        where,
-        select: staffVehicleSelect,
-        orderBy: getStaffVehicleOrderBy(sort, direction),
-        skip,
-        take,
-      }),
-      prisma.vehicle.count({ where }),
-    ],
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const total = await tx.vehicle.count({ where });
+      const totalPages = Math.ceil(total / pageSize);
+      const items =
+        page > Math.max(1, totalPages)
+          ? []
+          : await tx.vehicle.findMany({
+              where,
+              select: staffVehicleSelect,
+              orderBy: getStaffVehicleOrderBy(sort, direction),
+              skip,
+              take,
+            });
+      return { items, total, page, pageSize, totalPages };
+    },
     { isolationLevel: "RepeatableRead" },
   );
   return {
-    items: items.map(serializeStaffVehicle),
-    total,
-    page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    ...result,
+    items: result.items.map(serializeStaffVehicle),
   };
 }
 

@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+export const DEFAULT_INVENTORY_PAGE_SIZE = 8;
+
+const maximumInventoryOffset = 2_147_483_647;
+
 export const vehicleStatusSchema = z.enum([
   "draft",
   "published",
@@ -27,6 +31,28 @@ export const staffInventoryFiltersSchema = z.strictObject({
 });
 
 export type StaffInventoryFilters = z.infer<typeof staffInventoryFiltersSchema>;
+
+export const staffInventorySearchParamsSchema =
+  staffInventoryFiltersSchema.extend({
+    page: z
+      .string()
+      .regex(/^[1-9]\d*$/)
+      .default("1")
+      .transform(Number)
+      .pipe(
+        z
+          .number()
+          .int()
+          .positive()
+          .refine(Number.isSafeInteger)
+          .refine(
+            (page) =>
+              Number.isSafeInteger((page - 1) * DEFAULT_INVENTORY_PAGE_SIZE) &&
+              (page - 1) * DEFAULT_INVENTORY_PAGE_SIZE <=
+                maximumInventoryOffset,
+          ),
+      ),
+  });
 
 export const inspectionStatusSchema = z.enum([
   "pending",
@@ -56,7 +82,12 @@ export const inventoryPolicyUpdateSchema = inventoryPolicyStateSchema
 
 export const inventoryPaginationInputSchema = z.strictObject({
   page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(100).default(8),
+  pageSize: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(DEFAULT_INVENTORY_PAGE_SIZE),
 });
 
 export const inventoryPaginationSchema = inventoryPaginationInputSchema
@@ -66,9 +97,12 @@ export const inventoryPaginationSchema = inventoryPaginationInputSchema
     skip: (page - 1) * pageSize,
     take: pageSize,
   }))
-  .refine(({ skip }) => Number.isSafeInteger(skip) && skip <= 2_147_483_647, {
-    message: "Pagination offset is too large.",
-  });
+  .refine(
+    ({ skip }) => Number.isSafeInteger(skip) && skip <= maximumInventoryOffset,
+    {
+      message: "Pagination offset is too large.",
+    },
+  );
 
 export const inventorySlugSchema = z
   .string()

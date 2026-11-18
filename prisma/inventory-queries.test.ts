@@ -231,6 +231,91 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     }
   });
 
+  it("paginates staff inventory with fresh counts and clamps stale page requests", async () => {
+    session = { user: { role: "user" } };
+    const newId = `page-${prefix}`;
+    const originals = await prisma.vehicle.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, status: true, updatedAt: true },
+    });
+
+    try {
+      await prisma.vehicle.update({
+        where: { id: ids[1] },
+        data: { updatedAt: new Date("2027-01-01T00:00:00.000Z") },
+      });
+      const firstPage = await queries.listStaffVehicles();
+      assert.equal(firstPage.page, 1);
+      assert.equal(firstPage.pageSize, 8);
+      assert.equal(firstPage.total, 8);
+      assert.equal(firstPage.totalPages, 1);
+      assert.deepEqual(
+        firstPage.items.map(({ id }) => id),
+        [ids[1], ids[0], ...ids.slice(2)],
+        "the default ordering remains updated-descending with ID tie-breakers",
+      );
+
+      const secondOfThree = await queries.listStaffVehicles({
+        page: 2,
+        pageSize: 3,
+      });
+      assert.equal(secondOfThree.total, 8);
+      assert.equal(secondOfThree.page, 2);
+      assert.equal(secondOfThree.totalPages, 3);
+      assert.equal(secondOfThree.items.length, 3);
+
+      await prisma.vehicle.update({
+        where: { id: ids[5] },
+        data: { status: "archived" },
+      });
+      assert.equal(
+        (await queries.listStaffVehicles({ status: "draft" })).total,
+        0,
+      );
+      assert.equal(
+        (await queries.listStaffVehicles({ status: "archived" })).total,
+        2,
+      );
+
+      await prisma.vehicle.create({
+        data: {
+          id: newId,
+          slug: newId,
+          stockNumber: `PAGE-${prefix.toUpperCase()}`,
+          make: "Pagination",
+          model: "Boundary",
+          dealerId,
+          createdById: actorId,
+          updatedById: actorId,
+          acquisitionDate: new Date("2026-01-01T00:00:00.000Z"),
+          updatedAt: new Date("2020-01-01T00:00:00.000Z"),
+        },
+      });
+      const createdPage = await queries.listStaffVehicles({ page: 2 });
+      assert.equal(createdPage.total, 9);
+      assert.equal(createdPage.page, 2);
+      assert.equal(createdPage.totalPages, 2);
+      assert.deepEqual(
+        createdPage.items.map(({ id }) => id),
+        [newId],
+      );
+
+      await prisma.vehicle.delete({ where: { id: newId } });
+      const stalePage = await queries.listStaffVehicles({ page: 2 });
+      assert.equal(stalePage.total, 8);
+      assert.equal(stalePage.page, 2);
+      assert.equal(stalePage.totalPages, 1);
+      assert.equal(stalePage.items.length, 0);
+    } finally {
+      await prisma.vehicle.deleteMany({ where: { id: newId } });
+      await prisma.$transaction(
+        originals.map(({ id, ...data }) =>
+          prisma.vehicle.update({ where: { id }, data }),
+        ),
+      );
+    }
+  });
+
   it("searches and sorts staff inventory with validated filters", async () => {
     session = { user: { role: "user" } };
     const changedIds = [ids[0], ids[3], ids[5]];

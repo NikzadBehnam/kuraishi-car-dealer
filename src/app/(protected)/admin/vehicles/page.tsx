@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { adminRoutes } from "@/config/admin-routes.config";
 import { listStaffVehicles } from "@/lib/inventory-queries";
-import { staffInventoryFiltersSchema } from "@/lib/inventory-validation";
+import { staffInventorySearchParamsSchema } from "@/lib/inventory-validation";
 import { VehicleInventoryTable } from "./_components/vehicle-inventory-table";
 
 export default async function AdminVehiclesPage({
@@ -11,20 +12,39 @@ export default async function AdminVehiclesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const parsedFilters = staffInventoryFiltersSchema.safeParse(
+  const parsedFilters = staffInventorySearchParamsSchema.safeParse(
     await searchParams,
   );
   if (!parsedFilters.success) return <InvalidInventoryFilters />;
-  const filters = parsedFilters.data;
-  const { items, total } = await listStaffVehicles({
+  const { page, ...filters } = parsedFilters.data;
+  const result = await listStaffVehicles({
     ...filters,
-    pageSize: 100,
+    page,
   });
+  const totalPages = Math.max(1, result.totalPages);
+  if (page > totalPages) {
+    const params = new URLSearchParams();
+    if (filters.search) params.set("search", filters.search);
+    if (filters.status) params.set("status", filters.status);
+    if (filters.sort !== "lastUpdatedAt") params.set("sort", filters.sort);
+    if (filters.direction !== "desc")
+      params.set("direction", filters.direction);
+    if (totalPages > 1) params.set("page", String(totalPages));
+    const queryString = params.toString();
+    redirect(
+      queryString
+        ? `${adminRoutes.vehicles}?${queryString}`
+        : adminRoutes.vehicles,
+    );
+  }
   return (
     <VehicleInventoryTable
       key={filters.search}
-      vehicles={items}
-      total={total}
+      vehicles={result.items}
+      total={result.total}
+      page={result.page}
+      pageSize={result.pageSize}
+      totalPages={totalPages}
       filters={filters}
     />
   );

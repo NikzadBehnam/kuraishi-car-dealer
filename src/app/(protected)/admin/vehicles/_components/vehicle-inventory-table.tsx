@@ -82,19 +82,22 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
-const pageSize = 8;
-
 export function VehicleInventoryTable({
   vehicles,
   total,
+  page,
+  pageSize,
+  totalPages,
   filters,
 }: {
   vehicles: StaffInventoryVehicleDTO[];
   total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
   filters: StaffInventoryFilters;
 }) {
   const [query, setQuery] = useState(filters.search);
-  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const router = useRouter();
   const pathname = usePathname();
@@ -102,13 +105,9 @@ export function VehicleInventoryTable({
   const searchParamsString = searchParams.toString();
   const sort: SortState = { key: filters.sort, direction: filters.direction };
   const statusFilter = filters.status ?? "all";
-  const pageCount = Math.max(1, Math.ceil(vehicles.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const paginatedVehicles = vehicles.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
-  const visibleIds = paginatedVehicles.map((vehicle) => vehicle.id);
+  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+  const visibleIds = vehicles.map((vehicle) => vehicle.id);
   const selectedVisibleCount = visibleIds.filter((id) =>
     selectedIds.has(id),
   ).length;
@@ -124,6 +123,7 @@ export function VehicleInventoryTable({
       const params = new URLSearchParams(searchParamsString);
       if (query.trim()) params.set("search", query.trim());
       else params.delete("search");
+      params.delete("page");
       const queryString = params.toString();
       router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
         scroll: false,
@@ -134,7 +134,7 @@ export function VehicleInventoryTable({
 
   const updateSearchParams = (
     updates: Partial<
-      Record<"search" | "status" | "sort" | "direction", string | null>
+      Record<"search" | "status" | "sort" | "direction" | "page", string | null>
     >,
   ) => {
     const params = new URLSearchParams(searchParamsString);
@@ -150,23 +150,28 @@ export function VehicleInventoryTable({
 
   const updateSearch = (value: string) => {
     setQuery(value);
-    setPage(1);
   };
 
   const updateStatusFilter = (value: string) => {
-    setPage(1);
-    updateSearchParams({ status: value === "all" ? null : value });
+    updateSearchParams({
+      page: null,
+      status: value === "all" ? null : value,
+    });
   };
 
   const toggleSort = (key: SortKey) => {
     const direction =
       sort.key === key && sort.direction === "asc" ? "desc" : "asc";
-    setPage(1);
     updateSearchParams({
+      page: null,
       sort: key === "lastUpdatedAt" ? null : key,
       direction:
         key === "lastUpdatedAt" && direction === "desc" ? null : direction,
     });
+  };
+
+  const updatePage = (nextPage: number) => {
+    updateSearchParams({ page: nextPage === 1 ? null : String(nextPage) });
   };
 
   const toggleVehicle = (id: string, checked: boolean) => {
@@ -196,18 +201,9 @@ export function VehicleInventoryTable({
           <div className="min-w-0">
             <h2 className="text-base font-extrabold">Inventory table</h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              Database inventory with client-side controls for the loaded
-              records.
+              Search, filters, sorting and pagination are applied to database
+              inventory.
             </p>
-            {total > vehicles.length && (
-              <p
-                className="text-warning mt-1 text-sm font-semibold"
-                role="status"
-              >
-                Showing the first {vehicles.length} of {total} vehicles.
-                Server-side pagination is not available yet.
-              </p>
-            )}
           </div>
           <Button
             asChild
@@ -349,8 +345,8 @@ export function VehicleInventoryTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedVehicles.length ? (
-              paginatedVehicles.map((vehicle) => (
+            {vehicles.length ? (
+              vehicles.map((vehicle) => (
                 <TableRow
                   key={vehicle.id}
                   data-state={selectedIds.has(vehicle.id) ? "selected" : ""}
@@ -444,30 +440,29 @@ export function VehicleInventoryTable({
           <p className="text-muted-foreground text-sm">
             Showing{" "}
             <strong className="text-foreground">
-              {paginatedVehicles.length}
+              {start}-{end}
             </strong>{" "}
-            of <strong className="text-foreground">{vehicles.length}</strong>{" "}
-            vehicles
+            of <strong className="text-foreground">{total}</strong> vehicles
           </p>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
             <Button
               type="button"
               variant="outline"
               className="rounded-[var(--radius-sm)]"
-              disabled={currentPage === 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
+              disabled={page === 1}
+              onClick={() => updatePage(Math.max(1, page - 1))}
             >
               Previous
             </Button>
             <span className="text-center text-sm font-bold">
-              Page {currentPage} of {pageCount}
+              Page {page} of {totalPages}
             </span>
             <Button
               type="button"
               variant="outline"
               className="rounded-[var(--radius-sm)]"
-              disabled={currentPage === pageCount}
-              onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+              disabled={page === totalPages}
+              onClick={() => updatePage(Math.min(totalPages, page + 1))}
             >
               Next
             </Button>

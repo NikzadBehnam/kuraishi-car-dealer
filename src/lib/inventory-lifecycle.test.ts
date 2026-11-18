@@ -12,6 +12,7 @@ import {
   inventoryIdSchema,
   inventoryPaginationSchema,
   inventoryPolicyUpdateSchema,
+  staffInventorySearchParamsSchema,
 } from "./inventory-validation.ts";
 
 const published: InventoryPolicyState = {
@@ -43,6 +44,33 @@ describe("inventory input and lifecycle boundary", () => {
       { take: 1000 },
     ]) {
       assert.equal(inventoryPaginationSchema.safeParse(input).success, false);
+    }
+  });
+
+  it("parses positive integer staff page parameters from URLs", () => {
+    assert.equal(staffInventorySearchParamsSchema.parse({}).page, 1);
+    assert.deepEqual(
+      staffInventorySearchParamsSchema.parse({ page: "3", search: " BMW " }),
+      {
+        search: "BMW",
+        sort: "lastUpdatedAt",
+        direction: "desc",
+        page: 3,
+      },
+    );
+    for (const page of [
+      "0",
+      "-1",
+      "1.5",
+      "2x",
+      "268435457",
+      "9007199254740992",
+      ["2"],
+    ]) {
+      assert.equal(
+        staffInventorySearchParamsSchema.safeParse({ page }).success,
+        false,
+      );
     }
   });
 

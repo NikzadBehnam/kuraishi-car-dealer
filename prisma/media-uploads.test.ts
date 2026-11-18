@@ -3,9 +3,15 @@ import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { after, before, describe, it, mock } from "node:test";
 
-import { DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
 import {
   AuthorizationError,
+  assertAdminSession,
   assertAuthenticatedSession,
 } from "../src/lib/auth-access.ts";
 import type { AuthSession } from "../src/lib/auth-access.ts";
@@ -72,6 +78,26 @@ async function postFile(
   return response;
 }
 
+async function assertObjectMissing(key: string) {
+  await assert.rejects(
+    s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key })),
+    (error: unknown) =>
+      error instanceof Error &&
+      (error.name === "NotFound" || error.name === "NoSuchKey"),
+  );
+}
+
+async function expireIntent(uploadId: string) {
+  const createdAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  await prisma.mediaUploadIntent.update({
+    where: { id: uploadId },
+    data: {
+      createdAt,
+      expiresAt: new Date(createdAt.getTime() + 60 * 60 * 1000),
+    },
+  });
+}
+
 describe("media upload service on isolated Neon resources", () => {
   before(async () => {
     runPrisma(["migrate", "deploy"]);
@@ -98,6 +124,7 @@ describe("media upload service on isolated Neon resources", () => {
     sessionMock = mock.module("../src/lib/session.ts", {
       namedExports: {
         requireSession: async () => assertAuthenticatedSession(session),
+        requireAdmin: async () => assertAdminSession(session),
       },
     });
     uploads = await import("../src/lib/media-uploads.ts");
@@ -184,6 +211,10 @@ describe("media upload service on isolated Neon resources", () => {
     assert.equal(firstCompletion.cleanupPending, false);
     assert.equal(firstCompletion.asset.id, upload.uploadId);
     assert.equal(firstCompletion.asset.verifiedMimeType, "image/png");
+    const completedIntent = await prisma.mediaUploadIntent.findUniqueOrThrow({
+      where: { id: upload.uploadId },
+    });
+    assert.ok(completedIntent.completedAt);
 
     const asset = await prisma.mediaAsset.findUniqueOrThrow({
       where: { id: upload.uploadId },
@@ -208,6 +239,26 @@ describe("media upload service on isolated Neon resources", () => {
     assert.ok(replayedFinalBytes);
     assert.deepEqual(Buffer.from(replayedFinalBytes), png);
 
+    await expireIntent(upload.uploadId);
+    session = { user: { id: userId, role: "admin" } };
+    const cleanup = await uploads.cleanupExpiredMediaUploadIntents();
+    assert.ok(cleanup.cleaned >= 1);
+    assert.equal(cleanup.failed, 0);
+    assert.equal(
+      await prisma.mediaUploadIntent.findUnique({
+        where: { id: upload.uploadId },
+      }),
+      null,
+    );
+    const preservedFinal = await s3.send(
+      new GetObjectCommand({ Bucket: bucket, Key: asset.objectKey }),
+    );
+    const preservedBytes = await preservedFinal.Body?.transformToByteArray();
+    assert.ok(preservedBytes);
+    assert.deepEqual(Buffer.from(preservedBytes), png);
+    await assertObjectMissing(`incoming/${upload.uploadId}`);
+
+    session = { user: { id: userId, role: "user" } };
     const retry = await uploads.completeMediaUploadIntent({
       uploadId: upload.uploadId,
     });
@@ -274,6 +325,88 @@ describe("media upload service on isolated Neon resources", () => {
     assert.equal(
       await prisma.mediaUploadIntent.count({ where: { uploadedById: userId } }),
       intentCountBefore,
+    );
+  });
+
+  it("cancels pending uploads and retries bounded cleanup after expiry", async () => {
+    session = { user: { id: userId, role: "user" } };
+    const png = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x00,
+    ]);
+    const {
+      uploads: [upload],
+    } = await uploads.createMediaUploadIntents({
+      files: [
+        {
+          originalFilename: "cancelled.png",
+          contentType: "image/png",
+          sizeBytes: png.length,
+          type: "image",
+        },
+      ],
+    });
+    uploadIds.push(upload.uploadId);
+
+    const intent = await prisma.mediaUploadIntent.findUniqueOrThrow({
+      where: { id: upload.uploadId },
+    });
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: intent.stagingKey,
+        Body: png,
+        ContentType: "image/png",
+      }),
+    );
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: intent.objectKey,
+        Body: png,
+        ContentType: "image/png",
+      }),
+    );
+
+    const cancellation = await uploads.cancelMediaUploadIntent({
+      uploadId: upload.uploadId,
+    });
+    assert.equal(cancellation.cancelled, true);
+    assert.equal(cancellation.cleanupPending, false);
+    assert.ok(
+      (
+        await prisma.mediaUploadIntent.findUniqueOrThrow({
+          where: { id: upload.uploadId },
+        })
+      ).cancelledAt,
+    );
+    await assertObjectMissing(intent.stagingKey);
+    await assertObjectMissing(intent.objectKey);
+    await assert.rejects(
+      uploads.completeMediaUploadIntent({ uploadId: upload.uploadId }),
+      (error: unknown) =>
+        error instanceof uploads.MediaUploadError && error.status === 409,
+    );
+
+    const retry = await uploads.cancelMediaUploadIntent({
+      uploadId: upload.uploadId,
+    });
+    assert.equal(retry.cleanupPending, false);
+    await assert.rejects(
+      uploads.cleanupExpiredMediaUploadIntents(),
+      (error: unknown) =>
+        error instanceof AuthorizationError && error.status === 403,
+    );
+
+    await expireIntent(upload.uploadId);
+    session = { user: { id: userId, role: "admin" } };
+    const cleanup = await uploads.cleanupExpiredMediaUploadIntents();
+    assert.ok(cleanup.cleaned >= 1);
+    assert.equal(cleanup.failed, 0);
+    assert.equal(
+      await prisma.mediaUploadIntent.findUnique({
+        where: { id: upload.uploadId },
+      }),
+      null,
     );
   });
 });

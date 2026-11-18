@@ -183,6 +183,7 @@ model MediaUploadIntent {
   createdAt        DateTime       @default(now()) @db.Timestamptz(3)
   expiresAt        DateTime       @db.Timestamptz(3)
   completedAt      DateTime?      @db.Timestamptz(3)
+  cancelledAt      DateTime?      @db.Timestamptz(3)
 
   @@unique([objectKey])
   @@index([uploadedById, createdAt])

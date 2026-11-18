@@ -169,8 +169,27 @@ describe("isolated media metadata migration", { concurrency: false }, () => {
       });
 
       assert.equal(intent.completedAt, null);
+      assert.equal(intent.cancelledAt, null);
       assert.equal(intent.claimedMimeType, "image/png");
       assert.equal(intent.sizeBytes, BigInt(1024));
+    });
+  });
+
+  it("rejects upload intents marked completed and cancelled simultaneously", async () => {
+    await expectConstraintViolation("23514", async (tx, uploaderId) => {
+      await tx.$executeRaw`
+        INSERT INTO "MediaUploadIntent" (
+          "id", "objectKey", "stagingKey", "type", "title",
+          "originalFilename", "claimedMimeType", "sizeBytes",
+          "uploadedById", "expiresAt", "completedAt", "cancelledAt"
+        ) VALUES (
+          ${randomUUID()}, ${`assets/${randomUUID()}.png`},
+          ${`incoming/${randomUUID()}`}, 'image', 'Invalid terminal state',
+          'state.png', 'image/png', 1024, ${uploaderId},
+          CURRENT_TIMESTAMP + INTERVAL '5 minutes',
+          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+      `;
     });
   });
 

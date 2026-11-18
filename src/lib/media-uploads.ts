@@ -11,7 +11,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "../generated/prisma/client.ts";
 
 import { prisma } from "./db.ts";
-import { requireSession } from "./session.ts";
+import { requireAdmin, requireSession } from "./session.ts";
 import {
   completeMediaUploadSchema,
   detectMediaMimeType,
@@ -34,6 +34,12 @@ export class MediaUploadError extends Error {
     this.status = status;
   }
 }
+
+type CleanupReport = {
+  scanned: number;
+  cleaned: number;
+  failed: number;
+};
 
 type CompletedMediaAsset = {
   id: string;
@@ -90,7 +96,7 @@ async function findOwnedCompletedAsset(uploadId: string, userId: string) {
   return asset ? serializeAsset(asset) : null;
 }
 
-async function finishStorageCleanup(
+async function cleanupCompletedStaging(
   uploadId: string,
   stagingKey: string,
   bucket: string,
@@ -99,7 +105,6 @@ async function finishStorageCleanup(
     await getMediaStorageClient().send(
       new DeleteObjectCommand({ Bucket: bucket, Key: stagingKey }),
     );
-    await prisma.mediaUploadIntent.deleteMany({ where: { id: uploadId } });
     return false;
   } catch (error) {
     console.error("Completed media upload cleanup is pending.", {
@@ -110,11 +115,116 @@ async function finishStorageCleanup(
   }
 }
 
+async function cleanupCancelledObjects(
+  intent: { id: string; stagingKey: string; objectKey: string },
+  bucket: string,
+): Promise<boolean> {
+  try {
+    const client = getMediaStorageClient();
+    await client.send(
+      new DeleteObjectCommand({ Bucket: bucket, Key: intent.stagingKey }),
+    );
+    await client.send(
+      new DeleteObjectCommand({ Bucket: bucket, Key: intent.objectKey }),
+    );
+    return false;
+  } catch (error) {
+    console.error("Cancelled media upload cleanup is pending.", {
+      uploadId: intent.id,
+      errorType: storageErrorName(error),
+    });
+    return true;
+  }
+}
+
+async function sweepExpiredMediaUploadIntents(
+  limit: number,
+): Promise<CleanupReport> {
+  const now = new Date();
+  const expiredIntents = await prisma.mediaUploadIntent.findMany({
+    where: { expiresAt: { lte: now } },
+    orderBy: { expiresAt: "asc" },
+    take: limit,
+  });
+  const report: CleanupReport = {
+    scanned: expiredIntents.length,
+    cleaned: 0,
+    failed: 0,
+  };
+
+  for (const candidate of expiredIntents) {
+    try {
+      let intent = candidate;
+      if (!intent.completedAt && !intent.cancelledAt) {
+        const cancelledAt = new Date();
+        const claimed = await prisma.mediaUploadIntent.updateMany({
+          where: {
+            id: intent.id,
+            completedAt: null,
+            cancelledAt: null,
+            expiresAt: { lte: now },
+          },
+          data: { cancelledAt },
+        });
+        if (claimed.count === 1) {
+          intent = { ...intent, cancelledAt };
+        } else {
+          const current = await prisma.mediaUploadIntent.findUnique({
+            where: { id: intent.id },
+          });
+          if (!current) {
+            continue;
+          }
+          intent = current;
+        }
+      }
+
+      if (intent.expiresAt.getTime() > now.getTime()) {
+        continue;
+      }
+
+      const asset = await prisma.mediaAsset.findUnique({
+        where: { id: intent.id },
+        select: { id: true },
+      });
+      const client = getMediaStorageClient();
+      const bucket = getPrivateMediaBucket();
+      await client.send(
+        new DeleteObjectCommand({ Bucket: bucket, Key: intent.stagingKey }),
+      );
+      if (!asset) {
+        await client.send(
+          new DeleteObjectCommand({ Bucket: bucket, Key: intent.objectKey }),
+        );
+      }
+
+      const deleted = await prisma.mediaUploadIntent.deleteMany({
+        where: {
+          id: intent.id,
+          expiresAt: { lte: now },
+          completedAt: intent.completedAt,
+          cancelledAt: intent.cancelledAt,
+        },
+      });
+      report.cleaned += deleted.count;
+    } catch (error) {
+      report.failed += 1;
+      console.error("Expired media upload cleanup is pending.", {
+        uploadId: candidate.id,
+        errorType: storageErrorName(error),
+      });
+    }
+  }
+
+  return report;
+}
+
 export async function createMediaUploadIntents(input: unknown) {
   const session = await requireSession();
   const { files } = mediaUploadBatchSchema.parse(input);
   const client = getMediaStorageClient();
   const bucket = getPrivateMediaBucket();
+  const cleanup = await sweepExpiredMediaUploadIntents(5);
   const expiresAt = new Date(
     Date.now() + MEDIA_UPLOAD_INTENT_TTL_SECONDS * 1000,
   );
@@ -164,7 +274,72 @@ export async function createMediaUploadIntents(input: unknown) {
     data: intents.map(({ database }) => database),
   });
 
-  return { uploads: intents.map(({ response }) => response) };
+  return { uploads: intents.map(({ response }) => response), cleanup };
+}
+
+export async function cancelMediaUploadIntent(input: unknown) {
+  const session = await requireSession();
+  const { uploadId } = completeMediaUploadSchema.parse(input);
+  const intent = await prisma.mediaUploadIntent.findFirst({
+    where: { id: uploadId, uploadedById: session.user.id },
+  });
+
+  if (!intent) {
+    if (await findOwnedCompletedAsset(uploadId, session.user.id)) {
+      throw new MediaUploadError(409, "Completed uploads cannot be cancelled.");
+    }
+    throw new MediaUploadError(404, "Upload intent was not found.");
+  }
+  if (intent.completedAt) {
+    throw new MediaUploadError(409, "Completed uploads cannot be cancelled.");
+  }
+
+  let cancelledIntent = intent;
+  if (!intent.cancelledAt) {
+    const cancelledAt = new Date();
+    const transition = await prisma.mediaUploadIntent.updateMany({
+      where: {
+        id: intent.id,
+        uploadedById: session.user.id,
+        completedAt: null,
+        cancelledAt: null,
+      },
+      data: { cancelledAt },
+    });
+    if (transition.count !== 1) {
+      const current = await prisma.mediaUploadIntent.findFirst({
+        where: { id: intent.id, uploadedById: session.user.id },
+      });
+      if (!current) {
+        throw new MediaUploadError(404, "Upload intent was not found.");
+      }
+      if (current.completedAt) {
+        throw new MediaUploadError(
+          409,
+          "Completed uploads cannot be cancelled.",
+        );
+      }
+      if (!current.cancelledAt) {
+        throw new MediaUploadError(409, "Upload intent is no longer active.");
+      }
+      cancelledIntent = current;
+    } else {
+      cancelledIntent = { ...intent, cancelledAt };
+    }
+  }
+
+  return {
+    cancelled: true,
+    cleanupPending: await cleanupCancelledObjects(
+      cancelledIntent,
+      getPrivateMediaBucket(),
+    ),
+  };
+}
+
+export async function cleanupExpiredMediaUploadIntents() {
+  await requireAdmin();
+  return sweepExpiredMediaUploadIntents(100);
 }
 
 export async function completeMediaUploadIntent(input: unknown) {
@@ -184,12 +359,16 @@ export async function completeMediaUploadIntent(input: unknown) {
     }
     return {
       asset: completedAsset,
-      cleanupPending: await finishStorageCleanup(
+      cleanupPending: await cleanupCompletedStaging(
         uploadId,
         `incoming/${uploadId}`,
         getPrivateMediaBucket(),
       ),
     };
+  }
+
+  if (intent.cancelledAt) {
+    throw new MediaUploadError(409, "Upload intent has been cancelled.");
   }
 
   const completedAsset = await findOwnedCompletedAsset(
@@ -200,7 +379,7 @@ export async function completeMediaUploadIntent(input: unknown) {
   if (completedAsset) {
     return {
       asset: completedAsset,
-      cleanupPending: await finishStorageCleanup(
+      cleanupPending: await cleanupCompletedStaging(
         intent.id,
         intent.stagingKey,
         bucket,
@@ -263,6 +442,20 @@ export async function completeMediaUploadIntent(input: unknown) {
   let asset;
   try {
     asset = await prisma.$transaction(async (tx) => {
+      const transition = await tx.mediaUploadIntent.updateMany({
+        where: {
+          id: intent.id,
+          uploadedById: session.user.id,
+          completedAt: null,
+          cancelledAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        data: { completedAt: new Date() },
+      });
+      if (transition.count !== 1) {
+        throw new MediaUploadError(409, "Upload intent is no longer active.");
+      }
+
       const createdAsset = await tx.mediaAsset.create({
         data: {
           id: intent.id,
@@ -276,10 +469,6 @@ export async function completeMediaUploadIntent(input: unknown) {
           sizeBytes: intent.sizeBytes,
           uploadedById: intent.uploadedById,
         },
-      });
-      await tx.mediaUploadIntent.update({
-        where: { id: intent.id },
-        data: { completedAt: new Date() },
       });
       return createdAsset;
     });
@@ -295,7 +484,7 @@ export async function completeMediaUploadIntent(input: unknown) {
       if (existingAsset) {
         return {
           asset: existingAsset,
-          cleanupPending: await finishStorageCleanup(
+          cleanupPending: await cleanupCompletedStaging(
             intent.id,
             intent.stagingKey,
             bucket,
@@ -308,7 +497,7 @@ export async function completeMediaUploadIntent(input: unknown) {
 
   return {
     asset: serializeAsset(asset),
-    cleanupPending: await finishStorageCleanup(
+    cleanupPending: await cleanupCompletedStaging(
       intent.id,
       intent.stagingKey,
       bucket,

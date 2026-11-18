@@ -15,8 +15,8 @@ import {
 } from "./media-storage.ts";
 import {
   MAX_MEDIA_DOWNLOAD_BYTES,
-  parseMediaDownloadIds,
-} from "./media-download-validation.ts";
+  parseMediaAssetIds,
+} from "./media-selection-validation.ts";
 import { requireAdmin } from "./session.ts";
 
 type MediaDownloadClient = Pick<PrismaClient, "mediaAsset">;
@@ -370,7 +370,7 @@ export async function queryAdminMediaDownload(
   input: unknown,
 ): Promise<Response> {
   await requireAdmin();
-  const ids = parseMediaDownloadIds(input);
+  const ids = parseMediaAssetIds(input);
   const assets = await prepareAssets(client, ids);
 
   return assets.length === 1

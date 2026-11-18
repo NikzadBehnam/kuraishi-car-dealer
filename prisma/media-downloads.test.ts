@@ -12,7 +12,7 @@ import {
   getMediaStorageClient,
   getPrivateMediaBucket,
 } from "../src/lib/media-storage.ts";
-import { MAX_MEDIA_DOWNLOAD_BYTES } from "../src/lib/media-download-validation.ts";
+import { MAX_MEDIA_DOWNLOAD_BYTES } from "../src/lib/media-selection-validation.ts";
 
 const { prisma, connectionString } = createMediaTestDatabase();
 const s3 = getMediaStorageClient();

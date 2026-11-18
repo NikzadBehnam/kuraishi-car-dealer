@@ -18,11 +18,13 @@ import type {
   AdminMediaType,
   AdminMediaUsage,
 } from "@/types/admin";
-import { MAX_MEDIA_DOWNLOAD_ASSETS } from "@/lib/media-download-validation";
+import type { MediaDeletionResult } from "@/lib/media-delete-validation";
+import { MAX_MEDIA_SELECTION_ASSETS } from "@/lib/media-selection-validation";
 import {
   mediaLibraryErrorSchema,
   mediaLibraryPageSchema,
 } from "@/lib/media-library-validation";
+import { mediaDeletionResponseSchema } from "@/lib/media-delete-validation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -104,6 +106,11 @@ export function MediaLibrary() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeAssetId, setActiveAssetId] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
+  const [deleteResults, setDeleteResults] = useState<
+    MediaDeletionResult[] | null
+  >(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -173,10 +180,10 @@ export function MediaLibrary() {
     if (
       checked &&
       !selectedIds.has(assetId) &&
-      selectedIds.size >= MAX_MEDIA_DOWNLOAD_ASSETS
+      selectedIds.size >= MAX_MEDIA_SELECTION_ASSETS
     ) {
       toast.error(
-        `Select no more than ${MAX_MEDIA_DOWNLOAD_ASSETS} assets per download.`,
+        `Select no more than ${MAX_MEDIA_SELECTION_ASSETS} assets at a time.`,
       );
       return;
     }
@@ -195,6 +202,58 @@ export function MediaLibrary() {
       toast.success("Media URL copied.");
     } catch {
       toast.error("Could not copy the media URL.");
+    }
+  };
+
+  const requestDelete = (ids: string[]) => {
+    setDeleteResults(null);
+    setDeleteIds(ids);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteIds || deleting) return;
+    setDeleting(true);
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "DELETE",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: deleteIds }),
+      });
+      if (!response.ok) {
+        const payload: unknown = await response.json();
+        const parsedError = mediaLibraryErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not delete the selected media.",
+        );
+      }
+
+      const payload: unknown = await response.json();
+      const result = mediaDeletionResponseSchema.parse(payload);
+      const resolvedIds = new Set(
+        result.results
+          .filter(
+            (item) => item.status === "deleted" || item.status === "not_found",
+          )
+          .map((item) => item.id),
+      );
+      setSelectedIds(
+        (current) => new Set([...current].filter((id) => !resolvedIds.has(id))),
+      );
+      if (result.results.some((item) => item.status === "deleted")) {
+        setRetryCount((count) => count + 1);
+      }
+      setDeleteResults(result.results);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not delete the selected media.",
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -352,7 +411,8 @@ export function MediaLibrary() {
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => toast.info("Bulk delete is UI-only.")}
+              disabled={downloading || deleting}
+              onClick={() => requestDelete([...selectedIds])}
             >
               <Trash2 />
               Delete
@@ -416,7 +476,92 @@ export function MediaLibrary() {
         }}
         onCopyUrl={copyAssetUrl}
         onDownload={(asset) => void downloadAssets([asset.id])}
+        onDelete={(asset) => {
+          setActiveAssetId(null);
+          requestDelete([asset.id]);
+        }}
       />
+
+      <Dialog
+        open={deleteIds !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteIds(null);
+            setDeleteResults(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {deleteResults ? "Deletion results" : "Delete media assets?"}
+            </DialogTitle>
+            <DialogDescription>
+              {deleteResults
+                ? "Each selected asset has an individual result below."
+                : `${deleteIds?.length ?? 0} asset${deleteIds?.length === 1 ? "" : "s"} will be deleted if unused. Assets attached to a vehicle must be detached or replaced first.`}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteResults && (
+            <ul className="grid max-h-64 gap-3 overflow-y-auto">
+              {deleteResults.map((item) => (
+                <li
+                  key={item.id}
+                  className="bg-muted/40 rounded-[var(--radius-sm)] p-3 text-sm"
+                >
+                  <p className="font-bold">{item.filename || item.id}</p>
+                  <p className="text-muted-foreground mt-1">
+                    {item.status === "in_use"
+                      ? "Blocked: in use"
+                      : item.status === "not_found"
+                        ? "Not found"
+                        : item.status === "failed"
+                          ? "Failed"
+                          : "Deleted"}
+                    {" — "}
+                    {item.message}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <DialogFooter>
+            {deleteResults ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setDeleteIds(null);
+                  setDeleteResults(null);
+                }}
+              >
+                Done
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={deleting}
+                  onClick={() => {
+                    setDeleteIds(null);
+                    setDeleteResults(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={deleting}
+                  onClick={() => void confirmDelete()}
+                >
+                  {deleting ? "Deleting…" : "Delete"}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {!loading && !loadError && (
         <nav
@@ -518,6 +663,7 @@ function MediaAssetDialog({
   onOpenChange,
   onCopyUrl,
   onDownload,
+  onDelete,
 }: {
   asset: AdminMediaAsset | null;
   open: boolean;
@@ -525,6 +671,7 @@ function MediaAssetDialog({
   onOpenChange: (open: boolean) => void;
   onCopyUrl: (url: string) => void;
   onDownload: (asset: AdminMediaAsset) => void;
+  onDelete: (asset: AdminMediaAsset) => void;
 }) {
   if (!asset) return null;
 
@@ -591,7 +738,7 @@ function MediaAssetDialog({
             type="button"
             variant="destructive"
             className="rounded-[var(--radius-sm)]"
-            onClick={() => toast.info("Delete is UI-only.")}
+            onClick={() => onDelete(asset)}
           >
             <Trash2 />
             Delete

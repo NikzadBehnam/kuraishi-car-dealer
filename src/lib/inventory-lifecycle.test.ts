@@ -12,6 +12,7 @@ import {
   inventoryIdSchema,
   inventoryPaginationSchema,
   inventoryPolicyUpdateSchema,
+  inventorySelectionSchema,
   staffInventorySearchParamsSchema,
 } from "./inventory-validation.ts";
 
@@ -71,6 +72,22 @@ describe("inventory input and lifecycle boundary", () => {
         staffInventorySearchParamsSchema.safeParse({ page }).success,
         false,
       );
+    }
+  });
+
+  it("accepts only explicit unique inventory selection IDs", () => {
+    assert.deepEqual(
+      inventorySelectionSchema.parse({ ids: ["vehicle-1", "vehicle-2"] }),
+      { ids: ["vehicle-1", "vehicle-2"] },
+    );
+    for (const input of [
+      {},
+      { ids: [] },
+      { ids: ["vehicle-1", "vehicle-1"] },
+      { ids: ["../private"] },
+      { all: true, ids: ["vehicle-1"] },
+    ]) {
+      assert.equal(inventorySelectionSchema.safeParse(input).success, false);
     }
   });
 

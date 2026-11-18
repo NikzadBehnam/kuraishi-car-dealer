@@ -68,6 +68,15 @@ export const inventoryIdSchema = z
   .max(128, "Vehicle ID is too long.")
   .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "Invalid vehicle ID.");
 
+export const inventorySelectionSchema = z.strictObject({
+  ids: z
+    .array(inventoryIdSchema)
+    .min(1, "Select at least one vehicle.")
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Selected vehicle IDs must be unique.",
+    }),
+});
+
 export const inventoryPolicyStateSchema = z.strictObject({
   status: vehicleStatusSchema,
   inspectionStatus: inspectionStatusSchema,

@@ -29,6 +29,7 @@ import {
   formatFuelType,
   formatMileage,
 } from "@/lib/formatters";
+import { inventorySelectionSchema } from "@/lib/inventory-validation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -150,9 +151,11 @@ export function VehicleInventoryTable({
 
   const updateSearch = (value: string) => {
     setQuery(value);
+    setSelectedIds(new Set());
   };
 
   const updateStatusFilter = (value: string) => {
+    setSelectedIds(new Set());
     updateSearchParams({
       page: null,
       status: value === "all" ? null : value,
@@ -172,6 +175,19 @@ export function VehicleInventoryTable({
 
   const updatePage = (nextPage: number) => {
     updateSearchParams({ page: nextPage === 1 ? null : String(nextPage) });
+  };
+
+  const submitBulkAction = (action: string) => {
+    const selection = inventorySelectionSchema.safeParse({
+      ids: [...selectedIds],
+    });
+    if (!selection.success) {
+      toast.error(
+        "The selected vehicle IDs are invalid. Clear the selection and try again.",
+      );
+      return;
+    }
+    mockBulkAction(action, selection.data.ids);
   };
 
   const toggleVehicle = (id: string, checked: boolean) => {
@@ -249,15 +265,21 @@ export function VehicleInventoryTable({
 
       {selectedCount > 0 && (
         <section className="bg-surface grid min-w-0 gap-3 rounded-[var(--radius-sm)] border p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
-          <p className="text-sm font-bold">
-            {selectedCount} vehicle{selectedCount === 1 ? "" : "s"} selected
-          </p>
+          <div>
+            <p className="text-sm font-bold">
+              {selectedCount} vehicle{selectedCount === 1 ? "" : "s"} selected
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Selection carries across pages; changing search or status clears
+              it.
+            </p>
+          </div>
           <div className="grid gap-2 sm:flex sm:flex-wrap">
             <Button
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => mockBulkAction("Archive", selectedCount)}
+              onClick={() => submitBulkAction("Archive")}
             >
               <Archive />
               Archive
@@ -266,7 +288,7 @@ export function VehicleInventoryTable({
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => mockBulkAction("Mark sold", selectedCount)}
+              onClick={() => submitBulkAction("Mark sold")}
             >
               <BadgeCheck />
               Mark sold
@@ -583,6 +605,8 @@ function mockRowAction(action: string, title: string) {
   toast.info(`${action} is UI-only for ${title}.`);
 }
 
-function mockBulkAction(action: string, count: number) {
-  toast.info(`${action} is UI-only for ${count} selected vehicles.`);
+function mockBulkAction(action: string, ids: readonly string[]) {
+  toast.info(
+    `${action} is UI-only for ${ids.length} explicitly selected vehicles.`,
+  );
 }

@@ -39,7 +39,7 @@ export default async function AdminVehiclesPage({
   }
   return (
     <VehicleInventoryTable
-      key={filters.search}
+      key={JSON.stringify([filters.search, filters.status ?? null])}
       vehicles={result.items}
       total={result.total}
       page={result.page}

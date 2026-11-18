@@ -281,6 +281,17 @@ describe(
           make: "Toyota",
           model: "Corolla",
         });
+        assert.equal(attached.assets[0]?.bucketAccess, "private");
+        assert.equal(attached.assets[0]?.publicApprovedAt, null);
+
+        const approvedBrand = await mediaQueries.queryMediaLibraryAssets(tx, {
+          search: "Kuraishi brand mark",
+        });
+        assert.equal(approvedBrand.assets[0]?.bucketAccess, "public_read");
+        assert.equal(
+          approvedBrand.assets[0]?.publicApprovedAt,
+          "2026-03-02T00:00:00.000Z",
+        );
       });
     });
 

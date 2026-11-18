@@ -16,6 +16,7 @@
     "test:watch": "node --test --watch --test-isolation=none --experimental-strip-types src/**/*.test.ts",
     "test:inventory-db": "node --env-file=.env.inventory-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\inventory-migration.test.ts prisma\\inventory-queries.test.ts",
     "test:media-db": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-migration.test.ts",
+    "test:media-approvals": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-approvals.test.ts",
     "test:media-upload": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-uploads.test.ts",
     "test:media-library": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-library.test.ts",
     "test:media-downloads": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-downloads.test.ts",

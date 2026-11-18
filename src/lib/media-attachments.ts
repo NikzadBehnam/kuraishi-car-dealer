@@ -71,6 +71,10 @@ export async function listAttachableMediaAssets(input: unknown) {
         title: asset.title,
         filename: asset.originalFilename,
         altText: asset.altText,
+        isPublicApproved:
+          asset.bucketAccess === "public_read" &&
+          asset.publicApprovedAt !== null &&
+          asset.publicApprovedById !== null,
         sizeBytes: Number(asset.sizeBytes),
         uploadedAt: asset.uploadedAt.toISOString(),
         previewUrl: await getMediaPreviewUrl(storageClient, asset),
@@ -110,6 +114,10 @@ export async function listVehicleMediaAssets(vehicleId: unknown) {
         id: mediaAsset.id,
         title: mediaAsset.title,
         altText: mediaAsset.altText,
+        isPublicApproved:
+          mediaAsset.bucketAccess === "public_read" &&
+          mediaAsset.publicApprovedAt !== null &&
+          mediaAsset.publicApprovedById !== null,
         previewUrl: await getMediaPreviewUrl(storageClient, mediaAsset),
       })),
     ),

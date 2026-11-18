@@ -3,12 +3,14 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   Copy,
   Download,
   FileText,
   Images,
   Search,
+  ShieldCheck,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -74,6 +76,11 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
 
 const integer = new Intl.NumberFormat("de-DE");
 const pageSize = 24;
+const mediaApprovalResponseSchema = z.strictObject({
+  sourceMediaAssetId: z.string().min(1),
+  publicMediaAssetId: z.string().min(1),
+  reused: z.boolean(),
+});
 
 function getDownloadFilename(
   contentDisposition: string | null,
@@ -111,6 +118,10 @@ export function MediaLibrary() {
     MediaDeletionResult[] | null
   >(null);
   const [deleting, setDeleting] = useState(false);
+  const [approvalAsset, setApprovalAsset] = useState<AdminMediaAsset | null>(
+    null,
+  );
+  const [approving, setApproving] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -254,6 +265,45 @@ export function MediaLibrary() {
       );
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const approvePublicCopy = async () => {
+    if (!approvalAsset || approving) return;
+    setApproving(true);
+    try {
+      const response = await fetch("/api/admin/media/approve-public", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaAssetId: approvalAsset.id }),
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const parsedError = mediaLibraryErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not approve this image for public access.",
+        );
+      }
+      const result = mediaApprovalResponseSchema.parse(payload);
+      setApprovalAsset(null);
+      setPage(1);
+      setRetryCount((count) => count + 1);
+      toast.success(
+        result.reused
+          ? "An approved public copy already exists."
+          : "Approved public copy created. The private original is unchanged.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not approve this image for public access.",
+      );
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -476,11 +526,51 @@ export function MediaLibrary() {
         }}
         onCopyUrl={copyAssetUrl}
         onDownload={(asset) => void downloadAssets([asset.id])}
+        onApprovePublic={(asset) => {
+          setActiveAssetId(null);
+          setApprovalAsset(asset);
+        }}
         onDelete={(asset) => {
           setActiveAssetId(null);
           requestDelete([asset.id]);
         }}
       />
+
+      <Dialog
+        open={approvalAsset !== null}
+        onOpenChange={(open) => {
+          if (!open && !approving) setApprovalAsset(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create an approved public copy?</DialogTitle>
+            <DialogDescription>
+              {approvalAsset
+                ? `This makes a separate copy of "${approvalAsset.title}" accessible to anyone with its public URL. The private original stays private and unchanged.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={approving}
+              onClick={() => setApprovalAsset(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={approving}
+              onClick={() => void approvePublicCopy()}
+            >
+              <ShieldCheck />
+              {approving ? "Approving…" : "Create public copy"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={deleteIds !== null}
@@ -634,6 +724,11 @@ function MediaAssetCard({
         <div className="flex flex-wrap gap-2">
           <TypeBadge type={asset.type} />
           <UsageBadge usage={asset.usage} />
+          <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
+            {asset.bucketAccess === "public_read" && asset.publicApprovedAt
+              ? "Public approved"
+              : "Private"}
+          </Badge>
         </div>
         <div className="flex items-center justify-between gap-3">
           <p className="text-muted-foreground truncate text-xs">
@@ -663,6 +758,7 @@ function MediaAssetDialog({
   onOpenChange,
   onCopyUrl,
   onDownload,
+  onApprovePublic,
   onDelete,
 }: {
   asset: AdminMediaAsset | null;
@@ -671,6 +767,7 @@ function MediaAssetDialog({
   onOpenChange: (open: boolean) => void;
   onCopyUrl: (url: string) => void;
   onDownload: (asset: AdminMediaAsset) => void;
+  onApprovePublic: (asset: AdminMediaAsset) => void;
   onDelete: (asset: AdminMediaAsset) => void;
 }) {
   if (!asset) return null;
@@ -699,6 +796,22 @@ function MediaAssetDialog({
             <div className="grid gap-3 text-sm">
               <Info label="Type" value={typeLabels[asset.type]} />
               <Info label="Usage" value={usageLabels[asset.usage]} />
+              <Info
+                label="Access"
+                value={
+                  asset.bucketAccess === "public_read" && asset.publicApprovedAt
+                    ? "Public approved"
+                    : "Private"
+                }
+              />
+              <Info
+                label="Public approval"
+                value={
+                  asset.publicApprovedAt
+                    ? formatDateTime(asset.publicApprovedAt)
+                    : "Not approved"
+                }
+              />
               <Info label="Dimensions" value={formatDimensions(asset)} />
               <Info label="Size" value={`${integer.format(asset.sizeKb)} KB`} />
               <Info
@@ -715,6 +828,17 @@ function MediaAssetDialog({
         </div>
 
         <DialogFooter className="[&>button]:w-full sm:[&>button]:w-auto">
+          {asset.type === "image" && asset.bucketAccess === "private" && (
+            <Button
+              type="button"
+              variant="accent"
+              className="rounded-[var(--radius-sm)]"
+              onClick={() => onApprovePublic(asset)}
+            >
+              <ShieldCheck />
+              Create public copy
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"

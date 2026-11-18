@@ -5,6 +5,7 @@ import type { VehicleFormValues } from "./vehicle-form.schema.ts";
 import {
   parseOptionalNumber,
   toCreateVehicleDraftPayload,
+  toPublishVehiclePayload,
   toUpdateVehiclePayload,
 } from "./vehicle-form-payload.ts";
 
@@ -136,6 +137,25 @@ describe("vehicle form draft payload", () => {
     assert.equal("inspectionStatus" in payload, false);
     assert.equal("isFeatured" in payload, false);
     assert.equal("isAvailable" in payload, false);
+  });
+
+  it("uses a separate publish payload with explicit inspection confirmation", () => {
+    const createPayload = toPublishVehiclePayload(formValues(), true);
+    const updatePayload = toPublishVehiclePayload(formValues(), true, {
+      vehicleId: "vehicle-123",
+      expectedVersion: 7,
+    });
+
+    assert.equal(createPayload.confirmInspectionPassed, true);
+    assert.equal("vehicleId" in createPayload, false);
+    assert.equal(updatePayload.vehicleId, "vehicle-123");
+    assert.equal(updatePayload.expectedVersion, 7);
+    for (const payload of [createPayload, updatePayload]) {
+      assert.equal("status" in payload, false);
+      assert.equal("inspectionStatus" in payload, false);
+      assert.equal("isFeatured" in payload, false);
+      assert.equal("isAvailable" in payload, false);
+    }
   });
 
   it("parses blank optional numeric inputs without creating a zero", () => {

@@ -16,6 +16,8 @@ export const mediaLibraryPageSchema = z.strictObject({
       id: z.string().min(1),
       type: z.enum(["image", "document", "brand"]),
       usage: z.enum(["vehicle", "brand", "legal", "unused"]),
+      bucketAccess: z.enum(["private", "public_read"]),
+      publicApprovedAt: z.string().datetime({ offset: true }).nullable(),
       title: z.string(),
       filename: z.string(),
       url: z.string().url(),

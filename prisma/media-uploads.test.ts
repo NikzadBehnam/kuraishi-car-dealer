@@ -237,6 +237,7 @@ describe("media upload service on isolated Neon resources", () => {
       (candidate) => candidate.id === asset.id,
     );
     assert.ok(attachableAsset);
+    assert.equal(attachableAsset.isPublicApproved, false);
     assert.match(
       attachableAsset.previewUrl,
       /^https:\/\/.+[?&]X-Amz-Signature=/,

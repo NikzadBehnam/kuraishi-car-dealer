@@ -31,6 +31,7 @@ import {
 import {
   parseOptionalNumber,
   toCreateVehicleDraftPayload,
+  toPublishVehiclePayload,
   toUpdateVehiclePayload,
 } from "../_schemas/vehicle-form-payload";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,7 @@ const attachableAssetsResponseSchema = z.strictObject({
       title: z.string(),
       filename: z.string(),
       altText: z.string().nullable(),
+      isPublicApproved: z.boolean(),
       sizeBytes: z.number(),
       uploadedAt: z.string(),
       previewUrl: z.string().url(),
@@ -107,6 +109,9 @@ const createVehicleResponseSchema = z.strictObject({
   version: z.number().int().positive(),
   mediaAssetIds: z.array(z.string()),
 });
+const publishVehicleResponseSchema = createVehicleResponseSchema.extend({
+  created: z.boolean(),
+});
 
 const vehicleMediaAssetsResponseSchema = z.strictObject({
   assets: z.array(
@@ -114,6 +119,7 @@ const vehicleMediaAssetsResponseSchema = z.strictObject({
       id: z.string(),
       title: z.string(),
       altText: z.string().nullable(),
+      isPublicApproved: z.boolean(),
       previewUrl: z.string().url(),
     }),
   ),
@@ -131,6 +137,7 @@ type VehicleMediaItem = {
   previewUrl: string | null;
   title: string;
   altText: string;
+  isPublicApproved: boolean;
 };
 
 async function readApiResponse<T extends z.ZodType>(
@@ -215,6 +222,7 @@ export function VehicleForm({
     defaultValues: vehicle ? toFormValues(vehicle) : defaultValues,
   });
 
+  const [confirmInspectionPassed, setConfirmInspectionPassed] = useState(false);
   const [mediaItems, setMediaItems] = useState<VehicleMediaItem[]>(() =>
     (vehicle?.mediaAssetIds ?? []).map((mediaAssetId, index) => ({
       key: mediaAssetId,
@@ -222,6 +230,7 @@ export function VehicleForm({
       previewUrl: null,
       title: `Image ${index + 1}`,
       altText: "",
+      isPublicApproved: false,
     })),
   );
   const [isUploading, setIsUploading] = useState(false);
@@ -275,6 +284,7 @@ export function VehicleForm({
                   previewUrl: asset.previewUrl,
                   title: asset.title,
                   altText: asset.altText ?? "",
+                  isPublicApproved: asset.isPublicApproved,
                 }
               : item;
           }),
@@ -387,6 +397,7 @@ export function VehicleForm({
           previewUrl,
           title: completion.asset.title,
           altText: "",
+          isPublicApproved: false,
         });
       }
 
@@ -440,6 +451,7 @@ export function VehicleForm({
                 previewUrl,
                 title: retry.asset.title,
                 altText: "",
+                isPublicApproved: false,
               });
             } catch (recoveryError) {
               cleanupPending = true;
@@ -553,6 +565,49 @@ export function VehicleForm({
     }
   };
 
+  const canPublish = mode === "create" || vehicle?.status === "draft";
+
+  const publish = async (values: VehicleFormValues) => {
+    if (!confirmInspectionPassed) {
+      toast.error(
+        "Confirm that the vehicle passed inspection before publishing.",
+      );
+      return;
+    }
+    if (mode === "edit" && (!vehicle || vehicle.status !== "draft")) {
+      toast.error("Only a draft vehicle can be published from this form.");
+      return;
+    }
+
+    const target =
+      mode === "edit" && vehicle
+        ? { vehicleId: vehicle.id, expectedVersion: vehicle.version }
+        : undefined;
+    const payload = toPublishVehiclePayload(
+      values,
+      confirmInspectionPassed,
+      target,
+    );
+
+    try {
+      const response = await fetch("/api/admin/vehicles/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await readApiResponse(
+        response,
+        publishVehicleResponseSchema,
+      );
+      toast.success(result.created ? "Vehicle published." : "Draft published.");
+      router.push(adminRoutes.vehicles);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not publish vehicle.",
+      );
+    }
+  };
+
   const title = mode === "create" ? "Add vehicle" : "Edit vehicle";
 
   return (
@@ -574,15 +629,19 @@ export function VehicleForm({
               </Button>
               <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
                 {mode === "create"
-                  ? "Draft saving enabled"
-                  : "Edit saving enabled"}
+                  ? "Draft save and publish"
+                  : vehicle?.status === "draft"
+                    ? "Draft edit and publish"
+                    : "Edit saving enabled"}
               </Badge>
             </div>
             <h2 className="mt-3 text-xl font-extrabold">{title}</h2>
             <p className="text-muted-foreground mt-1 text-sm">
               {mode === "create"
-                ? "New vehicles are saved as drafts. Publishing is not available yet."
-                : "Saving updates vehicle details and images without changing its lifecycle state."}
+                ? "Save an incomplete draft, or publish a complete listing with an explicitly approved public image."
+                : vehicle?.status === "draft"
+                  ? "Save draft changes, or publish the complete listing after confirming inspection."
+                  : "Saving updates vehicle details and images without changing its lifecycle state."}
             </p>
           </div>
           <div className="grid w-full gap-2 sm:w-auto sm:grid-flow-col">
@@ -606,19 +665,37 @@ export function VehicleForm({
                 Save draft
               </Button>
             )}
-            <Button
-              type={mode === "create" ? "button" : "submit"}
-              variant="accent"
-              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              disabled={mode === "create" || isSubmitting || isUploading}
-            >
-              {isSubmitting ? (
-                <LoaderCircle className="animate-spin" />
-              ) : (
-                <BadgeCheck />
-              )}
-              {mode === "create" ? "Publish" : "Update"}
-            </Button>
+            {mode === "edit" && (
+              <Button
+                type="submit"
+                variant="accent"
+                className="w-full rounded-[var(--radius-sm)] sm:w-auto"
+                disabled={isSubmitting || isUploading}
+              >
+                {isSubmitting ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  <BadgeCheck />
+                )}
+                Update
+              </Button>
+            )}
+            {canPublish && (
+              <Button
+                type="button"
+                variant="accent"
+                className="w-full rounded-[var(--radius-sm)] sm:w-auto"
+                disabled={isSubmitting || isUploading}
+                onClick={handleSubmit(publish)}
+              >
+                {isSubmitting ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  <BadgeCheck />
+                )}
+                Publish
+              </Button>
+            )}
           </div>
         </div>
       </Card>
@@ -967,6 +1044,11 @@ export function VehicleForm({
                             <p className="truncate text-sm font-bold">
                               {asset.title}
                             </p>
+                            <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary mt-1">
+                              {asset.isPublicApproved
+                                ? "Public approved"
+                                : "Private"}
+                            </Badge>
                             <p className="text-muted-foreground truncate text-xs">
                               {asset.filename}
                             </p>
@@ -985,6 +1067,7 @@ export function VehicleForm({
                                   previewUrl: asset.previewUrl,
                                   title: asset.title,
                                   altText: asset.altText ?? "",
+                                  isPublicApproved: asset.isPublicApproved,
                                 },
                               ]);
                             }}
@@ -1055,6 +1138,11 @@ export function VehicleForm({
                           {attachedPosition === 1
                             ? "Cover"
                             : `Image ${attachedPosition ?? index + 1}`}
+                        </Badge>
+                        <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
+                          {item.isPublicApproved
+                            ? "Public approved"
+                            : "Private"}
                         </Badge>
                         <div className="flex gap-1">
                           <Button
@@ -1137,8 +1225,8 @@ export function VehicleForm({
           <Panel
             title="Publishing"
             description={
-              mode === "create"
-                ? "New vehicles are created as drafts. These settings are not applied during draft creation."
+              canPublish
+                ? "Publishing is a separate action from saving a draft and enforces the complete-listing and approved-image requirements."
                 : "Lifecycle state and quality gates are managed separately; saving vehicle details does not change them."
             }
           >
@@ -1201,6 +1289,15 @@ export function VehicleForm({
                 )}
               />
             </div>
+            {canPublish && (
+              <CheckboxField
+                label="I confirm the vehicle passed inspection"
+                description="The server records the inspection as passed only when this publish action succeeds. Saving a draft does not change its inspection status."
+                checked={confirmInspectionPassed}
+                disabled={isSubmitting || isUploading}
+                onCheckedChange={setConfirmInspectionPassed}
+              />
+            )}
           </Panel>
         </TabsContent>
       </Tabs>

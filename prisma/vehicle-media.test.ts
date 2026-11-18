@@ -118,6 +118,30 @@ async function createDraft(
   return result;
 }
 
+function publishInput(overrides: Record<string, unknown> = {}) {
+  const suffix = randomUUID();
+  return {
+    stockNumber: `PUBLISH-${suffix.slice(0, 8).toUpperCase()}`,
+    slug: `publish-${suffix}`,
+    make: "Skoda",
+    model: "Octavia",
+    description:
+      "A carefully maintained vehicle with complete listing details.",
+    location: "Vienna",
+    condition: "used",
+    price: "24900.00",
+    firstRegistration: "2020-05",
+    mileage: 45000,
+    powerKw: "110",
+    fuelType: "petrol",
+    transmissionType: "automatic",
+    bodyType: "wagon",
+    mediaAssetIds: [],
+    confirmInspectionPassed: true,
+    ...overrides,
+  };
+}
+
 describe("vehicle media persistence on isolated Neon resources", () => {
   before(async () => {
     runPrisma(["migrate", "deploy"]);
@@ -389,6 +413,152 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     assert.equal(asset.bucketAccess, "public_read");
     assert.ok(asset.publicApprovedAt);
     assert.equal(asset.publicApprovedById, actorId);
+  });
+
+  it("requires complete listing fields and explicit inspection confirmation", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const invalidFields: Record<string, unknown>[] = [
+      { price: null },
+      { firstRegistration: null },
+      { mileage: null },
+      { powerKw: null },
+      { fuelType: null },
+      { transmissionType: null },
+      { bodyType: null },
+      { condition: null },
+      { location: null },
+      { description: "Too short" },
+      { confirmInspectionPassed: false },
+      { expectedVersion: 1 },
+    ];
+    const countBefore = await prisma.vehicle.count({
+      where: { createdById: actorId },
+    });
+
+    for (const fields of invalidFields) {
+      await assert.rejects(
+        mutations.publishVehicle(publishInput(fields)),
+        (error: unknown) => error instanceof ZodError,
+      );
+    }
+
+    assert.equal(
+      await prisma.vehicle.count({ where: { createdById: actorId } }),
+      countBefore,
+    );
+  });
+
+  it("atomically creates a complete published vehicle with approved ordered media", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset({ publicRead: true });
+    const input = publishInput({ mediaAssetIds: [imageId] });
+    const saved = await mutations.publishVehicle(input);
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: saved.vehicleId },
+    });
+    const history = await prisma.vehicleChange.findMany({
+      where: { vehicleId: saved.vehicleId },
+      orderBy: { version: "asc" },
+    });
+
+    assert.equal(saved.created, true);
+    assert.equal(saved.version, 1);
+    assert.equal(vehicle.status, "published");
+    assert.equal(vehicle.inspectionStatus, "passed");
+    assert.equal(vehicle.isFeatured, false);
+    assert.ok(vehicle.publishedAt);
+    assert.equal(vehicle.price?.toFixed(2), "24900.00");
+    assert.deepEqual(saved.mediaAssetIds, [imageId]);
+    const publicMediaPreview = await mediaAttachments.listVehicleMediaAssets(
+      saved.vehicleId,
+    );
+    assert.equal(publicMediaPreview.assets[0]?.isPublicApproved, true);
+    assert.deepEqual(
+      history.map(({ previousStatus, status, inspectionStatus }) => ({
+        previousStatus,
+        status,
+        inspectionStatus,
+      })),
+      [
+        {
+          previousStatus: null,
+          status: "published",
+          inspectionStatus: "passed",
+        },
+      ],
+    );
+  });
+
+  it("rejects publishing with private images or no approved image", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const privateImageId = await createImageAsset();
+    const countBefore = await prisma.vehicle.count({
+      where: { createdById: actorId },
+    });
+
+    for (const mediaAssetIds of [[], [privateImageId]]) {
+      await assert.rejects(
+        mutations.publishVehicle(publishInput({ mediaAssetIds })),
+        (error: unknown) =>
+          error instanceof Error &&
+          error.name === "InventoryPolicyError" &&
+          "status" in error &&
+          error.status === 422,
+      );
+    }
+
+    assert.equal(
+      await prisma.vehicle.count({ where: { createdById: actorId } }),
+      countBefore,
+    );
+  });
+
+  it("publishes an existing draft with an optimistic version and rejects repeat publishing", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset({ publicRead: true });
+    const draft = await createDraft([imageId]);
+    const current = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const input = publishInput({
+      vehicleId: draft.vehicleId,
+      expectedVersion: draft.version,
+      stockNumber: current.stockNumber,
+      slug: current.slug,
+      make: "Published Skoda",
+      mediaAssetIds: [imageId],
+    });
+    const saved = await mutations.publishVehicle(input);
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+    });
+
+    assert.equal(saved.created, false);
+    assert.equal(saved.version, draft.version + 1);
+    assert.equal(vehicle.make, "Published Skoda");
+    assert.equal(vehicle.status, "published");
+    assert.equal(vehicle.inspectionStatus, "passed");
+    assert.ok(vehicle.publishedAt);
+    await assert.rejects(
+      mutations.publishVehicle({
+        ...input,
+        expectedVersion: saved.version,
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+    await assert.rejects(
+      mutations.publishVehicle(input),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
   });
 
   it("returns conflicts when a stock number or slug already exists", async () => {
@@ -806,7 +976,7 @@ describe("vehicle media persistence on isolated Neon resources", () => {
 
   it("rolls back vehicle, history, and media changes when attachment insertion fails", async () => {
     const originalImage = await createImageAsset();
-    const rejectedImage = await createImageAsset();
+    const rejectedImage = await createImageAsset({ publicRead: true });
     const created = await createDraft([originalImage]);
 
     await prisma.$executeRawUnsafe(`
@@ -852,6 +1022,32 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         where: { vehicleId: created.vehicleId },
       }),
       1,
+    );
+
+    const failedPublishSlug = `publish-rollback-${randomUUID()}`;
+    await assert.rejects(
+      mutations.publishVehicle(
+        publishInput({
+          slug: failedPublishSlug,
+          mediaAssetIds: [rejectedImage],
+        }),
+      ),
+    );
+    assert.equal(
+      await prisma.vehicle.count({ where: { slug: failedPublishSlug } }),
+      0,
+    );
+    assert.equal(
+      await prisma.vehicleChange.count({
+        where: { vehicle: { slug: failedPublishSlug } },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.vehicleMedia.count({
+        where: { mediaAssetId: rejectedImage },
+      }),
+      0,
     );
   });
 });

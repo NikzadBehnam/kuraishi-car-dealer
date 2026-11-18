@@ -15,6 +15,10 @@ import {
   inventoryIdSchema,
   inventorySlugSchema,
 } from "./inventory-validation.ts";
+import {
+  InventoryPolicyError,
+  resolveInventoryPolicyUpdate,
+} from "./inventory-lifecycle.ts";
 import { requireSession } from "./session.ts";
 
 const requiredText = (label: string, max: number) =>
@@ -153,11 +157,102 @@ export const updateVehicleSchema = vehicleDraftFieldsSchema
     { message: "Provide at least one vehicle change." },
   );
 
+export const publishVehicleSchema = vehicleDraftFieldsSchema
+  .extend({
+    mediaAssetIds: mediaAssetIdsSchema,
+    confirmInspectionPassed: z.literal(true),
+    vehicleId: inventoryIdSchema.optional(),
+    expectedVersion: z.number().int().min(1).max(2_147_483_647).optional(),
+  })
+  .superRefine((publication, context) => {
+    if (
+      (publication.vehicleId === undefined) !==
+      (publication.expectedVersion === undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: [
+          publication.vehicleId === undefined ? "vehicleId" : "expectedVersion",
+        ],
+        message: "Vehicle ID and expected version must be provided together.",
+      });
+    }
+
+    const requiredFields = [
+      [
+        "price",
+        "Price",
+        publication.price === null || publication.price === undefined,
+      ],
+      [
+        "firstRegistration",
+        "First registration",
+        publication.firstRegistration === null ||
+          publication.firstRegistration === undefined,
+      ],
+      [
+        "mileage",
+        "Mileage",
+        publication.mileage === null || publication.mileage === undefined,
+      ],
+      [
+        "powerKw",
+        "Power",
+        publication.powerKw === null || publication.powerKw === undefined,
+      ],
+      [
+        "fuelType",
+        "Fuel type",
+        publication.fuelType === null || publication.fuelType === undefined,
+      ],
+      [
+        "transmissionType",
+        "Transmission",
+        publication.transmissionType === null ||
+          publication.transmissionType === undefined,
+      ],
+      [
+        "bodyType",
+        "Body type",
+        publication.bodyType === null || publication.bodyType === undefined,
+      ],
+      [
+        "condition",
+        "Condition",
+        publication.condition === null || publication.condition === undefined,
+      ],
+      [
+        "location",
+        "Location",
+        publication.location === null || publication.location === undefined,
+      ],
+      [
+        "description",
+        "Description",
+        typeof publication.description !== "string" ||
+          publication.description.length < 20,
+      ],
+    ] as const;
+
+    for (const [field, label, missing] of requiredFields) {
+      if (missing) {
+        context.addIssue({
+          code: "custom",
+          path: [field],
+          message:
+            field === "description"
+              ? "Description must be at least 20 characters to publish."
+              : `${label} is required before publishing.`,
+        });
+      }
+    }
+  });
+
 type MediaAssetRecord = {
   id: string;
   objectKey: string;
   bucketAccess: "private" | "public_read";
-  type: string;
+  type: "image" | "document" | "brand";
   verifiedMimeType: string;
   sizeBytes: bigint;
   publicApprovedAt: Date | null;
@@ -617,6 +712,7 @@ export async function updateVehicle(input: unknown) {
             });
           }
         }
+
         return {
           vehicleId,
           version,
@@ -633,6 +729,201 @@ export async function updateVehicle(input: unknown) {
     );
   } catch (error) {
     if (error instanceof InventoryMutationError) {
+      throw error;
+    }
+    prismaMutationError(error);
+  }
+}
+
+export async function publishVehicle(input: unknown) {
+  const session = await requireSession();
+  const parsed = publishVehicleSchema.parse(input);
+  const {
+    vehicleId,
+    expectedVersion,
+    mediaAssetIds,
+    ...vehicleFieldsWithConfirmation
+  } = parsed;
+  const { confirmInspectionPassed, ...vehicleFields } =
+    vehicleFieldsWithConfirmation;
+  if (!confirmInspectionPassed) {
+    throw new InventoryMutationError(
+      422,
+      "Confirm that the vehicle passed inspection before publishing.",
+    );
+  }
+  const current = vehicleId
+    ? await prisma.vehicle.findUnique({
+        where: { id: vehicleId },
+        select: {
+          id: true,
+          version: true,
+          slug: true,
+          status: true,
+          inspectionStatus: true,
+          isFeatured: true,
+          publishedAt: true,
+          soldAt: true,
+        },
+      })
+    : null;
+  if (vehicleId && !current) {
+    throw new InventoryMutationError(404, "Vehicle was not found.");
+  }
+  if (current && current.version !== expectedVersion) {
+    throw new InventoryMutationError(
+      409,
+      "The vehicle changed since it was loaded. Reload it to review the latest version before publishing.",
+    );
+  }
+  if (current && current.status !== "draft") {
+    throw new InventoryMutationError(
+      409,
+      "Only a draft vehicle can be published from this action.",
+    );
+  }
+  if (current?.publishedAt && vehicleFields.slug !== current.slug) {
+    throw new InventoryMutationError(
+      422,
+      "A vehicle slug cannot be changed after it has been published.",
+    );
+  }
+
+  assertValidConsumption(vehicleFields);
+  const media = await loadMediaRows(mediaAssetIds, vehicleId);
+  const currentPolicy = current ?? {
+    status: "draft" as const,
+    inspectionStatus: "pending" as const,
+    isFeatured: false,
+  };
+  const publication = {
+    status: "published" as const,
+    inspectionStatus: "passed" as const,
+  };
+  resolveInventoryPolicyUpdate(currentPolicy, publication, media);
+  const publishedAt = current?.publishedAt ?? new Date();
+
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const transactionMedia = await assertMediaAvailableInTransaction(
+          tx,
+          mediaAssetIds,
+          vehicleId,
+        );
+        const lifecycle = resolveInventoryPolicyUpdate(
+          currentPolicy,
+          publication,
+          transactionMedia,
+        );
+
+        if (!current) {
+          const dealershipId = await getSingleDealershipId(tx);
+          const vehicle = await tx.vehicle.create({
+            data: {
+              ...vehicleFields,
+              dealerId: dealershipId,
+              createdById: session.user.id,
+              updatedById: session.user.id,
+              acquisitionDate: todayInDealershipTimezone(),
+              status: lifecycle.status,
+              inspectionStatus: lifecycle.inspectionStatus,
+              isFeatured: lifecycle.isFeatured,
+              publishedAt,
+            },
+            select: { id: true, version: true },
+          });
+          await tx.vehicleChange.create({
+            data: {
+              vehicleId: vehicle.id,
+              actorId: session.user.id,
+              version: vehicle.version,
+              previousStatus: null,
+              status: lifecycle.status,
+              previousInspectionStatus: null,
+              inspectionStatus: lifecycle.inspectionStatus,
+              previousSoldAt: null,
+              soldAt: null,
+            },
+          });
+          await tx.vehicleMedia.createMany({
+            data: transactionMedia.map((asset, position) => ({
+              vehicleId: vehicle.id,
+              mediaAssetId: asset.id,
+              position,
+            })),
+          });
+          return {
+            vehicleId: vehicle.id,
+            version: vehicle.version,
+            mediaAssetIds,
+            created: true,
+          };
+        }
+
+        const update = await tx.vehicle.updateMany({
+          where: {
+            id: current.id,
+            version: current.version,
+            status: "draft",
+          },
+          data: {
+            ...vehicleFields,
+            updatedById: session.user.id,
+            version: { increment: 1 },
+            status: lifecycle.status,
+            inspectionStatus: lifecycle.inspectionStatus,
+            isFeatured: lifecycle.isFeatured,
+            publishedAt,
+            soldAt: null,
+          },
+        });
+        if (update.count !== 1) {
+          throw new InventoryMutationError(
+            409,
+            "The vehicle changed since it was loaded. Reload it to review the latest version before publishing.",
+          );
+        }
+
+        const version = current.version + 1;
+        await tx.vehicleChange.create({
+          data: {
+            vehicleId: current.id,
+            actorId: session.user.id,
+            version,
+            previousStatus: current.status,
+            status: lifecycle.status,
+            previousInspectionStatus: current.inspectionStatus,
+            inspectionStatus: lifecycle.inspectionStatus,
+            previousSoldAt: current.soldAt,
+            soldAt: null,
+          },
+        });
+        await tx.vehicleMedia.deleteMany({
+          where: { vehicleId: current.id },
+        });
+        await tx.vehicleMedia.createMany({
+          data: transactionMedia.map((asset, position) => ({
+            vehicleId: current.id,
+            mediaAssetId: asset.id,
+            position,
+          })),
+        });
+
+        return {
+          vehicleId: current.id,
+          version,
+          mediaAssetIds,
+          created: false,
+        };
+      },
+      { isolationLevel: "Serializable" },
+    );
+  } catch (error) {
+    if (
+      error instanceof InventoryMutationError ||
+      error instanceof InventoryPolicyError
+    ) {
       throw error;
     }
     prismaMutationError(error);

@@ -47,6 +47,8 @@ export interface AdminMediaAsset {
   id: string;
   type: AdminMediaType;
   usage: AdminMediaUsage;
+  bucketAccess: "private" | "public_read";
+  publicApprovedAt: string | null;
   title: string;
   filename: string;
   url: string;

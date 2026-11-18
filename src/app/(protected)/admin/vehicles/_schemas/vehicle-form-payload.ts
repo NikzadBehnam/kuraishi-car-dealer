@@ -64,3 +64,15 @@ export function toUpdateVehiclePayload(
     expectedVersion,
   };
 }
+
+export function toPublishVehiclePayload(
+  values: VehicleFormValues,
+  confirmInspectionPassed: boolean,
+  target?: { vehicleId: string; expectedVersion: number },
+) {
+  return {
+    ...toCreateVehicleDraftPayload(values),
+    confirmInspectionPassed,
+    ...(target ?? {}),
+  };
+}

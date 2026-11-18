@@ -177,6 +177,8 @@ export async function queryMediaLibraryAssets(
           type: asset.type,
           hasVehicleAttachment: asset.vehicleAttachment !== null,
         }),
+        bucketAccess: asset.bucketAccess,
+        publicApprovedAt: asset.publicApprovedAt?.toISOString() ?? null,
         title: asset.title,
         filename: asset.originalFilename,
         url: await getAssetUrl(asset),

@@ -11,8 +11,11 @@ const normalizeSearch = (value: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+export const getVehicleSearchTerms = (query: string) =>
+  normalizeSearch(query).trim().split(/\s+/).filter(Boolean);
+
 export function filterVehicles(input: Vehicle[], query: string) {
-  const terms = normalizeSearch(query).trim().split(/\s+/).filter(Boolean);
+  const terms = getVehicleSearchTerms(query);
   const result = input.filter((vehicle) => {
     if (!terms.length) return true;
 
@@ -38,7 +41,5 @@ export function filterVehicles(input: Vehicle[], query: string) {
     return terms.every((term) => searchableText.includes(term));
   });
 
-  return result.toSorted(
-    (a, b) => Number(b.isFeatured) - Number(a.isFeatured),
-  );
+  return result.toSorted((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
 }

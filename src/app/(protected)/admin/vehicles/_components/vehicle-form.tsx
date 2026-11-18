@@ -31,6 +31,7 @@ import {
 import {
   parseOptionalNumber,
   toCreateVehicleDraftPayload,
+  toUpdateVehiclePayload,
 } from "../_schemas/vehicle-form-payload";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,17 @@ const createVehicleResponseSchema = z.strictObject({
   vehicleId: z.string().min(1),
   version: z.number().int().positive(),
   mediaAssetIds: z.array(z.string()),
+});
+
+const vehicleMediaAssetsResponseSchema = z.strictObject({
+  assets: z.array(
+    z.strictObject({
+      id: z.string(),
+      title: z.string(),
+      altText: z.string().nullable(),
+      previewUrl: z.string().url(),
+    }),
+  ),
 });
 
 type UploadIntent = z.infer<
@@ -223,6 +235,7 @@ export function VehicleForm({
   const [hasMoreAssets, setHasMoreAssets] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectUrlsRef = useRef(new Set<string>());
+  const vehicleId = vehicle?.id;
 
   useEffect(
     () => () => {
@@ -231,6 +244,55 @@ export function VehicleForm({
     },
     [],
   );
+
+  useEffect(() => {
+    if (mode !== "edit" || !vehicleId) return;
+
+    let active = true;
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/admin/vehicles/${encodeURIComponent(vehicleId)}/media`,
+          { cache: "no-store" },
+        );
+        const result = await readApiResponse(
+          response,
+          vehicleMediaAssetsResponseSchema,
+        );
+        if (!active) return;
+
+        const assetsById = new Map(
+          result.assets.map((asset) => [asset.id, asset]),
+        );
+        setMediaItems((current) =>
+          current.map((item) => {
+            const asset = item.mediaAssetId
+              ? assetsById.get(item.mediaAssetId)
+              : undefined;
+            return asset
+              ? {
+                  ...item,
+                  previewUrl: asset.previewUrl,
+                  title: asset.title,
+                  altText: asset.altText ?? "",
+                }
+              : item;
+          }),
+        );
+      } catch (error) {
+        if (!active) return;
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not load vehicle images.",
+        );
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [mode, vehicleId]);
 
   const setOrderedMediaItems = (items: VehicleMediaItem[]) => {
     setMediaItems(items);
@@ -460,25 +522,33 @@ export function VehicleForm({
   };
 
   const submit = async (values: VehicleFormValues) => {
-    if (mode === "edit") {
-      toast.info("Durable vehicle editing is not available yet.");
+    const payload =
+      mode === "create"
+        ? toCreateVehicleDraftPayload(values)
+        : vehicle
+          ? toUpdateVehiclePayload(values, vehicle.id, vehicle.version)
+          : null;
+    if (!payload) {
+      toast.error("Vehicle details are unavailable.");
       return;
     }
 
     try {
       const response = await fetch("/api/admin/vehicles", {
-        method: "POST",
+        method: mode === "create" ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toCreateVehicleDraftPayload(values)),
+        body: JSON.stringify(payload),
       });
       await readApiResponse(response, createVehicleResponseSchema);
-      toast.success("Vehicle draft saved.");
+      toast.success(
+        mode === "create" ? "Vehicle draft saved." : "Vehicle updated.",
+      );
       router.push(adminRoutes.vehicles);
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Could not save the vehicle draft.",
+          : "Could not save vehicle changes.",
       );
     }
   };
@@ -505,14 +575,14 @@ export function VehicleForm({
               <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
                 {mode === "create"
                   ? "Draft saving enabled"
-                  : "Edit saving unavailable"}
+                  : "Edit saving enabled"}
               </Badge>
             </div>
             <h2 className="mt-3 text-xl font-extrabold">{title}</h2>
             <p className="text-muted-foreground mt-1 text-sm">
               {mode === "create"
                 ? "New vehicles are saved as drafts. Publishing is not available yet."
-                : "Vehicle edits are not saved yet; draft creation is available."}
+                : "Saving updates vehicle details and images without changing its lifecycle state."}
             </p>
           </div>
           <div className="grid w-full gap-2 sm:w-auto sm:grid-flow-col">
@@ -525,23 +595,17 @@ export function VehicleForm({
               <Eye />
               Preview
             </Button>
-            <Button
-              type={mode === "create" ? "submit" : "button"}
-              variant="outline"
-              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              disabled={isSubmitting || isUploading}
-              onClick={
-                mode === "edit"
-                  ? () =>
-                      toast.info(
-                        "Durable vehicle editing is not available yet.",
-                      )
-                  : undefined
-              }
-            >
-              <Save />
-              Save draft
-            </Button>
+            {mode === "create" && (
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full rounded-[var(--radius-sm)] sm:w-auto"
+                disabled={isSubmitting || isUploading}
+              >
+                <Save />
+                Save draft
+              </Button>
+            )}
             <Button
               type={mode === "create" ? "button" : "submit"}
               variant="accent"
@@ -599,7 +663,15 @@ export function VehicleForm({
                 <Input {...register("stockNumber")} />
               </Field>
               <Field label="Slug" error={errors.slug?.message}>
-                <Input {...register("slug")} />
+                <Input
+                  {...register("slug")}
+                  disabled={
+                    Boolean(vehicle?.publishedAt) ||
+                    ["published", "reserved", "sold"].includes(
+                      vehicle?.status ?? "",
+                    )
+                  }
+                />
               </Field>
               <Field label="Location" error={errors.location?.message}>
                 <Input {...register("location")} />
@@ -786,7 +858,7 @@ export function VehicleForm({
         <TabsContent value="media">
           <Panel
             title="Media"
-            description="Uploads become private assets immediately. Selected image IDs stay ordered in this form; vehicle attachment persistence is 03.08. Removing an image here does not delete its asset, and attaching it does not approve public access."
+            description="Uploads become private assets immediately. Selected image IDs stay ordered and are attached when the vehicle is saved. Removing an image detaches it without deleting the asset; attaching it does not approve public access."
           >
             <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
               <div className="grid min-w-0 content-start gap-3">
@@ -1067,7 +1139,7 @@ export function VehicleForm({
             description={
               mode === "create"
                 ? "New vehicles are created as drafts. These settings are not applied during draft creation."
-                : "Visibility, workflow state, and quality gates."
+                : "Lifecycle state and quality gates are managed separately; saving vehicle details does not change them."
             }
           >
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
@@ -1076,7 +1148,7 @@ export function VehicleForm({
                 name="status"
                 control={control}
                 error={errors.status?.message}
-                disabled={mode === "create"}
+                disabled
                 items={[
                   ["draft", "Draft"],
                   ["published", "Published"],
@@ -1090,7 +1162,7 @@ export function VehicleForm({
                 name="inspectionStatus"
                 control={control}
                 error={errors.inspectionStatus?.message}
-                disabled={mode === "create"}
+                disabled
                 items={[
                   ["pending", "Pending"],
                   ["in_progress", "In progress"],
@@ -1106,7 +1178,7 @@ export function VehicleForm({
                     label="Featured vehicle"
                     description="Show this vehicle in highlighted admin and public sections."
                     checked={field.value}
-                    disabled={mode === "create"}
+                    disabled
                     onCheckedChange={(checked) =>
                       field.onChange(checked === true)
                     }
@@ -1119,9 +1191,9 @@ export function VehicleForm({
                 render={({ field }) => (
                   <CheckboxField
                     label="Available"
-                    description="Vehicle can be shown as available in listing UI."
+                    description="Availability is derived from the vehicle's lifecycle status."
                     checked={field.value}
-                    disabled={mode === "create"}
+                    disabled
                     onCheckedChange={(checked) =>
                       field.onChange(checked === true)
                     }

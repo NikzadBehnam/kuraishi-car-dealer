@@ -135,7 +135,7 @@ export const createDraftVehicleSchema = vehicleDraftFieldsSchema.extend({
   mediaAssetIds: mediaAssetIdsSchema.default([]),
 });
 
-export const updateDraftVehicleSchema = vehicleDraftFieldsSchema
+export const updateVehicleSchema = vehicleDraftFieldsSchema
   .partial()
   .extend({
     vehicleId: inventoryIdSchema,
@@ -150,7 +150,7 @@ export const updateDraftVehicleSchema = vehicleDraftFieldsSchema
           key !== "expectedVersion" &&
           value !== undefined,
       ),
-    { message: "Provide at least one draft change." },
+    { message: "Provide at least one vehicle change." },
   );
 
 type MediaAssetRecord = {
@@ -326,7 +326,7 @@ async function assertMediaAvailableInTransaction(
   vehicleId?: string,
 ) {
   if (!ids.length) {
-    return;
+    return [];
   }
   const assets = await tx.mediaAsset.findMany({
     where: { id: { in: ids } },
@@ -344,7 +344,33 @@ async function assertMediaAvailableInTransaction(
       },
     },
   });
-  validateMediaRows(assets, ids, vehicleId);
+  return validateMediaRows(assets, ids, vehicleId);
+}
+
+type PublicMediaAsset = Pick<
+  MediaAssetRecord,
+  "type" | "bucketAccess" | "publicApprovedAt" | "publicApprovedById"
+>;
+
+function assertPublicVehicleHasApprovedImage(
+  status: string,
+  assets: readonly PublicMediaAsset[],
+) {
+  if (
+    ["published", "reserved", "sold"].includes(status) &&
+    !assets.some(
+      (asset) =>
+        asset.type === "image" &&
+        asset.bucketAccess === "public_read" &&
+        asset.publicApprovedAt !== null &&
+        asset.publicApprovedById !== null,
+    )
+  ) {
+    throw new InventoryMutationError(
+      422,
+      "Published, reserved, and sold vehicles must retain at least one approved public image.",
+    );
+  }
 }
 
 async function getSingleDealershipId(tx: Prisma.TransactionClient) {
@@ -460,15 +486,17 @@ export async function createDraftVehicle(input: unknown) {
   }
 }
 
-export async function updateDraftVehicle(input: unknown) {
+export async function updateVehicle(input: unknown) {
   const session = await requireSession();
-  const parsed = updateDraftVehicleSchema.parse(input);
+  const parsed = updateVehicleSchema.parse(input);
   const { vehicleId, expectedVersion, mediaAssetIds, ...changes } = parsed;
   const current = await prisma.vehicle.findUnique({
     where: { id: vehicleId },
     select: {
       id: true,
       version: true,
+      slug: true,
+      publishedAt: true,
       status: true,
       inspectionStatus: true,
       soldAt: true,
@@ -480,16 +508,21 @@ export async function updateDraftVehicle(input: unknown) {
   if (!current) {
     throw new InventoryMutationError(404, "Vehicle was not found.");
   }
-  if (current.status !== "draft") {
-    throw new InventoryMutationError(
-      409,
-      "Only draft vehicles can be edited by this operation.",
-    );
-  }
   if (current.version !== expectedVersion) {
     throw new InventoryMutationError(
       409,
-      "The vehicle changed since it was loaded. Reload it and try again.",
+      "The vehicle changed since it was loaded. Reload it to review the latest version before saving.",
+    );
+  }
+  if (
+    (current.publishedAt ||
+      ["published", "reserved", "sold"].includes(current.status)) &&
+    changes.slug !== undefined &&
+    changes.slug !== current.slug
+  ) {
+    throw new InventoryMutationError(
+      422,
+      "A vehicle slug cannot be changed after it has been published.",
     );
   }
   assertValidConsumption({
@@ -504,21 +537,47 @@ export async function updateDraftVehicle(input: unknown) {
         ? current.consumptionUnit
         : changes.consumptionUnit,
   });
-  const media = mediaAssetIds
-    ? await loadMediaRows(mediaAssetIds, vehicleId)
-    : undefined;
+  const media =
+    mediaAssetIds !== undefined
+      ? await loadMediaRows(mediaAssetIds, vehicleId)
+      : undefined;
+  if (media !== undefined) {
+    assertPublicVehicleHasApprovedImage(current.status, media);
+  }
 
   try {
     return await prisma.$transaction(
       async (tx) => {
-        if (mediaAssetIds) {
-          await assertMediaAvailableInTransaction(tx, mediaAssetIds, vehicleId);
-        }
+        const transactionMedia =
+          mediaAssetIds !== undefined
+            ? await assertMediaAvailableInTransaction(
+                tx,
+                mediaAssetIds,
+                vehicleId,
+              )
+            : (
+                await tx.vehicleMedia.findMany({
+                  where: { vehicleId },
+                  orderBy: { position: "asc" },
+                  select: {
+                    mediaAsset: {
+                      select: {
+                        type: true,
+                        bucketAccess: true,
+                        publicApprovedAt: true,
+                        publicApprovedById: true,
+                      },
+                    },
+                  },
+                })
+              ).map(({ mediaAsset }) => mediaAsset);
+        assertPublicVehicleHasApprovedImage(current.status, transactionMedia);
+
         const update = await tx.vehicle.updateMany({
           where: {
             id: vehicleId,
             version: expectedVersion,
-            status: "draft",
+            status: current.status,
           },
           data: {
             ...changes,
@@ -546,7 +605,7 @@ export async function updateDraftVehicle(input: unknown) {
             soldAt: current.soldAt,
           },
         });
-        if (media) {
+        if (media !== undefined) {
           await tx.vehicleMedia.deleteMany({ where: { vehicleId } });
           if (media.length) {
             await tx.vehicleMedia.createMany({
@@ -561,15 +620,13 @@ export async function updateDraftVehicle(input: unknown) {
         return {
           vehicleId,
           version,
-          mediaAssetIds:
-            mediaAssetIds ??
-            (
-              await tx.vehicleMedia.findMany({
-                where: { vehicleId },
-                orderBy: { position: "asc" },
-                select: { mediaAssetId: true },
-              })
-            ).map(({ mediaAssetId }) => mediaAssetId),
+          mediaAssetIds: (
+            await tx.vehicleMedia.findMany({
+              where: { vehicleId },
+              orderBy: { position: "asc" },
+              select: { mediaAssetId: true },
+            })
+          ).map(({ mediaAssetId }) => mediaAssetId),
         };
       },
       { isolationLevel: "Serializable" },

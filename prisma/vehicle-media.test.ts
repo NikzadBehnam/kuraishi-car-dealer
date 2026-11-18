@@ -35,6 +35,7 @@ let dbMock: ReturnType<typeof mock.module> | undefined;
 let sessionMock: ReturnType<typeof mock.module> | undefined;
 let mutations: typeof import("../src/lib/inventory-mutations.ts");
 let queries: typeof import("../src/lib/inventory-queries.ts");
+let mediaAttachments: typeof import("../src/lib/media-attachments.ts");
 let triggerInstalled = false;
 const objectKeys: { Bucket: string; Key: string }[] = [];
 
@@ -117,7 +118,7 @@ async function createDraft(
   return result;
 }
 
-describe("vehicle draft media persistence on isolated Neon resources", () => {
+describe("vehicle media persistence on isolated Neon resources", () => {
   before(async () => {
     runPrisma(["migrate", "deploy"]);
     runPrisma([
@@ -150,6 +151,7 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
     });
     mutations = await import("../src/lib/inventory-mutations.ts");
     queries = await import("../src/lib/inventory-queries.ts");
+    mediaAttachments = await import("../src/lib/media-attachments.ts");
   });
 
   after(async () => {
@@ -186,6 +188,11 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
   it("requires a fresh staff session before validating or writing", async () => {
     await assert.rejects(
       mutations.createDraftVehicle({ invalid: true }),
+      (error: unknown) =>
+        error instanceof Error && error.name === "AuthorizationError",
+    );
+    await assert.rejects(
+      mediaAttachments.listVehicleMediaAssets("vehicle_1"),
       (error: unknown) =>
         error instanceof Error && error.name === "AuthorizationError",
     );
@@ -427,6 +434,9 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
       where: { id: saved.vehicleId },
     });
     const staffDTO = await queries.getStaffVehicle(saved.vehicleId);
+    const mediaPreviews = await mediaAttachments.listVehicleMediaAssets(
+      saved.vehicleId,
+    );
     const attachments = await prisma.vehicleMedia.findMany({
       where: { vehicleId: saved.vehicleId },
       orderBy: { position: "asc" },
@@ -438,6 +448,15 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
 
     assert.deepEqual(saved.mediaAssetIds, [second, first]);
     assert.deepEqual(staffDTO?.mediaAssetIds, [second, first]);
+    assert.deepEqual(
+      mediaPreviews.assets.map(({ id }) => id),
+      [second, first],
+    );
+    assert.ok(
+      mediaPreviews.assets.every(({ previewUrl }) =>
+        previewUrl.startsWith("http"),
+      ),
+    );
     assert.equal(saved.version, 1);
     assert.deepEqual(
       attachments.map(({ mediaAssetId, position }) => [mediaAssetId, position]),
@@ -492,7 +511,7 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
     const second = await createImageAsset();
     const created = await createDraft([first, second]);
 
-    const updated = await mutations.updateDraftVehicle({
+    const updated = await mutations.updateVehicle({
       vehicleId: created.vehicleId,
       expectedVersion: 1,
       make: "Škoda",
@@ -521,7 +540,7 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
     );
 
     await assert.rejects(
-      mutations.updateDraftVehicle({
+      mutations.updateVehicle({
         vehicleId: created.vehicleId,
         expectedVersion: 1,
         make: "Stale edit",
@@ -542,6 +561,158 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
         where: { vehicleId: created.vehicleId },
       }),
       2,
+    );
+  });
+
+  it("detaches removed draft images without deleting the media assets", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const first = await createImageAsset();
+    const second = await createImageAsset();
+    const created = await createDraft([first, second]);
+
+    const updated = await mutations.updateVehicle({
+      vehicleId: created.vehicleId,
+      expectedVersion: 1,
+      mediaAssetIds: [second],
+    });
+
+    assert.deepEqual(updated.mediaAssetIds, [second]);
+    assert.deepEqual(
+      await prisma.vehicleMedia.findMany({
+        where: { vehicleId: created.vehicleId },
+        orderBy: { position: "asc" },
+        select: { mediaAssetId: true, position: true },
+      }),
+      [{ mediaAssetId: second, position: 0 }],
+    );
+    assert.equal(await prisma.mediaAsset.count({ where: { id: first } }), 1);
+  });
+
+  it("updates every lifecycle status without changing it or its approved public media", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const publishedAt = new Date("2026-01-01T10:00:00.000Z");
+    const cases = [
+      { status: "published", isFeatured: true, hasPublicImage: true },
+      { status: "reserved", isFeatured: false, hasPublicImage: true },
+      { status: "sold", isFeatured: false, hasPublicImage: true },
+      { status: "archived", isFeatured: false, hasPublicImage: false },
+    ] as const;
+    let publishedVehicle: { vehicleId: string; imageId: string } | undefined;
+
+    for (const testCase of cases) {
+      const imageId = testCase.hasPublicImage
+        ? await createImageAsset({ publicRead: true })
+        : undefined;
+      const created = await createDraft(imageId ? [imageId] : []);
+      await prisma.vehicle.update({
+        where: { id: created.vehicleId },
+        data: {
+          status: testCase.status,
+          inspectionStatus:
+            testCase.status === "archived" ? "pending" : "passed",
+          isFeatured: testCase.isFeatured,
+          publishedAt: testCase.hasPublicImage ? publishedAt : null,
+          soldAt: testCase.status === "sold" ? publishedAt : null,
+        },
+      });
+
+      const updated = await mutations.updateVehicle({
+        vehicleId: created.vehicleId,
+        expectedVersion: 1,
+        make: `Updated ${testCase.status}`,
+        mediaAssetIds: imageId ? [imageId] : [],
+      });
+      const vehicle = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: created.vehicleId },
+      });
+
+      assert.equal(updated.version, 2);
+      assert.equal(vehicle.version, 2);
+      assert.equal(vehicle.status, testCase.status);
+      assert.equal(
+        vehicle.inspectionStatus,
+        testCase.status === "archived" ? "pending" : "passed",
+      );
+      assert.equal(vehicle.isFeatured, testCase.isFeatured);
+      assert.equal(vehicle.make, `Updated ${testCase.status}`);
+      assert.equal(
+        vehicle.publishedAt?.toISOString() ?? null,
+        testCase.hasPublicImage ? publishedAt.toISOString() : null,
+      );
+      assert.equal(
+        vehicle.soldAt?.toISOString() ?? null,
+        testCase.status === "sold" ? publishedAt.toISOString() : null,
+      );
+      assert.deepEqual(updated.mediaAssetIds, imageId ? [imageId] : []);
+      if (testCase.status === "published" && imageId) {
+        publishedVehicle = { vehicleId: created.vehicleId, imageId };
+      }
+    }
+
+    assert.ok(publishedVehicle);
+    const privateImage = await createImageAsset();
+    await assert.rejects(
+      mutations.updateVehicle({
+        vehicleId: publishedVehicle.vehicleId,
+        expectedVersion: 2,
+        mediaAssetIds: [],
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 422,
+    );
+    await assert.rejects(
+      mutations.updateVehicle({
+        vehicleId: publishedVehicle.vehicleId,
+        expectedVersion: 2,
+        mediaAssetIds: [privateImage],
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 422,
+    );
+    await assert.rejects(
+      mutations.updateVehicle({
+        vehicleId: publishedVehicle.vehicleId,
+        expectedVersion: 2,
+        slug: "changed-published-slug",
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 422,
+    );
+    await assert.rejects(
+      mutations.updateVehicle({
+        vehicleId: publishedVehicle.vehicleId,
+        expectedVersion: 1,
+        make: "Stale edit",
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+
+    const unchanged = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: publishedVehicle.vehicleId },
+    });
+    assert.equal(unchanged.version, 2);
+    assert.equal(unchanged.make, "Updated published");
+    assert.equal(
+      await prisma.vehicleMedia.count({
+        where: {
+          vehicleId: publishedVehicle.vehicleId,
+          mediaAssetId: publishedVehicle.imageId,
+        },
+      }),
+      1,
     );
   });
 
@@ -572,7 +743,7 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
       [missingObject],
     ]) {
       await assert.rejects(
-        mutations.updateDraftVehicle({
+        mutations.updateVehicle({
           vehicleId: created.vehicleId,
           expectedVersion: 1,
           make: "Must not persist",
@@ -608,7 +779,7 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
     const second = await createDraft();
 
     await assert.rejects(
-      mutations.updateDraftVehicle({
+      mutations.updateVehicle({
         vehicleId: second.vehicleId,
         expectedVersion: 1,
         mediaAssetIds: [imageId],
@@ -657,7 +828,7 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
     triggerInstalled = true;
 
     await assert.rejects(
-      mutations.updateDraftVehicle({
+      mutations.updateVehicle({
         vehicleId: created.vehicleId,
         expectedVersion: 1,
         make: "Must roll back",

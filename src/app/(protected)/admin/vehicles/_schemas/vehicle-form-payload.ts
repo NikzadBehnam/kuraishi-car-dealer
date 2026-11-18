@@ -52,3 +52,15 @@ export function toCreateVehicleDraftPayload(values: VehicleFormValues) {
     mediaAssetIds: values.mediaAssetIds,
   };
 }
+
+export function toUpdateVehiclePayload(
+  values: VehicleFormValues,
+  vehicleId: string,
+  expectedVersion: number,
+) {
+  return {
+    ...toCreateVehicleDraftPayload(values),
+    vehicleId,
+    expectedVersion,
+  };
+}

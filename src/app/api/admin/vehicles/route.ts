@@ -4,7 +4,7 @@ import { AuthorizationError } from "@/lib/auth-access";
 import {
   createDraftVehicle,
   InventoryMutationError,
-  updateDraftVehicle,
+  updateVehicle,
 } from "@/lib/inventory-mutations";
 import { isTrustedOrigin } from "@/lib/trusted-origins";
 
@@ -21,7 +21,10 @@ async function readJson(request: Request): Promise<unknown | Response> {
   }
 }
 
-function failureResponse(error: unknown) {
+function failureResponse(
+  error: unknown,
+  fallbackMessage = "Could not save vehicle changes.",
+) {
   if (error instanceof AuthorizationError) {
     return Response.json({ error: error.message }, { status: error.status });
   }
@@ -35,13 +38,10 @@ function failureResponse(error: unknown) {
     return Response.json({ error: error.message }, { status: error.status });
   }
 
-  console.error("Vehicle draft save failed.", {
+  console.error("Vehicle save failed.", {
     errorType: error instanceof Error ? error.name : "UnknownError",
   });
-  return Response.json(
-    { error: "Could not save the vehicle draft." },
-    { status: 500 },
-  );
+  return Response.json({ error: fallbackMessage }, { status: 500 });
 }
 
 export async function POST(request: Request) {
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
-    return failureResponse(error);
+    return failureResponse(error, "Could not save the vehicle draft.");
   }
 }
 
@@ -81,7 +81,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    return Response.json(await updateDraftVehicle(input), {
+    return Response.json(await updateVehicle(input), {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

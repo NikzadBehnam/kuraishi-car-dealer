@@ -5,6 +5,7 @@ import type { VehicleFormValues } from "./vehicle-form.schema.ts";
 import {
   parseOptionalNumber,
   toCreateVehicleDraftPayload,
+  toUpdateVehiclePayload,
 } from "./vehicle-form-payload.ts";
 
 function formValues(
@@ -112,6 +113,25 @@ describe("vehicle form draft payload", () => {
     assert.equal(payload.location, null);
     assert.deepEqual(payload.features, []);
     assert.deepEqual(payload.labels, []);
+    assert.equal("status" in payload, false);
+    assert.equal("inspectionStatus" in payload, false);
+    assert.equal("isFeatured" in payload, false);
+    assert.equal("isAvailable" in payload, false);
+  });
+
+  it("adds the target ID and expected version without accepting lifecycle changes", () => {
+    const payload = toUpdateVehiclePayload(
+      formValues({
+        status: "sold",
+        inspectionStatus: "failed",
+        isFeatured: true,
+      }),
+      "vehicle-123",
+      7,
+    );
+
+    assert.equal(payload.vehicleId, "vehicle-123");
+    assert.equal(payload.expectedVersion, 7);
     assert.equal("status" in payload, false);
     assert.equal("inspectionStatus" in payload, false);
     assert.equal("isFeatured" in payload, false);

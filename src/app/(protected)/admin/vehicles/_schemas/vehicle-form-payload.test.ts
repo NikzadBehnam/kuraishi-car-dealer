@@ -1,0 +1,127 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import type { VehicleFormValues } from "./vehicle-form.schema.ts";
+import {
+  parseOptionalNumber,
+  toCreateVehicleDraftPayload,
+} from "./vehicle-form-payload.ts";
+
+function formValues(
+  overrides: Partial<VehicleFormValues> = {},
+): VehicleFormValues {
+  return {
+    make: "  Volvo ",
+    model: " V60 ",
+    variant: "  Plus  ",
+    stockNumber: " KA-123 ",
+    slug: " volvo-v60 ",
+    description: "  Estate vehicle  ",
+    price: 35990.5,
+    marginEstimate: 2500,
+    firstRegistration: "2024-06",
+    mileage: 12000,
+    powerKw: 145,
+    fuelType: "petrol",
+    transmissionType: "automatic",
+    bodyType: "wagon",
+    exteriorColor: "  Silver ",
+    location: " Wien ",
+    condition: "used",
+    ownerCount: 1,
+    vinLastSix: " AB1234 ",
+    consumption: 6.4,
+    consumptionUnit: "l_per_100_km",
+    co2Emission: 145,
+    featuresText: "  Heated seats  \n\n Panoramic roof \r\n",
+    labelsText: "  Premium  \n  Low mileage ",
+    mediaAssetIds: ["asset-1", "asset-2"],
+    status: "published",
+    inspectionStatus: "passed",
+    isFeatured: true,
+    isAvailable: true,
+    ...overrides,
+  };
+}
+
+describe("vehicle form draft payload", () => {
+  it("trims text, serializes decimals, and normalizes line-separated lists", () => {
+    const payload = toCreateVehicleDraftPayload(formValues());
+
+    assert.deepEqual(payload, {
+      stockNumber: "KA-123",
+      slug: "volvo-v60",
+      make: "Volvo",
+      model: "V60",
+      variant: "Plus",
+      description: "Estate vehicle",
+      location: "Wien",
+      exteriorColor: "Silver",
+      condition: "used",
+      price: "35990.5",
+      marginEstimate: "2500",
+      firstRegistration: "2024-06",
+      mileage: 12000,
+      powerKw: "145",
+      ownerCount: 1,
+      vinLastSix: "AB1234",
+      fuelType: "petrol",
+      transmissionType: "automatic",
+      bodyType: "wagon",
+      consumption: "6.4",
+      consumptionUnit: "l_per_100_km",
+      co2Emission: 145,
+      features: ["Heated seats", "Panoramic roof"],
+      labels: ["Premium", "Low mileage"],
+      mediaAssetIds: ["asset-1", "asset-2"],
+    });
+  });
+
+  it("preserves blank optional values as null instead of zero or empty text", () => {
+    const values = formValues({
+      variant: " ",
+      description: "",
+      price: undefined,
+      marginEstimate: undefined,
+      firstRegistration: "",
+      mileage: undefined,
+      powerKw: undefined,
+      exteriorColor: " ",
+      location: "",
+      ownerCount: undefined,
+      vinLastSix: "",
+      consumption: undefined,
+      consumptionUnit: "l_per_100_km",
+      co2Emission: undefined,
+      featuresText: " \n ",
+      labelsText: "",
+    });
+    const payload = toCreateVehicleDraftPayload(values);
+
+    assert.equal(payload.price, null);
+    assert.equal(payload.marginEstimate, null);
+    assert.equal(payload.firstRegistration, null);
+    assert.equal(payload.mileage, null);
+    assert.equal(payload.powerKw, null);
+    assert.equal(payload.ownerCount, null);
+    assert.equal(payload.consumption, null);
+    assert.equal(payload.consumptionUnit, null);
+    assert.equal(payload.co2Emission, null);
+    assert.equal(payload.variant, null);
+    assert.equal(payload.exteriorColor, null);
+    assert.equal(payload.location, null);
+    assert.deepEqual(payload.features, []);
+    assert.deepEqual(payload.labels, []);
+    assert.equal("status" in payload, false);
+    assert.equal("inspectionStatus" in payload, false);
+    assert.equal("isFeatured" in payload, false);
+    assert.equal("isAvailable" in payload, false);
+  });
+
+  it("parses blank optional numeric inputs without creating a zero", () => {
+    assert.equal(parseOptionalNumber(""), undefined);
+    assert.equal(parseOptionalNumber("0"), 0);
+    assert.equal(parseOptionalNumber("12.5"), 12.5);
+    assert.equal(Number.isNaN(parseOptionalNumber("invalid")), true);
+  });
+});

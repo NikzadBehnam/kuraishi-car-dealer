@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowDown,
@@ -27,6 +28,10 @@ import {
   vehicleFormSchema,
   type VehicleFormValues,
 } from "../_schemas/vehicle-form.schema";
+import {
+  parseOptionalNumber,
+  toCreateVehicleDraftPayload,
+} from "../_schemas/vehicle-form-payload";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -96,6 +101,12 @@ const attachableAssetsResponseSchema = z.strictObject({
 
 const apiErrorResponseSchema = z.object({ error: z.string() });
 
+const createVehicleResponseSchema = z.strictObject({
+  vehicleId: z.string().min(1),
+  version: z.number().int().positive(),
+  mediaAssetIds: z.array(z.string()),
+});
+
 type UploadIntent = z.infer<
   typeof uploadIntentResponseSchema
 >["uploads"][number];
@@ -142,23 +153,24 @@ const defaultValues: VehicleFormValues = {
   make: "",
   model: "",
   variant: "",
-  stockNumber: "KA-",
+  stockNumber: "",
   slug: "",
   description: "",
-  price: 0,
-  marginEstimate: 0,
+  price: undefined,
+  marginEstimate: undefined,
   firstRegistration: "",
-  mileage: 0,
-  powerKw: 1,
-  fuelType: "petrol",
-  transmissionType: "automatic",
-  bodyType: "suv",
+  mileage: undefined,
+  powerKw: undefined,
+  fuelType: undefined,
+  transmissionType: undefined,
+  bodyType: undefined,
   exteriorColor: "",
-  location: "Wien",
-  condition: "used",
-  ownerCount: 1,
+  location: "",
+  condition: undefined,
+  ownerCount: undefined,
   vinLastSix: "",
   consumption: undefined,
+  consumptionUnit: undefined,
   co2Emission: undefined,
   featuresText: "",
   labelsText: "",
@@ -166,7 +178,7 @@ const defaultValues: VehicleFormValues = {
   status: "draft",
   inspectionStatus: "pending",
   isFeatured: false,
-  isAvailable: true,
+  isAvailable: false,
 };
 
 const formTabClassName =
@@ -179,6 +191,7 @@ export function VehicleForm({
   mode: "create" | "edit";
   vehicle?: StaffInventoryVehicleDTO;
 }) {
+  const router = useRouter();
   const {
     register,
     control,
@@ -446,10 +459,28 @@ export function VehicleForm({
     }
   };
 
-  const submit = async () => {
-    toast.info(
-      "Vehicle saving and image attachment persistence are the next step (03.08). Uploaded assets remain safely unattached.",
-    );
+  const submit = async (values: VehicleFormValues) => {
+    if (mode === "edit") {
+      toast.info("Durable vehicle editing is not available yet.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/admin/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toCreateVehicleDraftPayload(values)),
+      });
+      await readApiResponse(response, createVehicleResponseSchema);
+      toast.success("Vehicle draft saved.");
+      router.push(adminRoutes.vehicles);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not save the vehicle draft.",
+      );
+    }
   };
 
   const title = mode === "create" ? "Add vehicle" : "Edit vehicle";
@@ -472,13 +503,16 @@ export function VehicleForm({
                 </Link>
               </Button>
               <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
-                Vehicle save UI-only
+                {mode === "create"
+                  ? "Draft saving enabled"
+                  : "Edit saving unavailable"}
               </Badge>
             </div>
             <h2 className="mt-3 text-xl font-extrabold">{title}</h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              Vehicle saving is the next step; uploaded media is stored
-              privately.
+              {mode === "create"
+                ? "New vehicles are saved as drafts. Publishing is not available yet."
+                : "Vehicle edits are not saved yet; draft creation is available."}
             </p>
           </div>
           <div className="grid w-full gap-2 sm:w-auto sm:grid-flow-col">
@@ -492,19 +526,27 @@ export function VehicleForm({
               Preview
             </Button>
             <Button
-              type="button"
+              type={mode === "create" ? "submit" : "button"}
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => toast.info("Draft save is UI-only in this phase.")}
+              disabled={isSubmitting || isUploading}
+              onClick={
+                mode === "edit"
+                  ? () =>
+                      toast.info(
+                        "Durable vehicle editing is not available yet.",
+                      )
+                  : undefined
+              }
             >
               <Save />
               Save draft
             </Button>
             <Button
-              type="submit"
+              type={mode === "create" ? "button" : "submit"}
               variant="accent"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              disabled={isSubmitting || isUploading}
+              disabled={mode === "create" || isSubmitting || isUploading}
             >
               {isSubmitting ? (
                 <LoaderCircle className="animate-spin" />
@@ -595,7 +637,9 @@ export function VehicleForm({
               <Field label="Price" error={errors.price?.message}>
                 <Input
                   type="number"
-                  {...register("price", { valueAsNumber: true })}
+                  min="0.01"
+                  step="0.01"
+                  {...register("price", { setValueAs: parseOptionalNumber })}
                 />
               </Field>
               <Field
@@ -604,7 +648,11 @@ export function VehicleForm({
               >
                 <Input
                   type="number"
-                  {...register("marginEstimate", { valueAsNumber: true })}
+                  min="0"
+                  step="0.01"
+                  {...register("marginEstimate", {
+                    setValueAs: parseOptionalNumber,
+                  })}
                 />
               </Field>
             </div>
@@ -621,21 +669,22 @@ export function VehicleForm({
                 label="First registration"
                 error={errors.firstRegistration?.message}
               >
-                <Input
-                  placeholder="2024-01"
-                  {...register("firstRegistration")}
-                />
+                <Input type="month" {...register("firstRegistration")} />
               </Field>
               <Field label="Mileage" error={errors.mileage?.message}>
                 <Input
                   type="number"
-                  {...register("mileage", { valueAsNumber: true })}
+                  min="0"
+                  step="1"
+                  {...register("mileage", { setValueAs: parseOptionalNumber })}
                 />
               </Field>
               <Field label="Power kW" error={errors.powerKw?.message}>
                 <Input
                   type="number"
-                  {...register("powerKw", { valueAsNumber: true })}
+                  min="0.01"
+                  step="0.01"
+                  {...register("powerKw", { setValueAs: parseOptionalNumber })}
                 />
               </Field>
               <Field label="VIN last six" error={errors.vinLastSix?.message}>
@@ -680,20 +729,41 @@ export function VehicleForm({
               <Field label="Owners" error={errors.ownerCount?.message}>
                 <Input
                   type="number"
-                  {...register("ownerCount", { valueAsNumber: true })}
+                  min="0"
+                  step="1"
+                  {...register("ownerCount", {
+                    setValueAs: parseOptionalNumber,
+                  })}
                 />
               </Field>
               <Field label="Consumption" error={errors.consumption?.message}>
                 <Input
                   type="number"
-                  step="0.1"
-                  {...register("consumption", { valueAsNumber: true })}
+                  min="0"
+                  step="0.01"
+                  {...register("consumption", {
+                    setValueAs: parseOptionalNumber,
+                  })}
                 />
               </Field>
+              <SelectField
+                label="Consumption unit"
+                name="consumptionUnit"
+                control={control}
+                error={errors.consumptionUnit?.message}
+                items={[
+                  ["l_per_100_km", "L / 100 km"],
+                  ["kwh_per_100_km", "kWh / 100 km"],
+                ]}
+              />
               <Field label="CO2 emission" error={errors.co2Emission?.message}>
                 <Input
                   type="number"
-                  {...register("co2Emission", { valueAsNumber: true })}
+                  min="0"
+                  step="1"
+                  {...register("co2Emission", {
+                    setValueAs: parseOptionalNumber,
+                  })}
                 />
               </Field>
             </div>
@@ -994,7 +1064,11 @@ export function VehicleForm({
         <TabsContent value="publishing">
           <Panel
             title="Publishing"
-            description="Visibility, workflow state, and quality gates."
+            description={
+              mode === "create"
+                ? "New vehicles are created as drafts. These settings are not applied during draft creation."
+                : "Visibility, workflow state, and quality gates."
+            }
           >
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <SelectField
@@ -1002,6 +1076,7 @@ export function VehicleForm({
                 name="status"
                 control={control}
                 error={errors.status?.message}
+                disabled={mode === "create"}
                 items={[
                   ["draft", "Draft"],
                   ["published", "Published"],
@@ -1015,6 +1090,7 @@ export function VehicleForm({
                 name="inspectionStatus"
                 control={control}
                 error={errors.inspectionStatus?.message}
+                disabled={mode === "create"}
                 items={[
                   ["pending", "Pending"],
                   ["in_progress", "In progress"],
@@ -1030,6 +1106,7 @@ export function VehicleForm({
                     label="Featured vehicle"
                     description="Show this vehicle in highlighted admin and public sections."
                     checked={field.value}
+                    disabled={mode === "create"}
                     onCheckedChange={(checked) =>
                       field.onChange(checked === true)
                     }
@@ -1044,6 +1121,7 @@ export function VehicleForm({
                     label="Available"
                     description="Vehicle can be shown as available in listing UI."
                     checked={field.value}
+                    disabled={mode === "create"}
                     onCheckedChange={(checked) =>
                       field.onChange(checked === true)
                     }
@@ -1104,12 +1182,14 @@ function SelectField({
   name,
   control,
   error,
+  disabled = false,
   items,
 }: {
   label: string;
   name: keyof VehicleFormValues;
   control: ReturnType<typeof useForm<VehicleFormValues>>["control"];
   error?: string;
+  disabled?: boolean;
   items: Array<[string, string]>;
 }) {
   return (
@@ -1118,9 +1198,13 @@ function SelectField({
         control={control}
         name={name}
         render={({ field }) => (
-          <Select value={String(field.value)} onValueChange={field.onChange}>
+          <Select
+            value={field.value == null ? "" : String(field.value)}
+            onValueChange={field.onChange}
+            disabled={disabled}
+          >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>
               {items.map(([value, itemLabel]) => (
@@ -1141,17 +1225,20 @@ function CheckboxField({
   description,
   checked,
   onCheckedChange,
+  disabled = false,
 }: {
   label: string;
   description: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="bg-background flex min-h-24 min-w-0 items-start gap-3 rounded-[var(--radius-sm)] border p-4">
       <Checkbox
         checked={checked}
         className="shrink-0"
+        disabled={disabled}
         onCheckedChange={onCheckedChange}
       />
       <span className="min-w-0">
@@ -1191,6 +1278,7 @@ function toFormValues(
     ownerCount: vehicle.ownerCount ?? undefined,
     vinLastSix: vehicle.vinLastSix ?? undefined,
     consumption: vehicle.consumption ?? undefined,
+    consumptionUnit: vehicle.consumptionUnit ?? undefined,
     co2Emission: vehicle.co2Emission ?? undefined,
     featuresText: vehicle.features.join("\n"),
     labelsText: vehicle.labels.join("\n"),

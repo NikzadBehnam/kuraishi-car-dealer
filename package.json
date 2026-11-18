@@ -18,6 +18,7 @@
     "test:media-db": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-migration.test.ts",
     "test:media-upload": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-uploads.test.ts",
     "test:media-library": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-library.test.ts",
+    "test:media-downloads": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-downloads.test.ts",
     "test:vehicle-media": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\vehicle-media.test.ts",
     "test:media-storage": "node --env-file=.env.media-test.local --conditions=react-server --test --test-isolation=none --experimental-strip-types prisma\\media-storage.test.ts",
     "inventory:fixtures": "node --env-file=.env.inventory-test.local --experimental-strip-types prisma\\seed-inventory.ts"
@@ -61,6 +62,7 @@
     "sonner": "latest",
     "tailwind-merge": "latest",
     "ws": "8.23.0",
+    "yazl": "3.3.1",
     "zod": "latest"
   },
   "devDependencies": {
@@ -69,6 +71,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/ws": "8.18.2",
+    "@types/yazl": "3.3.1",
     "eslint": "9.39.4",
     "eslint-config-next": "latest",
     "prettier": "3.9.6",

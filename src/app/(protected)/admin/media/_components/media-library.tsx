@@ -18,6 +18,7 @@ import type {
   AdminMediaType,
   AdminMediaUsage,
 } from "@/types/admin";
+import { MAX_MEDIA_DOWNLOAD_ASSETS } from "@/lib/media-download-validation";
 import {
   mediaLibraryErrorSchema,
   mediaLibraryPageSchema,
@@ -72,6 +73,23 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
 const integer = new Intl.NumberFormat("de-DE");
 const pageSize = 24;
 
+function getDownloadFilename(
+  contentDisposition: string | null,
+  fallback: string,
+): string {
+  const encodedName = contentDisposition?.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedName?.[1]) {
+    try {
+      return decodeURIComponent(encodedName[1]);
+    } catch {
+      return fallback;
+    }
+  }
+
+  const quotedName = contentDisposition?.match(/filename="([^"]+)"/i);
+  return quotedName?.[1] ?? fallback;
+}
+
 export function MediaLibrary() {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
@@ -85,6 +103,7 @@ export function MediaLibrary() {
   const [retryCount, setRetryCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeAssetId, setActiveAssetId] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -151,12 +170,89 @@ export function MediaLibrary() {
   const selectedCount = selectedIds.size;
 
   const toggleSelected = (assetId: string, checked: boolean) => {
+    if (
+      checked &&
+      !selectedIds.has(assetId) &&
+      selectedIds.size >= MAX_MEDIA_DOWNLOAD_ASSETS
+    ) {
+      toast.error(
+        `Select no more than ${MAX_MEDIA_DOWNLOAD_ASSETS} assets per download.`,
+      );
+      return;
+    }
+
     setSelectedIds((current) => {
       const next = new Set(current);
       if (checked) next.add(assetId);
       else next.delete(assetId);
       return next;
     });
+  };
+
+  const copyAssetUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Media URL copied.");
+    } catch {
+      toast.error("Could not copy the media URL.");
+    }
+  };
+
+  const downloadAssets = async (ids: string[]) => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const params = new URLSearchParams();
+      for (const id of ids) params.append("id", id);
+
+      const response = await fetch(`/api/admin/media/download?${params}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const payload: unknown = await response.json();
+        const parsedError = mediaLibraryErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not download the selected media.",
+        );
+      }
+
+      const expectedContentType =
+        ids.length === 1 ? "application/octet-stream" : "application/zip";
+      if (
+        response.headers.get("content-type")?.split(";")[0] !==
+        expectedContentType
+      ) {
+        throw new Error("The server returned an invalid download response.");
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error("The selected media download was empty.");
+      }
+      const filename = getDownloadFilename(
+        response.headers.get("content-disposition"),
+        ids.length === 1 ? "media-file" : "media-assets.zip",
+      );
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      toast.success("Download started.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not download the selected media.",
+      );
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -246,10 +342,11 @@ export function MediaLibrary() {
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => toast.info("Bulk download is UI-only.")}
+              disabled={downloading}
+              onClick={() => void downloadAssets([...selectedIds])}
             >
               <Download />
-              Download
+              {downloading ? "Preparing…" : "Download"}
             </Button>
             <Button
               type="button"
@@ -313,9 +410,12 @@ export function MediaLibrary() {
       <MediaAssetDialog
         asset={activeAsset}
         open={!!activeAsset}
+        downloading={downloading}
         onOpenChange={(open) => {
           if (!open) setActiveAssetId(null);
         }}
+        onCopyUrl={copyAssetUrl}
+        onDownload={(asset) => void downloadAssets([asset.id])}
       />
 
       {!loading && !loadError && (
@@ -414,11 +514,17 @@ function MediaAssetCard({
 function MediaAssetDialog({
   asset,
   open,
+  downloading,
   onOpenChange,
+  onCopyUrl,
+  onDownload,
 }: {
   asset: AdminMediaAsset | null;
   open: boolean;
+  downloading: boolean;
   onOpenChange: (open: boolean) => void;
+  onCopyUrl: (url: string) => void;
+  onDownload: (asset: AdminMediaAsset) => void;
 }) {
   if (!asset) return null;
 
@@ -466,7 +572,7 @@ function MediaAssetDialog({
             type="button"
             variant="outline"
             className="rounded-[var(--radius-sm)]"
-            onClick={() => toast.info("Copy URL is UI-only.")}
+            onClick={() => void onCopyUrl(asset.url)}
           >
             <Copy />
             Copy URL
@@ -475,10 +581,11 @@ function MediaAssetDialog({
             type="button"
             variant="outline"
             className="rounded-[var(--radius-sm)]"
-            onClick={() => toast.info("Download is UI-only.")}
+            disabled={downloading}
+            onClick={() => onDownload(asset)}
           >
             <Download />
-            Download
+            {downloading ? "Preparing…" : "Download"}
           </Button>
           <Button
             type="button"

@@ -11,6 +11,7 @@ import {
   getPublicMediaBucket,
 } from "./media-storage.ts";
 import {
+  firstRegistrationMonthSchema,
   inventoryIdSchema,
   inventorySlugSchema,
 } from "./inventory-validation.ts";
@@ -76,6 +77,15 @@ const stringList = z
   .max(100)
   .optional();
 
+const optionalDescription = optionalText(10_000).refine(
+  (value) =>
+    value === undefined ||
+    value === null ||
+    value.length === 0 ||
+    value.length >= 20,
+  "Description must be at least 20 characters when provided.",
+);
+
 const mediaAssetIdsSchema = z
   .array(inventoryIdSchema)
   .max(20, "A vehicle can have at most 20 images.")
@@ -91,7 +101,7 @@ const vehicleDraftFieldsSchema = z.strictObject({
   make: requiredText("Make", 100),
   model: requiredText("Model", 100),
   variant: optionalText(255),
-  description: optionalText(10_000),
+  description: optionalDescription,
   location: optionalText(255),
   exteriorColor: optionalText(100),
   condition: nullableEnum(enumValues.condition),
@@ -99,7 +109,8 @@ const vehicleDraftFieldsSchema = z.strictObject({
   marginEstimate: optionalDecimal(10, 2),
   firstRegistration: z
     .string()
-    .regex(/^[0-9]{4}-(0[1-9]|1[0-2])$/)
+    .trim()
+    .pipe(firstRegistrationMonthSchema)
     .nullable()
     .optional(),
   mileage: optionalInteger,

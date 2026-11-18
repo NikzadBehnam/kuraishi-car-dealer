@@ -11,6 +11,7 @@ import {
 import {
   getMediaStorageClient,
   getPrivateMediaBucket,
+  getPublicMediaBucket,
 } from "../src/lib/media-storage.ts";
 import { ZodError } from "zod";
 import { createMediaTestDatabase } from "./media-test-client.ts";
@@ -18,6 +19,7 @@ import { createMediaTestDatabase } from "./media-test-client.ts";
 const { prisma, connectionString } = createMediaTestDatabase();
 const s3 = getMediaStorageClient();
 const bucket = getPrivateMediaBucket();
+const publicBucket = getPublicMediaBucket();
 const actorId = randomUUID();
 const dealerId = randomUUID();
 const imageBytes = Buffer.from([
@@ -34,7 +36,7 @@ let sessionMock: ReturnType<typeof mock.module> | undefined;
 let mutations: typeof import("../src/lib/inventory-mutations.ts");
 let queries: typeof import("../src/lib/inventory-queries.ts");
 let triggerInstalled = false;
-const objectKeys: string[] = [];
+const objectKeys: { Bucket: string; Key: string }[] = [];
 
 function runPrisma(args: string[]) {
   const result = spawnSync(
@@ -62,34 +64,40 @@ function runPrisma(args: string[]) {
 async function createImageAsset({
   type = "image",
   putObject = true,
+  publicRead = false,
 }: {
   type?: "image" | "document";
   putObject?: boolean;
+  publicRead?: boolean;
 } = {}) {
   const id = randomUUID();
   const objectKey = `assets/test-${id}.png`;
+  const assetBucket = publicRead ? publicBucket : bucket;
   if (putObject) {
     await s3.send(
       new PutObjectCommand({
-        Bucket: bucket,
+        Bucket: assetBucket,
         Key: objectKey,
         Body: imageBytes,
         ContentType: "image/png",
       }),
     );
-    objectKeys.push(objectKey);
+    objectKeys.push({ Bucket: assetBucket, Key: objectKey });
   }
   await prisma.mediaAsset.create({
     data: {
       id,
       objectKey,
-      bucketAccess: "private",
+      bucketAccess: publicRead ? "public_read" : "private",
       type,
       title: "Test image",
       originalFilename: "test.png",
       verifiedMimeType: type === "image" ? "image/png" : "application/pdf",
       sizeBytes: BigInt(imageBytes.length),
       uploadedById: actorId,
+      ...(publicRead
+        ? { publicApprovedAt: new Date(), publicApprovedById: actorId }
+        : {}),
     },
   });
   return id;
@@ -164,10 +172,8 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
       await prisma.mediaAsset.deleteMany({ where: { uploadedById: actorId } });
       await prisma.dealer.deleteMany({ where: { id: dealerId } });
       await prisma.user.deleteMany({ where: { id: actorId } });
-      for (const objectKey of objectKeys) {
-        await s3.send(
-          new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }),
-        );
+      for (const object of objectKeys) {
+        await s3.send(new DeleteObjectCommand(object));
       }
     } finally {
       dbMock?.restore();
@@ -284,6 +290,131 @@ describe("vehicle draft media persistence on isolated Neon resources", () => {
       await prisma.vehicle.count({ where: { createdById: actorId } }),
       0,
     );
+  });
+
+  it("revalidates required fields, descriptions, enums, numbers, dates, VINs, and media input", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const invalidFields: Record<string, unknown>[] = [
+      { stockNumber: " " },
+      { slug: " " },
+      { make: " " },
+      { description: "Too short" },
+      { condition: "certified" },
+      { fuelType: "steam" },
+      { price: "-1" },
+      { price: "NaN" },
+      { marginEstimate: "-0.01" },
+      { powerKw: "0" },
+      { mileage: 1.5 },
+      { ownerCount: Number.POSITIVE_INFINITY },
+      { co2Emission: -1 },
+      { firstRegistration: "1885-12" },
+      { firstRegistration: "9999-12" },
+      { firstRegistration: "2024-13" },
+      { vinLastSix: "12345" },
+      { mediaAssetIds: ["../private"] },
+      { imageUrls: ["https://example.invalid/car.jpg"] },
+    ];
+
+    for (const [index, fields] of invalidFields.entries()) {
+      await assert.rejects(
+        mutations.createDraftVehicle({
+          stockNumber: `TEST-VALIDATION-${index}`,
+          slug: `test-validation-${index}`,
+          make: "Skoda",
+          model: "Octavia",
+          ...fields,
+        }),
+        (error: unknown) => error instanceof ZodError,
+      );
+    }
+
+    assert.equal(
+      await prisma.vehicle.count({ where: { createdById: actorId } }),
+      0,
+    );
+  });
+
+  it("accepts a minimum-length description and the current registration month", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Vienna",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(new Date());
+    const year = parts.find(({ type }) => type === "year")?.value;
+    const month = parts.find(({ type }) => type === "month")?.value;
+    assert.ok(year && month);
+    const firstRegistration = `${year}-${month}`;
+    const description = "12345678901234567890";
+    const saved = await mutations.createDraftVehicle({
+      stockNumber: `TEST-VALID-${randomUUID().slice(0, 8)}`,
+      slug: `test-valid-${randomUUID().slice(0, 8)}`,
+      make: "Skoda",
+      model: "Octavia",
+      description,
+      firstRegistration,
+      vinLastSix: "ABC123",
+    });
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: saved.vehicleId },
+    });
+
+    assert.equal(vehicle.description, description);
+    assert.equal(vehicle.firstRegistration, firstRegistration);
+    assert.equal(vehicle.vinLastSix, "ABC123");
+  });
+
+  it("accepts approved public media IDs and attaches them in order", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset({ publicRead: true });
+    const saved = await createDraft([imageId]);
+    const asset = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: imageId },
+      select: {
+        bucketAccess: true,
+        publicApprovedAt: true,
+        publicApprovedById: true,
+      },
+    });
+
+    assert.deepEqual(saved.mediaAssetIds, [imageId]);
+    assert.equal(asset.bucketAccess, "public_read");
+    assert.ok(asset.publicApprovedAt);
+    assert.equal(asset.publicApprovedById, actorId);
+  });
+
+  it("returns conflicts when a stock number or slug already exists", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const saved = await createDraft();
+    const existing = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: saved.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+
+    for (const duplicate of [
+      {
+        stockNumber: existing.stockNumber,
+        slug: `unique-${randomUUID()}`,
+      },
+      {
+        stockNumber: `TEST-${randomUUID().slice(0, 8)}`,
+        slug: existing.slug,
+      },
+    ]) {
+      await assert.rejects(
+        mutations.createDraftVehicle({
+          ...duplicate,
+          make: "Skoda",
+          model: "Octavia",
+        }),
+        (error: unknown) =>
+          error instanceof Error &&
+          error.name === "InventoryMutationError" &&
+          "status" in error &&
+          error.status === 409,
+      );
+    }
   });
 
   it("creates a minimal draft with ordered private images and initial history", async () => {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  firstRegistrationMonthSchema,
   inspectionStatusSchema,
   vehicleStatusSchema,
 } from "@/lib/inventory-validation";
@@ -16,8 +17,7 @@ const nonnegativeNumber = optionalNumber.refine(
   "Value cannot be negative.",
 );
 const optionalMonth = z
-  .string()
-  .regex(/^$|^[0-9]{4}-(0[1-9]|1[0-2])$/, "Use a valid registration month.")
+  .union([z.literal(""), firstRegistrationMonthSchema])
   .optional();
 
 export const vehicleFormSchema = z
@@ -27,7 +27,14 @@ export const vehicleFormSchema = z
     variant: z.string().optional(),
     stockNumber: requiredText("Stock number"),
     slug: requiredText("Slug"),
-    description: z.string().optional(),
+    description: z
+      .string()
+      .max(10_000)
+      .refine(
+        (value) => value.trim().length === 0 || value.trim().length >= 20,
+        "Description must be at least 20 characters when provided.",
+      )
+      .optional(),
     price: optionalNumber.refine(
       (value) => value === undefined || value > 0,
       "Price must be greater than zero.",

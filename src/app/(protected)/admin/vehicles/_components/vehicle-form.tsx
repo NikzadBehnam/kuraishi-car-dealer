@@ -4,21 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  ArrowDown,
+  ArrowUp,
   ArrowLeft,
   BadgeCheck,
   Eye,
-  GripVertical,
   ImagePlus,
   LoaderCircle,
   Save,
   Trash2,
   Upload,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import type { AdminVehicle } from "@/types/admin";
 import { adminRoutes } from "@/config/admin-routes.config";
+import { MAX_MEDIA_FILES_PER_REQUEST } from "@/lib/media-upload-validation";
 import {
   vehicleFormSchema,
   type VehicleFormValues,
@@ -39,6 +43,100 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+
+const uploadIntentResponseSchema = z.strictObject({
+  uploads: z.array(
+    z.strictObject({
+      uploadId: z.string().uuid(),
+      url: z.string().url(),
+      method: z.literal("POST"),
+      fields: z.record(z.string(), z.string()),
+    }),
+  ),
+  cleanup: z.strictObject({
+    scanned: z.number(),
+    cleaned: z.number(),
+    failed: z.number(),
+  }),
+});
+
+const completedUploadResponseSchema = z.strictObject({
+  asset: z.strictObject({
+    id: z.string(),
+    title: z.string(),
+    originalFilename: z.string(),
+    verifiedMimeType: z.enum(["image/jpeg", "image/png"]),
+    sizeBytes: z.number(),
+    uploadedAt: z.string(),
+  }),
+  cleanupPending: z.boolean(),
+});
+
+const cancellationResponseSchema = z.strictObject({
+  cancelled: z.boolean(),
+  cleanupPending: z.boolean(),
+});
+
+const attachableAssetsResponseSchema = z.strictObject({
+  assets: z.array(
+    z.strictObject({
+      id: z.string(),
+      title: z.string(),
+      filename: z.string(),
+      altText: z.string().nullable(),
+      sizeBytes: z.number(),
+      uploadedAt: z.string(),
+      previewUrl: z.string().url(),
+    }),
+  ),
+  page: z.number(),
+  pageSize: z.number(),
+  hasMore: z.boolean(),
+});
+
+const apiErrorResponseSchema = z.object({ error: z.string() });
+
+type UploadIntent = z.infer<
+  typeof uploadIntentResponseSchema
+>["uploads"][number];
+type AttachableAsset = z.infer<
+  typeof attachableAssetsResponseSchema
+>["assets"][number];
+type VehicleMediaItem = {
+  key: string;
+  mediaAssetId: string | null;
+  previewUrl: string;
+  title: string;
+  altText: string;
+};
+
+async function readApiResponse<T extends z.ZodType>(
+  response: Response,
+  schema: T,
+): Promise<z.infer<T>> {
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    if (!response.ok) {
+      throw new Error(`Request failed (${response.status}).`);
+    }
+    throw new Error("The server returned an invalid response.");
+  }
+
+  if (!response.ok) {
+    const error = apiErrorResponseSchema.safeParse(payload);
+    throw new Error(
+      error.success ? error.data.error : `Request failed (${response.status}).`,
+    );
+  }
+
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) {
+    throw new Error("The server returned an invalid response.");
+  }
+  return parsed.data;
+}
 
 const defaultValues: VehicleFormValues = {
   make: "",
@@ -64,6 +162,7 @@ const defaultValues: VehicleFormValues = {
   co2Emission: undefined,
   featuresText: "",
   labelsText: "",
+  mediaAssetIds: [],
   status: "draft",
   inspectionStatus: "pending",
   isFeatured: false,
@@ -84,16 +183,272 @@ export function VehicleForm({
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleFormSchema),
     defaultValues: vehicle ? toFormValues(vehicle) : defaultValues,
   });
 
-  const submit = async (values: VehicleFormValues) => {
-    await new Promise((resolve) => setTimeout(resolve, 450));
-    toast.success(
-      `${values.make || "Vehicle"} ${mode === "create" ? "created" : "updated"} in UI-only mode.`,
+  const [mediaItems, setMediaItems] = useState<VehicleMediaItem[]>(() =>
+    (vehicle?.images ?? []).map((previewUrl, index) => ({
+      key: `vehicle-image-${index}-${previewUrl}`,
+      mediaAssetId: vehicle?.mediaAssetIds?.[index] ?? null,
+      previewUrl,
+      title: `Image ${index + 1}`,
+      altText: "",
+    })),
+  );
+  const [isUploading, setIsUploading] = useState(false);
+  const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+  const [assetLoadError, setAssetLoadError] = useState("");
+  const [attachableAssets, setAttachableAssets] = useState<AttachableAsset[]>(
+    [],
+  );
+  const [assetPage, setAssetPage] = useState(1);
+  const [hasMoreAssets, setHasMoreAssets] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlsRef = useRef(new Set<string>());
+
+  useEffect(
+    () => () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current.clear();
+    },
+    [],
+  );
+
+  const setOrderedMediaItems = (items: VehicleMediaItem[]) => {
+    setMediaItems(items);
+    setValue(
+      "mediaAssetIds",
+      items.flatMap((item) => (item.mediaAssetId ? [item.mediaAssetId] : [])),
+      { shouldDirty: true, shouldTouch: true, shouldValidate: true },
+    );
+  };
+
+  const uploadFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    if (files.length > MAX_MEDIA_FILES_PER_REQUEST) {
+      toast.error(
+        `Upload no more than ${MAX_MEDIA_FILES_PER_REQUEST} images at a time.`,
+      );
+      return;
+    }
+    if (mediaItems.length + files.length > 20) {
+      toast.error("A vehicle can have at most 20 images.");
+      return;
+    }
+
+    setIsUploading(true);
+    let uploads: UploadIntent[] = [];
+    const completedUploadIds = new Set<string>();
+    const uploadedItems: VehicleMediaItem[] = [];
+    let cleanupPending = false;
+
+    try {
+      const intentResponse = await fetch("/api/admin/media/uploads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          files: files.map((file) => ({
+            originalFilename: file.name,
+            contentType: file.type,
+            sizeBytes: file.size,
+            type: "image",
+          })),
+        }),
+      });
+      const intentResult = await readApiResponse(
+        intentResponse,
+        uploadIntentResponseSchema,
+      );
+      uploads = intentResult.uploads;
+      if (uploads.length !== files.length) {
+        throw new Error("The server returned an incomplete upload batch.");
+      }
+      if (intentResult.cleanup.failed > 0) {
+        toast.info(
+          "Some expired uploads still need cleanup; the new uploads can continue.",
+        );
+      }
+
+      for (const [index, upload] of uploads.entries()) {
+        const formData = new FormData();
+        for (const [name, value] of Object.entries(upload.fields)) {
+          formData.set(name, value);
+        }
+        formData.set("file", files[index], files[index].name);
+        const storageResponse = await fetch(upload.url, {
+          method: upload.method,
+          body: formData,
+        });
+        if (!storageResponse.ok) {
+          throw new Error(
+            `Storage rejected ${files[index].name} (${storageResponse.status}).`,
+          );
+        }
+
+        const completionResponse = await fetch(
+          "/api/admin/media/uploads/complete",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uploadId: upload.uploadId }),
+          },
+        );
+        const completion = await readApiResponse(
+          completionResponse,
+          completedUploadResponseSchema,
+        );
+        completedUploadIds.add(upload.uploadId);
+        cleanupPending ||= completion.cleanupPending;
+        const previewUrl = URL.createObjectURL(files[index]);
+        objectUrlsRef.current.add(previewUrl);
+        uploadedItems.push({
+          key: completion.asset.id,
+          mediaAssetId: completion.asset.id,
+          previewUrl,
+          title: completion.asset.title,
+          altText: "",
+        });
+      }
+
+      setOrderedMediaItems([...mediaItems, ...uploadedItems]);
+      if (cleanupPending) {
+        toast.info(
+          "Upload completed; staging-object cleanup is pending a later cleanup retry.",
+        );
+      }
+      toast.success(
+        "Images uploaded as private assets. They will be attached when the vehicle is saved.",
+      );
+    } catch (error) {
+      for (const [index, upload] of uploads.entries()) {
+        if (completedUploadIds.has(upload.uploadId)) continue;
+        try {
+          const cancellationResponse = await fetch(
+            "/api/admin/media/uploads/cancel",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ uploadId: upload.uploadId }),
+            },
+          );
+          if (cancellationResponse.status === 409) {
+            const file = files[index];
+            if (!file) {
+              cleanupPending = true;
+              continue;
+            }
+            try {
+              const retryResponse = await fetch(
+                "/api/admin/media/uploads/complete",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ uploadId: upload.uploadId }),
+                },
+              );
+              const retry = await readApiResponse(
+                retryResponse,
+                completedUploadResponseSchema,
+              );
+              completedUploadIds.add(upload.uploadId);
+              cleanupPending ||= retry.cleanupPending;
+              const previewUrl = URL.createObjectURL(file);
+              objectUrlsRef.current.add(previewUrl);
+              uploadedItems.push({
+                key: retry.asset.id,
+                mediaAssetId: retry.asset.id,
+                previewUrl,
+                title: retry.asset.title,
+                altText: "",
+              });
+            } catch (recoveryError) {
+              cleanupPending = true;
+              console.error(
+                "Could not reconcile an interrupted media upload.",
+                {
+                  uploadId: upload.uploadId,
+                  errorType:
+                    recoveryError instanceof Error
+                      ? recoveryError.name
+                      : "UnknownError",
+                },
+              );
+            }
+            continue;
+          }
+          const cancellation = await readApiResponse(
+            cancellationResponse,
+            cancellationResponseSchema,
+          );
+          cleanupPending ||= cancellation.cleanupPending;
+        } catch (cleanupError) {
+          cleanupPending = true;
+          console.error("Could not cancel an incomplete media upload.", {
+            uploadId: upload.uploadId,
+            errorType:
+              cleanupError instanceof Error
+                ? cleanupError.name
+                : "UnknownError",
+          });
+        }
+      }
+
+      if (uploadedItems.length > 0) {
+        setOrderedMediaItems([...mediaItems, ...uploadedItems]);
+        toast.info(
+          `${uploadedItems.length} image(s) were uploaded and remain unattached.`,
+        );
+      }
+      if (cleanupPending) {
+        toast.info(
+          "Some upload cleanup failed and will be retried during a later upload or cleanup sweep.",
+        );
+      }
+      toast.error(
+        error instanceof Error ? error.message : "The image upload failed.",
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const loadAttachableAssets = async (page: number, replace = false) => {
+    setIsLoadingAssets(true);
+    setAssetLoadError("");
+    try {
+      const response = await fetch(
+        `/api/admin/media/attachable?page=${page}&pageSize=24`,
+        { cache: "no-store" },
+      );
+      const result = await readApiResponse(
+        response,
+        attachableAssetsResponseSchema,
+      );
+      setAttachableAssets((current) =>
+        replace ? result.assets : [...current, ...result.assets],
+      );
+      setAssetPage(result.page);
+      setHasMoreAssets(result.hasMore);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not load attachable images.";
+      setAssetLoadError(message);
+      toast.error(message);
+    } finally {
+      setIsLoadingAssets(false);
+    }
+  };
+
+  const submit = async () => {
+    toast.info(
+      "Vehicle saving and image attachment persistence are the next step (03.08). Uploaded assets remain safely unattached.",
     );
   };
 
@@ -117,12 +472,13 @@ export function VehicleForm({
                 </Link>
               </Button>
               <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
-                UI-only
+                Vehicle save UI-only
               </Badge>
             </div>
             <h2 className="mt-3 text-xl font-extrabold">{title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Complete inventory form ready for later backend integration.
+              Vehicle saving is the next step; uploaded media is stored
+              privately.
             </p>
           </div>
           <div className="grid w-full gap-2 sm:w-auto sm:grid-flow-col">
@@ -148,7 +504,7 @@ export function VehicleForm({
               type="submit"
               variant="accent"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
             >
               {isSubmitting ? (
                 <LoaderCircle className="animate-spin" />
@@ -206,7 +562,10 @@ export function VehicleForm({
               <Field label="Location" error={errors.location?.message}>
                 <Input {...register("location")} />
               </Field>
-              <Field label="Exterior color" error={errors.exteriorColor?.message}>
+              <Field
+                label="Exterior color"
+                error={errors.exteriorColor?.message}
+              >
                 <Input {...register("exteriorColor")} />
               </Field>
               <SelectField
@@ -228,12 +587,21 @@ export function VehicleForm({
         </TabsContent>
 
         <TabsContent value="pricing">
-          <Panel title="Pricing" description="Commercial values for admin review.">
+          <Panel
+            title="Pricing"
+            description="Commercial values for admin review."
+          >
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <Field label="Price" error={errors.price?.message}>
-                <Input type="number" {...register("price", { valueAsNumber: true })} />
+                <Input
+                  type="number"
+                  {...register("price", { valueAsNumber: true })}
+                />
               </Field>
-              <Field label="Margin estimate" error={errors.marginEstimate?.message}>
+              <Field
+                label="Margin estimate"
+                error={errors.marginEstimate?.message}
+              >
                 <Input
                   type="number"
                   {...register("marginEstimate", { valueAsNumber: true })}
@@ -244,16 +612,31 @@ export function VehicleForm({
         </TabsContent>
 
         <TabsContent value="technical">
-          <Panel title="Technical details" description="Specifications shown in vehicle detail views.">
+          <Panel
+            title="Technical details"
+            description="Specifications shown in vehicle detail views."
+          >
             <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <Field label="First registration" error={errors.firstRegistration?.message}>
-                <Input placeholder="2024-01" {...register("firstRegistration")} />
+              <Field
+                label="First registration"
+                error={errors.firstRegistration?.message}
+              >
+                <Input
+                  placeholder="2024-01"
+                  {...register("firstRegistration")}
+                />
               </Field>
               <Field label="Mileage" error={errors.mileage?.message}>
-                <Input type="number" {...register("mileage", { valueAsNumber: true })} />
+                <Input
+                  type="number"
+                  {...register("mileage", { valueAsNumber: true })}
+                />
               </Field>
               <Field label="Power kW" error={errors.powerKw?.message}>
-                <Input type="number" {...register("powerKw", { valueAsNumber: true })} />
+                <Input
+                  type="number"
+                  {...register("powerKw", { valueAsNumber: true })}
+                />
               </Field>
               <Field label="VIN last six" error={errors.vinLastSix?.message}>
                 <Input maxLength={6} {...register("vinLastSix")} />
@@ -331,71 +714,261 @@ export function VehicleForm({
         </TabsContent>
 
         <TabsContent value="media">
-          <Panel title="Media" description="Mock image upload and ordering UI.">
+          <Panel
+            title="Media"
+            description="Uploads become private assets immediately. Selected image IDs stay ordered in this form; vehicle attachment persistence is 03.08. Removing an image here does not delete its asset, and attaching it does not approve public access."
+          >
             <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-              <button
-                type="button"
-                className="grid min-h-56 place-items-center rounded-[var(--radius-sm)] border border-dashed bg-background p-6 text-center transition-colors hover:bg-surface-muted focus-visible:outline-none"
-                onClick={() => toast.info("Upload is UI-only in this phase.")}
-              >
-                <span>
-                  <span className="mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
-                    <Upload className="size-6" aria-hidden="true" />
-                  </span>
-                  <span className="mt-4 block font-extrabold">
-                    Drop vehicle images here
-                  </span>
-                  <span className="mt-2 block text-sm text-muted-foreground">
-                    Mock upload zone for future media integration.
-                  </span>
-                </span>
-              </button>
-              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {(vehicle?.images ?? []).map((image, index) => (
+              <div className="grid min-w-0 content-start gap-3">
+                <div className="bg-background grid min-h-56 place-items-center rounded-[var(--radius-sm)] border border-dashed p-6 text-center">
+                  <div>
+                    <span className="bg-secondary text-primary mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)]">
+                      {isUploading ? (
+                        <LoaderCircle
+                          className="size-6 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Upload className="size-6" aria-hidden="true" />
+                      )}
+                    </span>
+                    <span className="mt-4 block font-extrabold">
+                      Upload vehicle images
+                    </span>
+                    <span className="text-muted-foreground mt-2 block text-sm">
+                      JPEG or PNG, up to 10 MiB each; five files per upload and
+                      20 images per vehicle.
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-4"
+                      disabled={isUploading || mediaItems.length >= 20}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Choose images
+                    </Button>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      multiple
+                      className="sr-only"
+                      aria-label="Upload vehicle images"
+                      onChange={(event) => {
+                        const files = Array.from(
+                          event.currentTarget.files ?? [],
+                        );
+                        event.currentTarget.value = "";
+                        void uploadFiles(files);
+                      }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-expanded={isAssetPickerOpen}
+                  aria-controls="attachable-media-assets"
+                  disabled={isUploading}
+                  onClick={() => {
+                    const shouldOpen = !isAssetPickerOpen;
+                    setIsAssetPickerOpen(shouldOpen);
+                    if (shouldOpen && attachableAssets.length === 0) {
+                      void loadAttachableAssets(1, true);
+                    }
+                  }}
+                >
+                  {isAssetPickerOpen
+                    ? "Hide existing images"
+                    : "Choose existing image"}
+                </Button>
+                {isAssetPickerOpen && (
                   <div
-                    key={image}
-                    className="overflow-hidden rounded-[var(--radius-sm)] border bg-background"
+                    id="attachable-media-assets"
+                    className="bg-background grid min-w-0 gap-3 rounded-[var(--radius-sm)] border p-3"
+                    aria-live="polite"
                   >
-                    <div className="relative aspect-[4/3] bg-secondary">
-                      <Image
-                        fill
-                        sizes="(max-width: 768px) 50vw, 18rem"
-                        src={image}
-                        alt=""
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2 p-2">
-                      <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
-                        Image {index + 1}
-                      </Badge>
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Reorder image"
-                          onClick={() => toast.info("Reorder is UI-only.")}
+                    {isLoadingAssets && (
+                      <p className="text-muted-foreground text-sm">
+                        Loading images…
+                      </p>
+                    )}
+                    {assetLoadError && (
+                      <p role="alert" className="text-destructive text-sm">
+                        {assetLoadError}
+                      </p>
+                    )}
+                    {attachableAssets
+                      .filter(
+                        (asset) =>
+                          !mediaItems.some(
+                            (item) => item.mediaAssetId === asset.id,
+                          ),
+                      )
+                      .map((asset) => (
+                        <div
+                          key={asset.id}
+                          className="flex min-w-0 items-center gap-3"
                         >
-                          <GripVertical />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Remove image"
-                          onClick={() => toast.info("Remove is UI-only.")}
-                        >
-                          <Trash2 />
-                        </Button>
+                          <div className="bg-secondary relative size-16 shrink-0 overflow-hidden rounded border">
+                            <Image
+                              fill
+                              sizes="4rem"
+                              src={asset.previewUrl}
+                              alt={asset.altText ?? asset.title}
+                              unoptimized
+                              className="object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold">
+                              {asset.title}
+                            </p>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {asset.filename}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={mediaItems.length >= 20}
+                            onClick={() => {
+                              setOrderedMediaItems([
+                                ...mediaItems,
+                                {
+                                  key: asset.id,
+                                  mediaAssetId: asset.id,
+                                  previewUrl: asset.previewUrl,
+                                  title: asset.title,
+                                  altText: asset.altText ?? "",
+                                },
+                              ]);
+                            }}
+                          >
+                            Attach
+                          </Button>
+                        </div>
+                      ))}
+                    {!isLoadingAssets &&
+                      !assetLoadError &&
+                      attachableAssets.every((asset) =>
+                        mediaItems.some(
+                          (item) => item.mediaAssetId === asset.id,
+                        ),
+                      ) && (
+                        <p className="text-muted-foreground text-sm">
+                          No unselected images are available on this page.
+                        </p>
+                      )}
+                    {hasMoreAssets && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={isLoadingAssets}
+                        onClick={() => void loadAttachableAssets(assetPage + 1)}
+                      >
+                        Load more images
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {mediaItems.map((item, index) => {
+                  const attachedPosition = item.mediaAssetId
+                    ? mediaItems
+                        .slice(0, index + 1)
+                        .filter((candidate) => candidate.mediaAssetId).length
+                    : null;
+                  return (
+                    <div
+                      key={item.key}
+                      className="bg-background overflow-hidden rounded-[var(--radius-sm)] border"
+                    >
+                      <div className="bg-secondary relative aspect-[4/3]">
+                        <Image
+                          fill
+                          sizes="(max-width: 768px) 50vw, 18rem"
+                          src={item.previewUrl}
+                          alt={item.altText || item.title}
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2 p-2">
+                        <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
+                          {attachedPosition === 1
+                            ? "Cover"
+                            : `Image ${attachedPosition ?? index + 1}`}
+                        </Badge>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Move image ${index + 1} up`}
+                            disabled={index === 0 || isUploading}
+                            onClick={() => {
+                              const reordered = [...mediaItems];
+                              [reordered[index - 1], reordered[index]] = [
+                                reordered[index],
+                                reordered[index - 1],
+                              ];
+                              setOrderedMediaItems(reordered);
+                            }}
+                          >
+                            <ArrowUp />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Move image ${index + 1} down`}
+                            disabled={
+                              index === mediaItems.length - 1 || isUploading
+                            }
+                            onClick={() => {
+                              const reordered = [...mediaItems];
+                              [reordered[index], reordered[index + 1]] = [
+                                reordered[index + 1],
+                                reordered[index],
+                              ];
+                              setOrderedMediaItems(reordered);
+                            }}
+                          >
+                            <ArrowDown />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Remove image ${index + 1} from vehicle`}
+                            disabled={isUploading}
+                            onClick={() => {
+                              if (item.previewUrl.startsWith("blob:")) {
+                                URL.revokeObjectURL(item.previewUrl);
+                                objectUrlsRef.current.delete(item.previewUrl);
+                              }
+                              setOrderedMediaItems(
+                                mediaItems.filter(
+                                  (candidate) => candidate.key !== item.key,
+                                ),
+                              );
+                            }}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                {!vehicle?.images.length && (
-                  <div className="grid min-h-44 place-items-center rounded-[var(--radius-sm)] border bg-background p-5 text-center">
+                  );
+                })}
+                {mediaItems.length === 0 && (
+                  <div className="bg-background grid min-h-44 place-items-center rounded-[var(--radius-sm)] border p-5 text-center">
                     <span>
-                      <ImagePlus className="mx-auto size-8 text-muted-foreground" />
+                      <ImagePlus className="text-muted-foreground mx-auto size-8" />
                       <span className="mt-3 block text-sm font-bold">
                         No images yet
                       </span>
@@ -408,7 +981,10 @@ export function VehicleForm({
         </TabsContent>
 
         <TabsContent value="publishing">
-          <Panel title="Publishing" description="Visibility, workflow state, and quality gates.">
+          <Panel
+            title="Publishing"
+            description="Visibility, workflow state, and quality gates."
+          >
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <SelectField
                 label="Status"
@@ -443,7 +1019,9 @@ export function VehicleForm({
                     label="Featured vehicle"
                     description="Show this vehicle in highlighted admin and public sections."
                     checked={field.value}
-                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked === true)
+                    }
                   />
                 )}
               />
@@ -455,7 +1033,9 @@ export function VehicleForm({
                     label="Available"
                     description="Vehicle can be shown as available in listing UI."
                     checked={field.value}
-                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked === true)
+                    }
                   />
                 )}
               />
@@ -501,7 +1081,9 @@ function Field({
     <div className="grid min-w-0 gap-2">
       <Label>{label}</Label>
       {children}
-      {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
+      {error && (
+        <p className="text-sm font-semibold text-destructive">{error}</p>
+      )}
     </div>
   );
 }
@@ -600,5 +1182,6 @@ function toFormValues(vehicle: AdminVehicle): VehicleFormValues {
     inspectionStatus: vehicle.inspectionStatus,
     isFeatured: vehicle.isFeatured,
     isAvailable: vehicle.isAvailable,
+    mediaAssetIds: vehicle.mediaAssetIds ?? [],
   };
 }

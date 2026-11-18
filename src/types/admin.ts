@@ -7,6 +7,7 @@ export type AdminInspectionStatus =
   "pending" | "in_progress" | "passed" | "failed";
 
 export interface AdminVehicle extends Vehicle {
+  mediaAssetIds?: string[];
   stockNumber: string;
   status: AdminVehicleStatus;
   inspectionStatus: AdminInspectionStatus;

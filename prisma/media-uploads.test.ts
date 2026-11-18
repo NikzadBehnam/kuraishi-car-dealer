@@ -31,6 +31,7 @@ let session:
 let dbMock: ReturnType<typeof mock.module> | undefined;
 let sessionMock: ReturnType<typeof mock.module> | undefined;
 let uploads: typeof import("../src/lib/media-uploads.ts");
+let attachments: typeof import("../src/lib/media-attachments.ts");
 const uploadIds: string[] = [];
 
 function runPrisma(args: string[]) {
@@ -128,6 +129,7 @@ describe("media upload service on isolated Neon resources", () => {
       },
     });
     uploads = await import("../src/lib/media-uploads.ts");
+    attachments = await import("../src/lib/media-attachments.ts");
   });
 
   after(async () => {
@@ -179,6 +181,11 @@ describe("media upload service on isolated Neon resources", () => {
       (error: unknown) =>
         error instanceof AuthorizationError && error.status === 401,
     );
+    await assert.rejects(
+      attachments.listAttachableMediaAssets({ page: 1, pageSize: 24 }),
+      (error: unknown) =>
+        error instanceof AuthorizationError && error.status === 401,
+    );
     assert.equal(
       await prisma.mediaUploadIntent.count({ where: { uploadedById: userId } }),
       0,
@@ -221,6 +228,57 @@ describe("media upload service on isolated Neon resources", () => {
     });
     assert.equal(asset.bucketAccess, "private");
     assert.equal(asset.uploadedById, userId);
+
+    const attachablePage = await attachments.listAttachableMediaAssets({
+      page: 1,
+      pageSize: 100,
+    });
+    const attachableAsset = attachablePage.assets.find(
+      (candidate) => candidate.id === asset.id,
+    );
+    assert.ok(attachableAsset);
+    assert.match(
+      attachableAsset.previewUrl,
+      /^https:\/\/.+[?&]X-Amz-Signature=/,
+    );
+    const privatePreview = await fetch(attachableAsset.previewUrl);
+    assert.equal(privatePreview.status, 200);
+    assert.deepEqual(Buffer.from(await privatePreview.arrayBuffer()), png);
+
+    const dealer = await prisma.dealer.create({
+      data: { name: `Media attachment test ${randomUUID()}` },
+    });
+    const vehicleId = randomUUID();
+    try {
+      await prisma.vehicle.create({
+        data: {
+          id: vehicleId,
+          slug: `media-attachment-${vehicleId}`,
+          stockNumber: `MEDIA-${vehicleId.toUpperCase()}`,
+          make: "Example",
+          model: "Media",
+          dealerId: dealer.id,
+          createdById: userId,
+          updatedById: userId,
+          acquisitionDate: new Date("2026-11-18T00:00:00.000Z"),
+        },
+      });
+      await prisma.vehicleMedia.create({
+        data: { vehicleId, mediaAssetId: asset.id, position: 0 },
+      });
+      const attachedPage = await attachments.listAttachableMediaAssets({
+        page: 1,
+        pageSize: 100,
+      });
+      assert.equal(
+        attachedPage.assets.some((candidate) => candidate.id === asset.id),
+        false,
+      );
+    } finally {
+      await prisma.vehicleMedia.deleteMany({ where: { vehicleId } });
+      await prisma.vehicle.deleteMany({ where: { id: vehicleId } });
+      await prisma.dealer.deleteMany({ where: { id: dealer.id } });
+    }
 
     const finalObject = await s3.send(
       new GetObjectCommand({ Bucket: bucket, Key: asset.objectKey }),

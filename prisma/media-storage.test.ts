@@ -29,6 +29,51 @@ describe("isolated Neon media storage", { concurrency: false }, () => {
     s3.destroy();
   });
 
+  it("allows upload preflight only from the local application origin", async () => {
+    const id = randomUUID();
+    const post = await createPresignedPost(s3, {
+      Bucket: bucket,
+      Key: `incoming/test/${id}`,
+      Conditions: [
+        ["content-length-range", 1, 1],
+        ["eq", "$Content-Type", "image/png"],
+      ],
+      Fields: { "Content-Type": "image/png" },
+      Expires: 60,
+    });
+    const allowedOrigin = "http://localhost:3000";
+    const allowed = await fetch(post.url, {
+      method: "OPTIONS",
+      headers: {
+        Origin: allowedOrigin,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+      },
+    });
+    assert.equal(
+      allowed.headers.get("access-control-allow-origin"),
+      allowedOrigin,
+    );
+    assert.match(
+      allowed.headers.get("access-control-allow-methods") ?? "",
+      /\bPOST\b/i,
+    );
+    assert.match(
+      allowed.headers.get("access-control-allow-headers") ?? "",
+      /content-type/i,
+    );
+
+    const rejected = await fetch(post.url, {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://untrusted.invalid",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+      },
+    });
+    assert.equal(rejected.headers.get("access-control-allow-origin"), null);
+  });
+
   it("enforces signed upload size and content-type conditions, then copies verified keys", async () => {
     const id = randomUUID();
     const stagingKey = `incoming/test/${id}`;

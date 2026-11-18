@@ -16,9 +16,14 @@
     "test:watch": "node --test --watch --test-isolation=none --experimental-strip-types src/**/*.test.ts",
     "test:inventory-db": "node --env-file=.env.inventory-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\inventory-migration.test.ts prisma\\inventory-queries.test.ts",
     "test:media-db": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-migration.test.ts",
+    "test:media-upload": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-uploads.test.ts",
+    "test:media-storage": "node --env-file=.env.media-test.local --conditions=react-server --test --test-isolation=none --experimental-strip-types prisma\\media-storage.test.ts",
     "inventory:fixtures": "node --env-file=.env.inventory-test.local --experimental-strip-types prisma\\seed-inventory.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1171.0",
+    "@aws-sdk/s3-presigned-post": "3.1171.0",
+    "@aws-sdk/s3-request-presigner": "3.1171.0",
     "@better-auth/prisma-adapter": "1.7.23",
     "@hookform/resolvers": "latest",
     "@neondatabase/serverless": "1.2.1",

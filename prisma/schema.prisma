@@ -168,25 +168,47 @@ model MediaAsset {
   @@index([publicApprovedById])
 }
 
+model MediaUploadIntent {
+  id               String         @id
+  objectKey        String         @db.VarChar(1024)
+  stagingKey       String         @unique @db.VarChar(1024)
+  type             MediaAssetType
+  title            String         @db.VarChar(255)
+  originalFilename String         @db.VarChar(255)
+  altText          String?
+  claimedMimeType  String         @db.VarChar(127)
+  sizeBytes        BigInt
+  uploadedById     String
+  uploadedBy       User           @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  expiresAt        DateTime       @db.Timestamptz(3)
+  completedAt      DateTime?      @db.Timestamptz(3)
+
+  @@unique([objectKey])
+  @@index([uploadedById, createdAt])
+  @@index([expiresAt])
+}
+
 model User {
-  id                  String          @id
+  id                  String              @id
   name                String
   email               String
-  emailVerified       Boolean         @default(false)
+  emailVerified       Boolean             @default(false)
   image               String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
   role                String?
-  banned              Boolean?        @default(false)
+  banned              Boolean?            @default(false)
   banReason           String?
   banExpires          DateTime?
   sessions            Session[]
   accounts            Account[]
-  createdVehicles     Vehicle[]       @relation("VehicleCreator")
-  updatedVehicles     Vehicle[]       @relation("VehicleUpdater")
+  createdVehicles     Vehicle[]           @relation("VehicleCreator")
+  updatedVehicles     Vehicle[]           @relation("VehicleUpdater")
   vehicleChanges      VehicleChange[]
-  uploadedMedia       MediaAsset[]    @relation("MediaUploader")
-  approvedPublicMedia MediaAsset[]    @relation("MediaPublicApprover")
+  uploadedMedia       MediaAsset[]        @relation("MediaUploader")
+  approvedPublicMedia MediaAsset[]        @relation("MediaPublicApprover")
+  mediaUploadIntents  MediaUploadIntent[]
 
   @@unique([email])
   @@map("user")

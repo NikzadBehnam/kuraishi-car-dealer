@@ -151,6 +151,60 @@ describe("isolated media metadata migration", { concurrency: false }, () => {
     });
   });
 
+  it("stores expiring upload intents with verified metadata pending completion", async () => {
+    await withTestUploader(async (tx, uploaderId) => {
+      const intent = await tx.mediaUploadIntent.create({
+        data: {
+          id: randomUUID(),
+          objectKey: `assets/${randomUUID()}.png`,
+          stagingKey: `incoming/${randomUUID()}`,
+          type: "image",
+          title: "Test upload",
+          originalFilename: "test.png",
+          claimedMimeType: "image/png",
+          sizeBytes: BigInt(1024),
+          uploadedById: uploaderId,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+        },
+      });
+
+      assert.equal(intent.completedAt, null);
+      assert.equal(intent.claimedMimeType, "image/png");
+      assert.equal(intent.sizeBytes, BigInt(1024));
+    });
+  });
+
+  it("rejects upload intents that exceed limits or mismatch media categories", async () => {
+    await expectConstraintViolation("23514", async (tx, uploaderId) => {
+      await tx.$executeRaw`
+        INSERT INTO "MediaUploadIntent" (
+          "id", "objectKey", "stagingKey", "type", "title",
+          "originalFilename", "claimedMimeType", "sizeBytes",
+          "uploadedById", "expiresAt"
+        ) VALUES (
+          ${randomUUID()}, ${`assets/${randomUUID()}.png`},
+          ${`incoming/${randomUUID()}`}, 'document', 'Invalid upload',
+          'invalid.png', 'image/png', 1024, ${uploaderId},
+          CURRENT_TIMESTAMP + INTERVAL '5 minutes'
+        )
+      `;
+    });
+    await expectConstraintViolation("23514", async (tx, uploaderId) => {
+      await tx.$executeRaw`
+        INSERT INTO "MediaUploadIntent" (
+          "id", "objectKey", "stagingKey", "type", "title",
+          "originalFilename", "claimedMimeType", "sizeBytes",
+          "uploadedById", "expiresAt"
+        ) VALUES (
+          ${randomUUID()}, ${`assets/${randomUUID()}.png`},
+          ${`incoming/${randomUUID()}`}, 'image', 'Oversized upload',
+          'oversized.png', 'image/png', 10485761, ${uploaderId},
+          CURRENT_TIMESTAMP + INTERVAL '5 minutes'
+        )
+      `;
+    });
+  });
+
   it("rejects public assets without recorded approval", async () => {
     await expectConstraintViolation("23514", async (tx, uploaderId) => {
       await tx.$executeRaw`

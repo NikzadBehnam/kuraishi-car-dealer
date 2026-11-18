@@ -231,6 +231,131 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     }
   });
 
+  it("searches and sorts staff inventory with validated filters", async () => {
+    session = { user: { role: "user" } };
+    const changedIds = [ids[0], ids[3], ids[5]];
+    const originals = await prisma.vehicle.findMany({
+      where: { id: { in: changedIds } },
+      select: {
+        id: true,
+        stockNumber: true,
+        make: true,
+        model: true,
+        variant: true,
+        location: true,
+        price: true,
+        mileage: true,
+        updatedAt: true,
+      },
+    });
+
+    try {
+      await prisma.$transaction([
+        prisma.vehicle.update({
+          where: { id: ids[0] },
+          data: {
+            stockNumber: "KA-SEARCH-A",
+            make: "BMW",
+            model: "X5",
+            variant: "40i",
+            location: "Wien",
+            price: new Prisma.Decimal("30000.00"),
+            mileage: 10_000,
+            updatedAt: new Date("2026-03-01T10:00:00.000Z"),
+          },
+        }),
+        prisma.vehicle.update({
+          where: { id: ids[3] },
+          data: {
+            stockNumber: "KA-SEARCH-B",
+            make: "Audi",
+            model: "A4",
+            variant: "Avant",
+            location: "Graz",
+            price: new Prisma.Decimal("20000.00"),
+            mileage: 20_000,
+            updatedAt: new Date("2026-02-01T10:00:00.000Z"),
+          },
+        }),
+        prisma.vehicle.update({
+          where: { id: ids[5] },
+          data: {
+            stockNumber: "KA-SEARCH-C",
+            make: "Mercedes",
+            model: "C",
+            variant: "Estate",
+            location: null,
+            price: null,
+            mileage: null,
+            updatedAt: new Date("2026-04-01T10:00:00.000Z"),
+          },
+        }),
+      ]);
+
+      const byMultipleTerms = await queries.listStaffVehicles({
+        search: "  BMW   Wien ",
+        status: "published",
+        pageSize: 100,
+      });
+      assert.deepEqual(
+        byMultipleTerms.items.map(({ id }) => id),
+        [ids[0]],
+      );
+      const noStatusMatch = await queries.listStaffVehicles({
+        search: "BMW Wien",
+        status: "draft",
+      });
+      assert.deepEqual(noStatusMatch.items, []);
+
+      const sortCases = [
+        ["title", "asc", [ids[3], ids[0], ids[5]]],
+        ["title", "desc", [ids[5], ids[0], ids[3]]],
+        ["price", "asc", [ids[3], ids[0], ids[5]]],
+        ["price", "desc", [ids[0], ids[3], ids[5]]],
+        ["mileage", "asc", [ids[0], ids[3], ids[5]]],
+        ["mileage", "desc", [ids[3], ids[0], ids[5]]],
+        ["status", "asc", [ids[5], ids[0], ids[3]]],
+        ["status", "desc", [ids[3], ids[0], ids[5]]],
+        ["location", "asc", [ids[3], ids[0], ids[5]]],
+        ["location", "desc", [ids[0], ids[3], ids[5]]],
+        ["lastUpdatedAt", "asc", [ids[3], ids[0], ids[5]]],
+        ["lastUpdatedAt", "desc", [ids[5], ids[0], ids[3]]],
+      ] as const;
+
+      for (const [sort, direction, expected] of sortCases) {
+        const result = await queries.listStaffVehicles({
+          search: "KA-SEARCH",
+          sort,
+          direction,
+          pageSize: 100,
+        });
+        assert.deepEqual(
+          result.items.map(({ id }) => id),
+          expected,
+          `${sort} ${direction}`,
+        );
+      }
+
+      for (const input of [
+        { search: "x".repeat(101) },
+        { search: ["BMW"] },
+        { sort: "invalid" },
+        { direction: "sideways" },
+      ]) {
+        await assert.rejects(
+          () => queries.listStaffVehicles(input),
+          z.ZodError,
+        );
+      }
+    } finally {
+      await prisma.$transaction(
+        originals.map(({ id, ...data }) =>
+          prisma.vehicle.update({ where: { id }, data }),
+        ),
+      );
+    }
+  });
+
   it("serializes every query as plain DTOs with exact money, dates and nullable metrics", async () => {
     session = { user: { role: "user" } };
     const instant = new Date("2026-10-25T01:30:45.123Z");

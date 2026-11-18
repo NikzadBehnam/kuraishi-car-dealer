@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Archive,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 
 import type { StaffInventoryVehicleDTO } from "@/types/inventory";
+import type { StaffInventoryFilters } from "@/lib/inventory-validation";
 import { adminRoutes } from "@/config/admin-routes.config";
 import { routeBuilders } from "@/config/routes.config";
 import {
@@ -57,10 +59,8 @@ import {
 } from "@/components/ui/table";
 
 type AdminVehicleStatus = StaffInventoryVehicleDTO["status"];
-type SortKey =
-  "title" | "price" | "mileage" | "status" | "location" | "lastUpdatedAt";
-
-type SortDirection = "asc" | "desc";
+type SortKey = StaffInventoryFilters["sort"];
+type SortDirection = StaffInventoryFilters["direction"];
 
 interface SortState {
   key: SortKey;
@@ -87,63 +87,24 @@ const pageSize = 8;
 export function VehicleInventoryTable({
   vehicles,
   total,
+  filters,
 }: {
   vehicles: StaffInventoryVehicleDTO[];
   total: number;
+  filters: StaffInventoryFilters;
 }) {
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | AdminVehicleStatus>(
-    "all",
-  );
-  const [sort, setSort] = useState<SortState>({
-    key: "lastUpdatedAt",
-    direction: "desc",
-  });
+  const [query, setQuery] = useState(filters.search);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  const filteredVehicles = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("de");
-    const filtered = vehicles.filter((vehicle) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        [
-          vehicle.stockNumber,
-          vehicle.make,
-          vehicle.model,
-          vehicle.variant ?? "",
-          vehicle.location ?? "",
-        ]
-          .join(" ")
-          .toLocaleLowerCase("de")
-          .includes(normalizedQuery);
-      const matchesStatus =
-        statusFilter === "all" || vehicle.status === statusFilter;
-
-      return matchesQuery && matchesStatus;
-    });
-
-    return filtered.toSorted((a, b) => {
-      const direction = sort.direction === "asc" ? 1 : -1;
-      const valueA = getSortValue(a, sort.key);
-      const valueB = getSortValue(b, sort.key);
-
-      if (valueA === null || valueB === null) {
-        if (valueA === valueB) return 0;
-        return valueA === null ? 1 : -1;
-      }
-
-      if (typeof valueA === "number" && typeof valueB === "number") {
-        return (valueA - valueB) * direction;
-      }
-
-      return String(valueA).localeCompare(String(valueB), "de") * direction;
-    });
-  }, [query, sort, statusFilter, vehicles]);
-
-  const pageCount = Math.max(1, Math.ceil(filteredVehicles.length / pageSize));
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
+  const sort: SortState = { key: filters.sort, direction: filters.direction };
+  const statusFilter = filters.status ?? "all";
+  const pageCount = Math.max(1, Math.ceil(vehicles.length / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const paginatedVehicles = filteredVehicles.slice(
+  const paginatedVehicles = vehicles.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
@@ -157,25 +118,55 @@ export function VehicleInventoryTable({
 
   const selectedCount = selectedIds.size;
 
+  useEffect(() => {
+    if (query === filters.search) return;
+    const timeout = setTimeout(() => {
+      const params = new URLSearchParams(searchParamsString);
+      if (query.trim()) params.set("search", query.trim());
+      else params.delete("search");
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+        scroll: false,
+      });
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [filters.search, pathname, query, router, searchParamsString]);
+
+  const updateSearchParams = (
+    updates: Partial<
+      Record<"search" | "status" | "sort" | "direction", string | null>
+    >,
+  ) => {
+    const params = new URLSearchParams(searchParamsString);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
+    const queryString = params.toString();
+    router.push(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  };
+
   const updateSearch = (value: string) => {
     setQuery(value);
     setPage(1);
   };
 
   const updateStatusFilter = (value: string) => {
-    setStatusFilter(value as "all" | AdminVehicleStatus);
     setPage(1);
+    updateSearchParams({ status: value === "all" ? null : value });
   };
 
   const toggleSort = (key: SortKey) => {
-    setSort((current) =>
-      current.key === key
-        ? {
-            key,
-            direction: current.direction === "asc" ? "desc" : "asc",
-          }
-        : { key, direction: "asc" },
-    );
+    const direction =
+      sort.key === key && sort.direction === "asc" ? "desc" : "asc";
+    setPage(1);
+    updateSearchParams({
+      sort: key === "lastUpdatedAt" ? null : key,
+      direction:
+        key === "lastUpdatedAt" && direction === "desc" ? null : direction,
+    });
   };
 
   const toggleVehicle = (id: string, checked: boolean) => {
@@ -239,7 +230,7 @@ export function VehicleInventoryTable({
             <Input
               value={query}
               onChange={(event) => updateSearch(event.target.value)}
-              placeholder="Search title, stock number, location"
+              placeholder="Search stock number, make, model, variant, location"
               aria-label="Search vehicles"
               className="bg-background pl-9"
             />
@@ -455,10 +446,7 @@ export function VehicleInventoryTable({
             <strong className="text-foreground">
               {paginatedVehicles.length}
             </strong>{" "}
-            of{" "}
-            <strong className="text-foreground">
-              {filteredVehicles.length}
-            </strong>{" "}
+            of <strong className="text-foreground">{vehicles.length}</strong>{" "}
             vehicles
           </p>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
@@ -590,19 +578,6 @@ function StatusBadge({ status }: { status: AdminVehicleStatus }) {
       {statusLabels[status]}
     </Badge>
   );
-}
-
-function getSortValue(
-  vehicle: StaffInventoryVehicleDTO,
-  key: SortKey,
-): number | string | null {
-  if (key === "title") return `${vehicle.make} ${vehicle.model}`;
-  if (key === "price")
-    return vehicle.price === null ? null : Number(vehicle.price);
-  if (key === "mileage") return vehicle.mileage;
-  if (key === "status") return vehicle.status;
-  if (key === "location") return vehicle.location;
-  return vehicle.updatedAt;
 }
 
 function formatDateTime(value: string) {

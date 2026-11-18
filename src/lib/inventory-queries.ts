@@ -39,8 +39,9 @@ import {
   inventoryPaginationInputSchema,
   inventoryPaginationSchema,
   inventorySlugSchema,
-  vehicleStatusSchema,
+  staffInventoryFiltersSchema,
 } from "./inventory-validation.ts";
+import type { StaffInventoryFilters } from "./inventory-validation.ts";
 import { requireSession } from "./session.ts";
 import { getVehicleSearchTerms } from "./vehicle-filters.ts";
 
@@ -55,7 +56,7 @@ const publicOrder = [
 ] satisfies Prisma.VehicleOrderByWithRelationInput[];
 
 const staffListSchema = inventoryPaginationInputSchema.extend({
-  status: vehicleStatusSchema.optional(),
+  ...staffInventoryFiltersSchema.shape,
 });
 const publicListSchema = inventoryPaginationInputSchema.extend({
   search: z.string().default(""),
@@ -79,6 +80,50 @@ function searchLabel(
       " ",
     )}
     ELSE '' END`;
+}
+
+function getStaffVehicleWhere(
+  filters: Pick<StaffInventoryFilters, "search" | "status">,
+): Prisma.VehicleWhereInput {
+  const conditions: Prisma.VehicleWhereInput[] = [];
+
+  if (filters.status) {
+    conditions.push({ status: filters.status });
+  }
+
+  for (const term of filters.search.split(/\s+/).filter(Boolean)) {
+    conditions.push({
+      OR: [
+        { stockNumber: { contains: term, mode: "insensitive" } },
+        { make: { contains: term, mode: "insensitive" } },
+        { model: { contains: term, mode: "insensitive" } },
+        { variant: { contains: term, mode: "insensitive" } },
+        { location: { contains: term, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  return conditions.length ? { AND: conditions } : {};
+}
+
+function getStaffVehicleOrderBy(
+  sort: StaffInventoryFilters["sort"],
+  direction: StaffInventoryFilters["direction"],
+): Prisma.VehicleOrderByWithRelationInput[] {
+  switch (sort) {
+    case "title":
+      return [{ make: direction }, { model: direction }, { id: "asc" }];
+    case "price":
+      return [{ price: { sort: direction, nulls: "last" } }, { id: "asc" }];
+    case "mileage":
+      return [{ mileage: { sort: direction, nulls: "last" } }, { id: "asc" }];
+    case "status":
+      return [{ status: direction }, { id: "asc" }];
+    case "location":
+      return [{ location: { sort: direction, nulls: "last" } }, { id: "asc" }];
+    case "lastUpdatedAt":
+      return [{ updatedAt: direction }, { id: "asc" }];
+  }
 }
 
 // Match filterVehicles' German lowercase/NFD/combining-mark rules, not stemming or transliteration.
@@ -142,16 +187,17 @@ export async function listStaffVehicles(
   input: unknown = {},
 ): Promise<InventoryPageDTO<StaffInventoryVehicleDTO>> {
   await requireSession();
-  const { status, ...pageInput } = staffListSchema.parse(input);
+  const { search, status, sort, direction, ...pageInput } =
+    staffListSchema.parse(input);
   const { page, pageSize, skip, take } =
     inventoryPaginationSchema.parse(pageInput);
-  const where: Prisma.VehicleWhereInput = status ? { status } : {};
+  const where = getStaffVehicleWhere({ search, status });
   const [items, total] = await prisma.$transaction(
     [
       prisma.vehicle.findMany({
         where,
         select: staffVehicleSelect,
-        orderBy: staffOrder,
+        orderBy: getStaffVehicleOrderBy(sort, direction),
         skip,
         take,
       }),

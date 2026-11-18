@@ -8,6 +8,26 @@ export const vehicleStatusSchema = z.enum([
   "archived",
 ]);
 
+export const inventorySortSchema = z.enum([
+  "title",
+  "price",
+  "mileage",
+  "status",
+  "location",
+  "lastUpdatedAt",
+]);
+
+export const inventorySortDirectionSchema = z.enum(["asc", "desc"]);
+
+export const staffInventoryFiltersSchema = z.strictObject({
+  search: z.string().trim().max(100).default(""),
+  status: vehicleStatusSchema.optional(),
+  sort: inventorySortSchema.default("lastUpdatedAt"),
+  direction: inventorySortDirectionSchema.default("desc"),
+});
+
+export type StaffInventoryFilters = z.infer<typeof staffInventoryFiltersSchema>;
+
 export const inspectionStatusSchema = z.enum([
   "pending",
   "in_progress",

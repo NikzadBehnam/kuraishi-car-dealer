@@ -9,7 +9,11 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 
-import { AuthorizationError } from "../src/lib/auth-access.ts";
+import {
+  AuthorizationError,
+  assertAdminSession,
+  type AuthSession,
+} from "../src/lib/auth-access.ts";
 import {
   getMediaStorageClient,
   getPrivateMediaBucket,
@@ -26,7 +30,7 @@ const dealerId = randomUUID();
 const vehicleId = randomUUID();
 const objectKeys: { Bucket: string; Key: string }[] = [];
 
-let adminAllowed = true;
+let session: AuthSession | null = null;
 let dbMock: ReturnType<typeof mock.module> | undefined;
 let sessionMock: ReturnType<typeof mock.module> | undefined;
 let mediaDeletions: typeof import("../src/lib/admin-media-deletions.ts");
@@ -143,14 +147,7 @@ describe(
       });
       sessionMock = mock.module("../src/lib/session.ts", {
         namedExports: {
-          requireAdmin: async () => {
-            if (!adminAllowed) {
-              throw new AuthorizationError(
-                403,
-                "Administrator access required.",
-              );
-            }
-          },
+          requireAdmin: async () => assertAdminSession(session),
         },
       });
       mediaDeletions = await import("../src/lib/admin-media-deletions.ts");
@@ -178,16 +175,18 @@ describe(
     });
 
     it("requires administrator access before validating the request", async () => {
-      adminAllowed = false;
-      try {
-        await assert.rejects(
-          mediaDeletions.queryAdminMediaDeletions(prisma, { invalid: true }),
-          (error: unknown) =>
-            error instanceof AuthorizationError && error.status === 403,
-        );
-      } finally {
-        adminAllowed = true;
-      }
+      await assert.rejects(
+        mediaDeletions.queryAdminMediaDeletions(prisma, { invalid: true }),
+        (error: unknown) =>
+          error instanceof AuthorizationError && error.status === 401,
+      );
+      session = { user: { role: "user" } };
+      await assert.rejects(
+        mediaDeletions.queryAdminMediaDeletions(prisma, { invalid: true }),
+        (error: unknown) =>
+          error instanceof AuthorizationError && error.status === 403,
+      );
+      session = { user: { role: "admin" } };
     });
 
     it("deletes unused files and reports attached and missing assets individually", async () => {
@@ -245,26 +244,61 @@ describe(
       );
     });
 
-    it("keeps the database asset when object storage deletion fails", async () => {
-      const asset = await createAsset();
-      const sendMock = mock.method(s3, "send", async () => {
-        throw new Error("Test-only storage failure.");
-      });
+    it("reports bulk storage failures without preventing other deletions", async () => {
+      const failedAsset = await createAsset();
+      const deletedAsset = await createAsset();
+      const originalSend = s3.send.bind(s3);
+      const sendMock = mock.method(
+        s3,
+        "send",
+        async (command: Parameters<typeof s3.send>[0]) => {
+          if (
+            command instanceof DeleteObjectCommand &&
+            command.input.Key === failedAsset.objectKey
+          ) {
+            throw new Error("Test-only storage failure.");
+          }
+          return originalSend(command);
+        },
+      );
       try {
         const result = await mediaDeletions.queryAdminMediaDeletions(prisma, {
-          ids: [asset.id],
+          ids: [failedAsset.id, deletedAsset.id],
         });
-        assert.equal(result.results[0]?.status, "failed");
+        assert.deepEqual(
+          result.results.map(({ id, status }) => ({ id, status })),
+          [
+            { id: failedAsset.id, status: "failed" },
+            { id: deletedAsset.id, status: "deleted" },
+          ],
+        );
         assert.match(result.results[0]?.message ?? "", /verify the asset/u);
         assert.ok(
-          await prisma.mediaAsset.findUnique({ where: { id: asset.id } }),
+          await prisma.mediaAsset.findUnique({ where: { id: failedAsset.id } }),
+        );
+        assert.equal(
+          await prisma.mediaAsset.findUnique({
+            where: { id: deletedAsset.id },
+          }),
+          null,
         );
       } finally {
         sendMock.mock.restore();
       }
 
       await s3.send(
-        new HeadObjectCommand({ Bucket: bucket, Key: asset.objectKey }),
+        new HeadObjectCommand({
+          Bucket: bucket,
+          Key: failedAsset.objectKey,
+        }),
+      );
+      await assert.rejects(
+        s3.send(
+          new HeadObjectCommand({
+            Bucket: bucket,
+            Key: deletedAsset.objectKey,
+          }),
+        ),
       );
     });
   },

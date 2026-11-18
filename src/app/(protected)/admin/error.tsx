@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 
 export default function AdminError({ reset }: { reset: () => void }) {
   return (
-    <section className="rounded-[var(--radius-sm)] border bg-surface p-8 text-center">
+    <section className="bg-surface rounded-[var(--radius-sm)] border p-8 text-center">
       <p className="eyebrow">Admin error</p>
       <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
         Admin area could not load
       </h1>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-        This UI-only admin section is available, but this view failed to render.
-        Try loading it again.
+      <p className="text-muted-foreground mx-auto mt-3 max-w-xl text-sm leading-6">
+        The requested admin data could not be loaded. Check your connection and
+        try again. If the problem continues, contact an administrator.
       </p>
       <Button
         type="button"

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -20,7 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import type { AdminVehicle, AdminVehicleStatus } from "@/types/admin";
+import type { StaffInventoryVehicleDTO } from "@/types/inventory";
 import { adminRoutes } from "@/config/admin-routes.config";
 import { routeBuilders } from "@/config/routes.config";
 import {
@@ -57,13 +56,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+type AdminVehicleStatus = StaffInventoryVehicleDTO["status"];
 type SortKey =
-  | "title"
-  | "price"
-  | "mileage"
-  | "status"
-  | "location"
-  | "lastUpdatedAt";
+  "title" | "price" | "mileage" | "status" | "location" | "lastUpdatedAt";
 
 type SortDirection = "asc" | "desc";
 
@@ -91,8 +86,10 @@ const pageSize = 8;
 
 export function VehicleInventoryTable({
   vehicles,
+  total,
 }: {
-  vehicles: AdminVehicle[];
+  vehicles: StaffInventoryVehicleDTO[];
+  total: number;
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | AdminVehicleStatus>(
@@ -114,8 +111,8 @@ export function VehicleInventoryTable({
           vehicle.stockNumber,
           vehicle.make,
           vehicle.model,
-          vehicle.variant,
-          vehicle.location,
+          vehicle.variant ?? "",
+          vehicle.location ?? "",
         ]
           .join(" ")
           .toLocaleLowerCase("de")
@@ -130,6 +127,11 @@ export function VehicleInventoryTable({
       const direction = sort.direction === "asc" ? 1 : -1;
       const valueA = getSortValue(a, sort.key);
       const valueB = getSortValue(b, sort.key);
+
+      if (valueA === null || valueB === null) {
+        if (valueA === valueB) return 0;
+        return valueA === null ? 1 : -1;
+      }
 
       if (typeof valueA === "number" && typeof valueB === "number") {
         return (valueA - valueB) * direction;
@@ -198,13 +200,23 @@ export function VehicleInventoryTable({
 
   return (
     <div className="grid min-w-0 gap-4">
-      <section className="min-w-0 rounded-[var(--radius-sm)] border bg-surface p-4">
+      <section className="bg-surface min-w-0 rounded-[var(--radius-sm)] border p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-base font-extrabold">Inventory table</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Mocked admin inventory with client-side controls for UI review.
+            <p className="text-muted-foreground mt-1 text-sm">
+              Database inventory with client-side controls for the loaded
+              records.
             </p>
+            {total > vehicles.length && (
+              <p
+                className="text-warning mt-1 text-sm font-semibold"
+                role="status"
+              >
+                Showing the first {vehicles.length} of {total} vehicles.
+                Server-side pagination is not available yet.
+              </p>
+            )}
           </div>
           <Button
             asChild
@@ -221,7 +233,7 @@ export function VehicleInventoryTable({
         <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem]">
           <div className="relative">
             <Search
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
@@ -249,7 +261,7 @@ export function VehicleInventoryTable({
       </section>
 
       {selectedCount > 0 && (
-        <section className="grid min-w-0 gap-3 rounded-[var(--radius-sm)] border bg-surface p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+        <section className="bg-surface grid min-w-0 gap-3 rounded-[var(--radius-sm)] border p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm font-bold">
             {selectedCount} vehicle{selectedCount === 1 ? "" : "s"} selected
           </p>
@@ -285,7 +297,7 @@ export function VehicleInventoryTable({
         </section>
       )}
 
-      <section className="min-w-0 overflow-hidden rounded-[var(--radius-sm)] border bg-surface">
+      <section className="bg-surface min-w-0 overflow-hidden rounded-[var(--radius-sm)] border">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -362,14 +374,8 @@ export function VehicleInventoryTable({
                     />
                   </TableCell>
                   <TableCell className="px-3">
-                    <div className="relative h-12 w-16 overflow-hidden rounded-[var(--radius-sm)] bg-secondary">
-                      <Image
-                        fill
-                        sizes="4rem"
-                        src={vehicle.images[0]}
-                        alt=""
-                        className="object-cover"
-                      />
+                    <div className="bg-secondary text-muted-foreground grid h-12 w-16 place-items-center overflow-hidden rounded-[var(--radius-sm)]">
+                      <CarFront className="size-6" aria-hidden="true" />
                     </div>
                   </TableCell>
                   <TableCell className="min-w-64 px-3">
@@ -377,19 +383,25 @@ export function VehicleInventoryTable({
                       <p className="truncate font-extrabold">
                         {vehicle.make} {vehicle.model}
                       </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {vehicle.stockNumber} - {vehicle.variant}
+                      <p className="text-muted-foreground truncate text-xs">
+                        {vehicle.stockNumber} - {vehicle.variant ?? "—"}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell className="px-3 text-right font-extrabold">
-                    {formatCurrency(vehicle.price)}
+                    {vehicle.price === null
+                      ? "—"
+                      : formatCurrency(Number(vehicle.price))}
                   </TableCell>
                   <TableCell className="px-3">
-                    {formatMileage(vehicle.mileage)}
+                    {vehicle.mileage === null
+                      ? "—"
+                      : formatMileage(vehicle.mileage)}
                   </TableCell>
                   <TableCell className="px-3">
-                    {formatFuelType(vehicle.fuelType)}
+                    {vehicle.fuelType === null
+                      ? "—"
+                      : formatFuelType(vehicle.fuelType)}
                   </TableCell>
                   <TableCell className="px-3">
                     <StatusBadge status={vehicle.status} />
@@ -400,14 +412,16 @@ export function VehicleInventoryTable({
                         Featured
                       </Badge>
                     ) : (
-                      <span className="text-xs font-bold text-muted-foreground">
+                      <span className="text-muted-foreground text-xs font-bold">
                         No
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="px-3">{vehicle.location}</TableCell>
-                  <TableCell className="whitespace-nowrap px-3 text-xs font-bold text-muted-foreground">
-                    {formatDateTime(vehicle.lastUpdatedAt)}
+                  <TableCell className="px-3">
+                    {vehicle.location ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground px-3 text-xs font-bold whitespace-nowrap">
+                    {formatDateTime(vehicle.updatedAt)}
                   </TableCell>
                   <TableCell className="px-3 text-right">
                     <VehicleRowActions vehicle={vehicle} />
@@ -418,13 +432,13 @@ export function VehicleInventoryTable({
               <TableRow>
                 <TableCell colSpan={11} className="p-8 text-center">
                   <div className="mx-auto grid max-w-sm justify-items-center gap-3">
-                    <span className="grid size-12 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
+                    <span className="bg-secondary text-primary grid size-12 place-items-center rounded-[var(--radius-sm)]">
                       <CarFront className="size-6" aria-hidden="true" />
                     </span>
                     <div>
                       <p className="font-extrabold">No vehicles found</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Adjust the search or status filter to show more mock
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        Adjust the search or status filter to show more
                         inventory records.
                       </p>
                     </div>
@@ -436,7 +450,7 @@ export function VehicleInventoryTable({
         </Table>
 
         <div className="grid gap-3 border-t p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Showing{" "}
             <strong className="text-foreground">
               {paginatedVehicles.length}
@@ -465,9 +479,7 @@ export function VehicleInventoryTable({
               variant="outline"
               className="rounded-[var(--radius-sm)]"
               disabled={currentPage === pageCount}
-              onClick={() =>
-                setPage((value) => Math.min(pageCount, value + 1))
-              }
+              onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
             >
               Next
             </Button>
@@ -503,7 +515,7 @@ function SortableHead({
       <button
         type="button"
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] font-bold hover:text-foreground focus-visible:outline-none",
+          "hover:text-foreground inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] font-bold focus-visible:outline-none",
           align === "right" && "justify-end",
         )}
         onClick={() => onSort(sortKey)}
@@ -515,7 +527,7 @@ function SortableHead({
   );
 }
 
-function VehicleRowActions({ vehicle }: { vehicle: AdminVehicle }) {
+function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
   const title = `${vehicle.make} ${vehicle.model}`;
 
   return (
@@ -572,8 +584,7 @@ function StatusBadge({ status }: { status: AdminVehicleStatus }) {
         status === "reserved" && "bg-warning/10 text-warning",
         status === "sold" && "bg-info/10 text-info",
         status === "draft" && "bg-accent/10 text-accent",
-        status === "archived" &&
-          "bg-muted text-muted-foreground dark:bg-muted",
+        status === "archived" && "bg-muted text-muted-foreground dark:bg-muted",
       )}
     >
       {statusLabels[status]}
@@ -581,13 +592,17 @@ function StatusBadge({ status }: { status: AdminVehicleStatus }) {
   );
 }
 
-function getSortValue(vehicle: AdminVehicle, key: SortKey) {
+function getSortValue(
+  vehicle: StaffInventoryVehicleDTO,
+  key: SortKey,
+): number | string | null {
   if (key === "title") return `${vehicle.make} ${vehicle.model}`;
-  if (key === "price") return vehicle.price;
+  if (key === "price")
+    return vehicle.price === null ? null : Number(vehicle.price);
   if (key === "mileage") return vehicle.mileage;
   if (key === "status") return vehicle.status;
   if (key === "location") return vehicle.location;
-  return vehicle.lastUpdatedAt;
+  return vehicle.updatedAt;
 }
 
 function formatDateTime(value: string) {

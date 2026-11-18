@@ -37,6 +37,14 @@ export function getPrivateMediaBucket(): string {
   return bucket;
 }
 
+export function getPublicMediaBucket(): string {
+  const bucket = requiredEnv("MEDIA_PUBLIC_BUCKET");
+  if (bucket === process.env.MEDIA_PRIVATE_BUCKET) {
+    throw new Error("The private and public media buckets must be different.");
+  }
+  return bucket;
+}
+
 export function getPublicMediaObjectUrl(asset: {
   objectKey: string;
   bucketAccess: "private" | "public_read";
@@ -50,10 +58,7 @@ export function getPublicMediaObjectUrl(asset: {
     throw new Error("Public media requires a recorded approval.");
   }
 
-  const publicBucket = requiredEnv("MEDIA_PUBLIC_BUCKET");
-  if (publicBucket === process.env.MEDIA_PRIVATE_BUCKET) {
-    throw new Error("The private and public media buckets must be different.");
-  }
+  const publicBucket = getPublicMediaBucket();
 
   const endpoint = new URL(requiredEnv("AWS_ENDPOINT_URL_S3"));
   if (

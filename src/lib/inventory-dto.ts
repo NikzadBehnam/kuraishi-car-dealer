@@ -44,6 +44,10 @@ export const staffVehicleSelect = {
   stockNumber: true,
   marginEstimate: true,
   vinLastSix: true,
+  mediaAttachments: {
+    select: { mediaAssetId: true, position: true },
+    orderBy: { position: "asc" },
+  },
   acquisitionDate: true,
   reservedUntil: true,
   soldAt: true,
@@ -123,6 +127,7 @@ export function serializeStaffVehicle(
     stockNumber: row.stockNumber,
     marginEstimate: row.marginEstimate?.toFixed(2) ?? null,
     vinLastSix: row.vinLastSix,
+    mediaAssetIds: row.mediaAttachments.map(({ mediaAssetId }) => mediaAssetId),
     inspectionStatus: row.inspectionStatus,
     acquisitionDate: row.acquisitionDate.toISOString().slice(0, 10),
     reservedUntil: row.reservedUntil?.toISOString() ?? null,

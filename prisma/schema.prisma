@@ -54,6 +54,17 @@ enum VehicleInspectionStatus {
   failed
 }
 
+enum MediaAssetType {
+  image
+  document
+  brand
+}
+
+enum MediaBucketAccess {
+  private
+  public_read
+}
+
 model Dealer {
   id       String    @id @default(cuid())
   name     String
@@ -131,23 +142,51 @@ model VehicleChange {
   @@index([actorId])
 }
 
+model MediaAsset {
+  id                 String            @id @default(cuid())
+  objectKey          String            @db.VarChar(1024)
+  bucketAccess       MediaBucketAccess
+  type               MediaAssetType
+  title              String            @db.VarChar(255)
+  originalFilename   String            @db.VarChar(255)
+  altText            String?
+  verifiedMimeType   String            @db.VarChar(127)
+  sizeBytes          BigInt
+  width              Int?
+  height             Int?
+  uploadedAt         DateTime          @default(now()) @db.Timestamptz(3)
+  uploadedById       String
+  uploadedBy         User              @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  publicApprovedAt   DateTime?         @db.Timestamptz(3)
+  publicApprovedById String?
+  publicApprovedBy   User?             @relation("MediaPublicApprover", fields: [publicApprovedById], references: [id], onDelete: Restrict)
+
+  @@unique([bucketAccess, objectKey])
+  @@index([type, bucketAccess])
+  @@index([uploadedAt(sort: Desc), id])
+  @@index([uploadedById])
+  @@index([publicApprovedById])
+}
+
 model User {
-  id              String          @id
-  name            String
-  email           String
-  emailVerified   Boolean         @default(false)
-  image           String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  role            String?
-  banned          Boolean?        @default(false)
-  banReason       String?
-  banExpires      DateTime?
-  sessions        Session[]
-  accounts        Account[]
-  createdVehicles Vehicle[]       @relation("VehicleCreator")
-  updatedVehicles Vehicle[]       @relation("VehicleUpdater")
-  vehicleChanges  VehicleChange[]
+  id                  String          @id
+  name                String
+  email               String
+  emailVerified       Boolean         @default(false)
+  image               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  role                String?
+  banned              Boolean?        @default(false)
+  banReason           String?
+  banExpires          DateTime?
+  sessions            Session[]
+  accounts            Account[]
+  createdVehicles     Vehicle[]       @relation("VehicleCreator")
+  updatedVehicles     Vehicle[]       @relation("VehicleUpdater")
+  vehicleChanges      VehicleChange[]
+  uploadedMedia       MediaAsset[]    @relation("MediaUploader")
+  approvedPublicMedia MediaAsset[]    @relation("MediaPublicApprover")
 
   @@unique([email])
   @@map("user")

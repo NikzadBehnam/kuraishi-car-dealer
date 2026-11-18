@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Copy,
@@ -17,8 +17,11 @@ import type {
   AdminMediaAsset,
   AdminMediaType,
   AdminMediaUsage,
-  AdminVehicle,
 } from "@/types/admin";
+import {
+  mediaLibraryErrorSchema,
+  mediaLibraryPageSchema,
+} from "@/lib/media-library-validation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,45 +70,81 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
 });
 
 const integer = new Intl.NumberFormat("de-DE");
+const pageSize = 24;
 
-export function MediaLibrary({
-  assets,
-  vehicles,
-}: {
-  assets: AdminMediaAsset[];
-  vehicles: AdminVehicle[];
-}) {
+export function MediaLibrary() {
   const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [usageFilter, setUsageFilter] = useState<UsageFilter>("all");
+  const [assets, setAssets] = useState<AdminMediaAsset[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeAssetId, setActiveAssetId] = useState<string | null>(null);
 
-  const filteredAssets = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("de");
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(query.trim());
+      setPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
-    return assets
-      .filter((asset) => typeFilter === "all" || asset.type === typeFilter)
-      .filter((asset) => usageFilter === "all" || asset.usage === usageFilter)
-      .filter((asset) => {
-        if (!normalizedQuery) return true;
-        const vehicle = getVehicle(asset, vehicles);
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+      search,
+      type: typeFilter,
+      usage: usageFilter,
+    });
 
-        return [
-          asset.title,
-          asset.filename,
-          asset.alt,
-          asset.type,
-          asset.usage,
-          vehicle?.make ?? "",
-          vehicle?.model ?? "",
-        ]
-          .join(" ")
-          .toLocaleLowerCase("de")
-          .includes(normalizedQuery);
-      })
-      .toSorted((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
-  }, [assets, query, typeFilter, usageFilter, vehicles]);
+    async function loadAssets() {
+      setLoading(true);
+      setLoadError(null);
+      setAssets([]);
+      setActiveAssetId(null);
+
+      try {
+        const response = await fetch(`/api/admin/media?${params}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload: unknown = await response.json();
+
+        if (!response.ok) {
+          const parsedError = mediaLibraryErrorSchema.safeParse(payload);
+          throw new Error(
+            parsedError.success
+              ? parsedError.data.error
+              : "Could not load media assets.",
+          );
+        }
+
+        const result = mediaLibraryPageSchema.parse(payload);
+        setAssets(result.assets);
+        setHasMore(result.hasMore);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Could not load media assets.",
+        );
+        setHasMore(false);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+
+    void loadAssets();
+    return () => controller.abort();
+  }, [page, retryCount, search, typeFilter, usageFilter]);
 
   const activeAsset =
     assets.find((asset) => asset.id === activeAssetId) ?? null;
@@ -126,8 +165,8 @@ export function MediaLibrary({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-base font-extrabold">Media library</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              UI-only asset management for vehicle images, brand files, and
+            <p className="text-muted-foreground mt-1 text-sm">
+              Search and filter uploaded vehicle images, brand files, and
               documents.
             </p>
           </div>
@@ -145,20 +184,23 @@ export function MediaLibrary({
         <div className="mt-4 grid gap-3 md:grid-cols-[1fr_10rem_10rem]">
           <div className="relative">
             <Search
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search filename, title, usage, vehicle"
+              placeholder="Search title, filename, alt text, type, usage, vehicle"
               aria-label="Search media"
               className="bg-background pl-9"
             />
           </div>
           <Select
             value={typeFilter}
-            onValueChange={(value) => setTypeFilter(value as TypeFilter)}
+            onValueChange={(value) => {
+              setTypeFilter(value as TypeFilter);
+              setPage(1);
+            }}
           >
             <SelectTrigger aria-label="Filter media type">
               <SelectValue />
@@ -174,7 +216,10 @@ export function MediaLibrary({
           </Select>
           <Select
             value={usageFilter}
-            onValueChange={(value) => setUsageFilter(value as UsageFilter)}
+            onValueChange={(value) => {
+              setUsageFilter(value as UsageFilter);
+              setPage(1);
+            }}
           >
             <SelectTrigger aria-label="Filter media usage">
               <SelectValue />
@@ -227,13 +272,34 @@ export function MediaLibrary({
         </Card>
       )}
 
-      {filteredAssets.length ? (
+      {loadError ? (
+        <Card
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] p-4"
+        >
+          <p className="text-destructive text-sm">{loadError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-[var(--radius-sm)]"
+            onClick={() => setRetryCount((count) => count + 1)}
+          >
+            Retry
+          </Button>
+        </Card>
+      ) : loading ? (
+        <Card
+          aria-live="polite"
+          className="text-muted-foreground grid min-h-40 place-items-center rounded-[var(--radius-sm)] p-8 text-sm"
+        >
+          Loading media assets…
+        </Card>
+      ) : assets.length ? (
         <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {filteredAssets.map((asset) => (
+          {assets.map((asset) => (
             <MediaAssetCard
               key={asset.id}
               asset={asset}
-              vehicle={getVehicle(asset, vehicles)}
               selected={selectedIds.has(asset.id)}
               onSelectedChange={(checked) => toggleSelected(asset.id, checked)}
               onOpen={() => setActiveAssetId(asset.id)}
@@ -246,25 +312,51 @@ export function MediaLibrary({
 
       <MediaAssetDialog
         asset={activeAsset}
-        vehicle={activeAsset ? getVehicle(activeAsset, vehicles) : undefined}
         open={!!activeAsset}
         onOpenChange={(open) => {
           if (!open) setActiveAssetId(null);
         }}
       />
+
+      {!loading && !loadError && (
+        <nav
+          aria-label="Media library pages"
+          className="flex items-center justify-between gap-3"
+        >
+          <p className="text-muted-foreground text-sm">Page {page}</p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[var(--radius-sm)]"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[var(--radius-sm)]"
+              disabled={!hasMore}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
 
 function MediaAssetCard({
   asset,
-  vehicle,
   selected,
   onSelectedChange,
   onOpen,
 }: {
   asset: AdminMediaAsset;
-  vehicle?: AdminVehicle;
   selected: boolean;
   onSelectedChange: (checked: boolean) => void;
   onOpen: () => void;
@@ -273,10 +365,10 @@ function MediaAssetCard({
     <Card
       className={cn(
         "overflow-hidden rounded-[var(--radius-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md",
-        selected && "border-accent ring-2 ring-accent/20",
+        selected && "border-accent ring-accent/20 ring-2",
       )}
     >
-      <div className="relative aspect-[4/3] bg-secondary">
+      <div className="bg-secondary relative aspect-[4/3]">
         <div className="absolute top-2 left-2 z-10">
           <Checkbox
             checked={selected}
@@ -290,7 +382,7 @@ function MediaAssetCard({
       <div className="grid gap-3 p-3">
         <div className="min-w-0">
           <p className="truncate font-extrabold">{asset.title}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-1 truncate text-xs">
             {asset.filename}
           </p>
         </div>
@@ -299,9 +391,9 @@ function MediaAssetCard({
           <UsageBadge usage={asset.usage} />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <p className="truncate text-xs text-muted-foreground">
-            {vehicle
-              ? `${vehicle.make} ${vehicle.model}`
+          <p className="text-muted-foreground truncate text-xs">
+            {asset.usedByVehicle
+              ? `${asset.usedByVehicle.make} ${asset.usedByVehicle.model}`
               : formatDimensions(asset)}
           </p>
           <Button
@@ -321,12 +413,10 @@ function MediaAssetCard({
 
 function MediaAssetDialog({
   asset,
-  vehicle,
   open,
   onOpenChange,
 }: {
   asset: AdminMediaAsset | null;
-  vehicle?: AdminVehicle;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -345,12 +435,12 @@ function MediaAssetDialog({
         </DialogHeader>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="overflow-hidden rounded-[var(--radius-sm)] border bg-background">
+          <div className="bg-background overflow-hidden rounded-[var(--radius-sm)] border">
             <div className="relative aspect-[4/3]">
               <MediaPreview asset={asset} />
             </div>
           </div>
-          <section className="rounded-[var(--radius-sm)] border bg-background p-4">
+          <section className="bg-background rounded-[var(--radius-sm)] border p-4">
             <h3 className="text-sm font-extrabold">Asset details</h3>
             <Separator className="my-3" />
             <div className="grid gap-3 text-sm">
@@ -361,8 +451,8 @@ function MediaAssetDialog({
               <Info
                 label="Used by"
                 value={
-                  vehicle
-                    ? `${vehicle.make} ${vehicle.model}`
+                  asset.usedByVehicle
+                    ? `${asset.usedByVehicle.make} ${asset.usedByVehicle.model}`
                     : usageLabels[asset.usage]
                 }
               />
@@ -408,9 +498,9 @@ function MediaAssetDialog({
 function MediaPreview({ asset }: { asset: AdminMediaAsset }) {
   if (asset.type === "document" || asset.url === "#") {
     return (
-      <div className="grid size-full place-items-center bg-background p-6 text-center">
+      <div className="bg-background grid size-full place-items-center p-6 text-center">
         <span>
-          <FileText className="mx-auto size-10 text-muted-foreground" />
+          <FileText className="text-muted-foreground mx-auto size-10" />
           <span className="mt-3 block text-sm font-extrabold">
             Document asset
           </span>
@@ -432,15 +522,14 @@ function MediaPreview({ asset }: { asset: AdminMediaAsset }) {
 
 function EmptyMediaState() {
   return (
-    <div className="grid min-h-72 place-items-center rounded-[var(--radius-sm)] border bg-surface p-8 text-center">
+    <div className="bg-surface grid min-h-72 place-items-center rounded-[var(--radius-sm)] border p-8 text-center">
       <div className="max-w-sm">
-        <span className="mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
+        <span className="bg-secondary text-primary mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)]">
           <Images className="size-6" aria-hidden="true" />
         </span>
         <h3 className="mt-4 font-extrabold">No media assets found</h3>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Change the search, type, or usage filters to review more mocked media
-          records.
+        <p className="text-muted-foreground mt-2 text-sm leading-6">
+          Change the search, type, or usage filters to review more media assets.
         </p>
       </div>
     </div>
@@ -478,16 +567,10 @@ function UsageBadge({ usage }: { usage: AdminMediaUsage }) {
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-bold text-muted-foreground">{label}</p>
+      <p className="text-muted-foreground text-xs font-bold">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
     </div>
   );
-}
-
-function getVehicle(asset: AdminMediaAsset, vehicles: AdminVehicle[]) {
-  return asset.usedByVehicleId
-    ? vehicles.find((vehicle) => vehicle.id === asset.usedByVehicleId)
-    : undefined;
 }
 
 function formatDimensions(asset: AdminMediaAsset) {

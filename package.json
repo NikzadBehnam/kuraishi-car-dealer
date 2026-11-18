@@ -17,6 +17,7 @@
     "test:inventory-db": "node --env-file=.env.inventory-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\inventory-migration.test.ts prisma\\inventory-queries.test.ts",
     "test:media-db": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-migration.test.ts",
     "test:media-upload": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-uploads.test.ts",
+    "test:media-library": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\media-library.test.ts",
     "test:vehicle-media": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --test-isolation=none --experimental-strip-types prisma\\vehicle-media.test.ts",
     "test:media-storage": "node --env-file=.env.media-test.local --conditions=react-server --test --test-isolation=none --experimental-strip-types prisma\\media-storage.test.ts",
     "inventory:fixtures": "node --env-file=.env.inventory-test.local --experimental-strip-types prisma\\seed-inventory.ts"

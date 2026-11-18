@@ -23,8 +23,7 @@ export interface AdminVehicle extends Vehicle {
   marginEstimate: number;
 }
 
-export type AdminLeadSource =
-  "contact" | "test-drive" | "callback";
+export type AdminLeadSource = "contact" | "test-drive" | "callback";
 
 export interface AdminLead {
   id: string;
@@ -56,5 +55,13 @@ export interface AdminMediaAsset {
   width?: number;
   height?: number;
   usedByVehicleId?: string;
+  usedByVehicle?: Pick<Vehicle, "id" | "make" | "model">;
   uploadedAt: string;
+}
+
+export interface AdminMediaLibraryPage {
+  assets: AdminMediaAsset[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 }

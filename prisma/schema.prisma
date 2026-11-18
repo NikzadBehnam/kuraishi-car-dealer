@@ -112,6 +112,7 @@ model Vehicle {
   updatedById       String
   updatedBy         User                     @relation("VehicleUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
   changes           VehicleChange[]
+  mediaAttachments  VehicleMedia[]
   dealerId          String
   dealer            Dealer                   @relation(fields: [dealerId], references: [id], onDelete: Restrict)
 
@@ -160,12 +161,23 @@ model MediaAsset {
   publicApprovedAt   DateTime?         @db.Timestamptz(3)
   publicApprovedById String?
   publicApprovedBy   User?             @relation("MediaPublicApprover", fields: [publicApprovedById], references: [id], onDelete: Restrict)
+  vehicleAttachment  VehicleMedia?
 
   @@unique([bucketAccess, objectKey])
   @@index([type, bucketAccess])
   @@index([uploadedAt(sort: Desc), id])
   @@index([uploadedById])
   @@index([publicApprovedById])
+}
+
+model VehicleMedia {
+  vehicleId    String
+  mediaAssetId String     @unique
+  position     Int        @db.SmallInt
+  vehicle      Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
+
+  @@id([vehicleId, position])
 }
 
 model MediaUploadIntent {

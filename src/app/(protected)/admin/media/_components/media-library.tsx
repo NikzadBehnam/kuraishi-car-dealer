@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Copy,
@@ -17,8 +17,14 @@ import type {
   AdminMediaAsset,
   AdminMediaType,
   AdminMediaUsage,
-  AdminVehicle,
 } from "@/types/admin";
+import type { MediaDeletionResult } from "@/lib/media-delete-validation";
+import { MAX_MEDIA_SELECTION_ASSETS } from "@/lib/media-selection-validation";
+import {
+  mediaLibraryErrorSchema,
+  mediaLibraryPageSchema,
+} from "@/lib/media-library-validation";
+import { mediaDeletionResponseSchema } from "@/lib/media-delete-validation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,51 +73,121 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
 });
 
 const integer = new Intl.NumberFormat("de-DE");
+const pageSize = 24;
 
-export function MediaLibrary({
-  assets,
-  vehicles,
-}: {
-  assets: AdminMediaAsset[];
-  vehicles: AdminVehicle[];
-}) {
+function getDownloadFilename(
+  contentDisposition: string | null,
+  fallback: string,
+): string {
+  const encodedName = contentDisposition?.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedName?.[1]) {
+    try {
+      return decodeURIComponent(encodedName[1]);
+    } catch {
+      return fallback;
+    }
+  }
+
+  const quotedName = contentDisposition?.match(/filename="([^"]+)"/i);
+  return quotedName?.[1] ?? fallback;
+}
+
+export function MediaLibrary() {
   const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [usageFilter, setUsageFilter] = useState<UsageFilter>("all");
+  const [assets, setAssets] = useState<AdminMediaAsset[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeAssetId, setActiveAssetId] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
+  const [deleteResults, setDeleteResults] = useState<
+    MediaDeletionResult[] | null
+  >(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const filteredAssets = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("de");
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(query.trim());
+      setPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
-    return assets
-      .filter((asset) => typeFilter === "all" || asset.type === typeFilter)
-      .filter((asset) => usageFilter === "all" || asset.usage === usageFilter)
-      .filter((asset) => {
-        if (!normalizedQuery) return true;
-        const vehicle = getVehicle(asset, vehicles);
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+      search,
+      type: typeFilter,
+      usage: usageFilter,
+    });
 
-        return [
-          asset.title,
-          asset.filename,
-          asset.alt,
-          asset.type,
-          asset.usage,
-          vehicle?.make ?? "",
-          vehicle?.model ?? "",
-        ]
-          .join(" ")
-          .toLocaleLowerCase("de")
-          .includes(normalizedQuery);
-      })
-      .toSorted((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
-  }, [assets, query, typeFilter, usageFilter, vehicles]);
+    async function loadAssets() {
+      setLoading(true);
+      setLoadError(null);
+      setAssets([]);
+      setActiveAssetId(null);
+
+      try {
+        const response = await fetch(`/api/admin/media?${params}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload: unknown = await response.json();
+
+        if (!response.ok) {
+          const parsedError = mediaLibraryErrorSchema.safeParse(payload);
+          throw new Error(
+            parsedError.success
+              ? parsedError.data.error
+              : "Could not load media assets.",
+          );
+        }
+
+        const result = mediaLibraryPageSchema.parse(payload);
+        setAssets(result.assets);
+        setHasMore(result.hasMore);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Could not load media assets.",
+        );
+        setHasMore(false);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+
+    void loadAssets();
+    return () => controller.abort();
+  }, [page, retryCount, search, typeFilter, usageFilter]);
 
   const activeAsset =
     assets.find((asset) => asset.id === activeAssetId) ?? null;
   const selectedCount = selectedIds.size;
 
   const toggleSelected = (assetId: string, checked: boolean) => {
+    if (
+      checked &&
+      !selectedIds.has(assetId) &&
+      selectedIds.size >= MAX_MEDIA_SELECTION_ASSETS
+    ) {
+      toast.error(
+        `Select no more than ${MAX_MEDIA_SELECTION_ASSETS} assets at a time.`,
+      );
+      return;
+    }
+
     setSelectedIds((current) => {
       const next = new Set(current);
       if (checked) next.add(assetId);
@@ -120,14 +196,132 @@ export function MediaLibrary({
     });
   };
 
+  const copyAssetUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Media URL copied.");
+    } catch {
+      toast.error("Could not copy the media URL.");
+    }
+  };
+
+  const requestDelete = (ids: string[]) => {
+    setDeleteResults(null);
+    setDeleteIds(ids);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteIds || deleting) return;
+    setDeleting(true);
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "DELETE",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: deleteIds }),
+      });
+      if (!response.ok) {
+        const payload: unknown = await response.json();
+        const parsedError = mediaLibraryErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not delete the selected media.",
+        );
+      }
+
+      const payload: unknown = await response.json();
+      const result = mediaDeletionResponseSchema.parse(payload);
+      const resolvedIds = new Set(
+        result.results
+          .filter(
+            (item) => item.status === "deleted" || item.status === "not_found",
+          )
+          .map((item) => item.id),
+      );
+      setSelectedIds(
+        (current) => new Set([...current].filter((id) => !resolvedIds.has(id))),
+      );
+      if (result.results.some((item) => item.status === "deleted")) {
+        setRetryCount((count) => count + 1);
+      }
+      setDeleteResults(result.results);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not delete the selected media.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const downloadAssets = async (ids: string[]) => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const params = new URLSearchParams();
+      for (const id of ids) params.append("id", id);
+
+      const response = await fetch(`/api/admin/media/download?${params}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const payload: unknown = await response.json();
+        const parsedError = mediaLibraryErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not download the selected media.",
+        );
+      }
+
+      const expectedContentType =
+        ids.length === 1 ? "application/octet-stream" : "application/zip";
+      if (
+        response.headers.get("content-type")?.split(";")[0] !==
+        expectedContentType
+      ) {
+        throw new Error("The server returned an invalid download response.");
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error("The selected media download was empty.");
+      }
+      const filename = getDownloadFilename(
+        response.headers.get("content-disposition"),
+        ids.length === 1 ? "media-file" : "media-assets.zip",
+      );
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      toast.success("Download started.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not download the selected media.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="grid min-w-0 gap-4">
       <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-base font-extrabold">Media library</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              UI-only asset management for vehicle images, brand files, and
+            <p className="text-muted-foreground mt-1 text-sm">
+              Search and filter uploaded vehicle images, brand files, and
               documents.
             </p>
           </div>
@@ -145,20 +339,23 @@ export function MediaLibrary({
         <div className="mt-4 grid gap-3 md:grid-cols-[1fr_10rem_10rem]">
           <div className="relative">
             <Search
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search filename, title, usage, vehicle"
+              placeholder="Search title, filename, alt text, type, usage, vehicle"
               aria-label="Search media"
               className="bg-background pl-9"
             />
           </div>
           <Select
             value={typeFilter}
-            onValueChange={(value) => setTypeFilter(value as TypeFilter)}
+            onValueChange={(value) => {
+              setTypeFilter(value as TypeFilter);
+              setPage(1);
+            }}
           >
             <SelectTrigger aria-label="Filter media type">
               <SelectValue />
@@ -174,7 +371,10 @@ export function MediaLibrary({
           </Select>
           <Select
             value={usageFilter}
-            onValueChange={(value) => setUsageFilter(value as UsageFilter)}
+            onValueChange={(value) => {
+              setUsageFilter(value as UsageFilter);
+              setPage(1);
+            }}
           >
             <SelectTrigger aria-label="Filter media usage">
               <SelectValue />
@@ -201,16 +401,18 @@ export function MediaLibrary({
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => toast.info("Bulk download is UI-only.")}
+              disabled={downloading}
+              onClick={() => void downloadAssets([...selectedIds])}
             >
               <Download />
-              Download
+              {downloading ? "Preparing…" : "Download"}
             </Button>
             <Button
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => toast.info("Bulk delete is UI-only.")}
+              disabled={downloading || deleting}
+              onClick={() => requestDelete([...selectedIds])}
             >
               <Trash2 />
               Delete
@@ -227,13 +429,34 @@ export function MediaLibrary({
         </Card>
       )}
 
-      {filteredAssets.length ? (
+      {loadError ? (
+        <Card
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] p-4"
+        >
+          <p className="text-destructive text-sm">{loadError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-[var(--radius-sm)]"
+            onClick={() => setRetryCount((count) => count + 1)}
+          >
+            Retry
+          </Button>
+        </Card>
+      ) : loading ? (
+        <Card
+          aria-live="polite"
+          className="text-muted-foreground grid min-h-40 place-items-center rounded-[var(--radius-sm)] p-8 text-sm"
+        >
+          Loading media assets…
+        </Card>
+      ) : assets.length ? (
         <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {filteredAssets.map((asset) => (
+          {assets.map((asset) => (
             <MediaAssetCard
               key={asset.id}
               asset={asset}
-              vehicle={getVehicle(asset, vehicles)}
               selected={selectedIds.has(asset.id)}
               onSelectedChange={(checked) => toggleSelected(asset.id, checked)}
               onOpen={() => setActiveAssetId(asset.id)}
@@ -246,25 +469,139 @@ export function MediaLibrary({
 
       <MediaAssetDialog
         asset={activeAsset}
-        vehicle={activeAsset ? getVehicle(activeAsset, vehicles) : undefined}
         open={!!activeAsset}
+        downloading={downloading}
         onOpenChange={(open) => {
           if (!open) setActiveAssetId(null);
         }}
+        onCopyUrl={copyAssetUrl}
+        onDownload={(asset) => void downloadAssets([asset.id])}
+        onDelete={(asset) => {
+          setActiveAssetId(null);
+          requestDelete([asset.id]);
+        }}
       />
+
+      <Dialog
+        open={deleteIds !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteIds(null);
+            setDeleteResults(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {deleteResults ? "Deletion results" : "Delete media assets?"}
+            </DialogTitle>
+            <DialogDescription>
+              {deleteResults
+                ? "Each selected asset has an individual result below."
+                : `${deleteIds?.length ?? 0} asset${deleteIds?.length === 1 ? "" : "s"} will be deleted if unused. Assets attached to a vehicle must be detached or replaced first.`}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteResults && (
+            <ul className="grid max-h-64 gap-3 overflow-y-auto">
+              {deleteResults.map((item) => (
+                <li
+                  key={item.id}
+                  className="bg-muted/40 rounded-[var(--radius-sm)] p-3 text-sm"
+                >
+                  <p className="font-bold">{item.filename || item.id}</p>
+                  <p className="text-muted-foreground mt-1">
+                    {item.status === "in_use"
+                      ? "Blocked: in use"
+                      : item.status === "not_found"
+                        ? "Not found"
+                        : item.status === "failed"
+                          ? "Failed"
+                          : "Deleted"}
+                    {" — "}
+                    {item.message}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <DialogFooter>
+            {deleteResults ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setDeleteIds(null);
+                  setDeleteResults(null);
+                }}
+              >
+                Done
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={deleting}
+                  onClick={() => {
+                    setDeleteIds(null);
+                    setDeleteResults(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={deleting}
+                  onClick={() => void confirmDelete()}
+                >
+                  {deleting ? "Deleting…" : "Delete"}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {!loading && !loadError && (
+        <nav
+          aria-label="Media library pages"
+          className="flex items-center justify-between gap-3"
+        >
+          <p className="text-muted-foreground text-sm">Page {page}</p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[var(--radius-sm)]"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[var(--radius-sm)]"
+              disabled={!hasMore}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
 
 function MediaAssetCard({
   asset,
-  vehicle,
   selected,
   onSelectedChange,
   onOpen,
 }: {
   asset: AdminMediaAsset;
-  vehicle?: AdminVehicle;
   selected: boolean;
   onSelectedChange: (checked: boolean) => void;
   onOpen: () => void;
@@ -273,10 +610,10 @@ function MediaAssetCard({
     <Card
       className={cn(
         "overflow-hidden rounded-[var(--radius-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md",
-        selected && "border-accent ring-2 ring-accent/20",
+        selected && "border-accent ring-accent/20 ring-2",
       )}
     >
-      <div className="relative aspect-[4/3] bg-secondary">
+      <div className="bg-secondary relative aspect-[4/3]">
         <div className="absolute top-2 left-2 z-10">
           <Checkbox
             checked={selected}
@@ -290,7 +627,7 @@ function MediaAssetCard({
       <div className="grid gap-3 p-3">
         <div className="min-w-0">
           <p className="truncate font-extrabold">{asset.title}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-1 truncate text-xs">
             {asset.filename}
           </p>
         </div>
@@ -299,9 +636,9 @@ function MediaAssetCard({
           <UsageBadge usage={asset.usage} />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <p className="truncate text-xs text-muted-foreground">
-            {vehicle
-              ? `${vehicle.make} ${vehicle.model}`
+          <p className="text-muted-foreground truncate text-xs">
+            {asset.usedByVehicle
+              ? `${asset.usedByVehicle.make} ${asset.usedByVehicle.model}`
               : formatDimensions(asset)}
           </p>
           <Button
@@ -321,14 +658,20 @@ function MediaAssetCard({
 
 function MediaAssetDialog({
   asset,
-  vehicle,
   open,
+  downloading,
   onOpenChange,
+  onCopyUrl,
+  onDownload,
+  onDelete,
 }: {
   asset: AdminMediaAsset | null;
-  vehicle?: AdminVehicle;
   open: boolean;
+  downloading: boolean;
   onOpenChange: (open: boolean) => void;
+  onCopyUrl: (url: string) => void;
+  onDownload: (asset: AdminMediaAsset) => void;
+  onDelete: (asset: AdminMediaAsset) => void;
 }) {
   if (!asset) return null;
 
@@ -345,12 +688,12 @@ function MediaAssetDialog({
         </DialogHeader>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="overflow-hidden rounded-[var(--radius-sm)] border bg-background">
+          <div className="bg-background overflow-hidden rounded-[var(--radius-sm)] border">
             <div className="relative aspect-[4/3]">
               <MediaPreview asset={asset} />
             </div>
           </div>
-          <section className="rounded-[var(--radius-sm)] border bg-background p-4">
+          <section className="bg-background rounded-[var(--radius-sm)] border p-4">
             <h3 className="text-sm font-extrabold">Asset details</h3>
             <Separator className="my-3" />
             <div className="grid gap-3 text-sm">
@@ -361,8 +704,8 @@ function MediaAssetDialog({
               <Info
                 label="Used by"
                 value={
-                  vehicle
-                    ? `${vehicle.make} ${vehicle.model}`
+                  asset.usedByVehicle
+                    ? `${asset.usedByVehicle.make} ${asset.usedByVehicle.model}`
                     : usageLabels[asset.usage]
                 }
               />
@@ -376,7 +719,7 @@ function MediaAssetDialog({
             type="button"
             variant="outline"
             className="rounded-[var(--radius-sm)]"
-            onClick={() => toast.info("Copy URL is UI-only.")}
+            onClick={() => void onCopyUrl(asset.url)}
           >
             <Copy />
             Copy URL
@@ -385,16 +728,17 @@ function MediaAssetDialog({
             type="button"
             variant="outline"
             className="rounded-[var(--radius-sm)]"
-            onClick={() => toast.info("Download is UI-only.")}
+            disabled={downloading}
+            onClick={() => onDownload(asset)}
           >
             <Download />
-            Download
+            {downloading ? "Preparing…" : "Download"}
           </Button>
           <Button
             type="button"
             variant="destructive"
             className="rounded-[var(--radius-sm)]"
-            onClick={() => toast.info("Delete is UI-only.")}
+            onClick={() => onDelete(asset)}
           >
             <Trash2 />
             Delete
@@ -408,9 +752,9 @@ function MediaAssetDialog({
 function MediaPreview({ asset }: { asset: AdminMediaAsset }) {
   if (asset.type === "document" || asset.url === "#") {
     return (
-      <div className="grid size-full place-items-center bg-background p-6 text-center">
+      <div className="bg-background grid size-full place-items-center p-6 text-center">
         <span>
-          <FileText className="mx-auto size-10 text-muted-foreground" />
+          <FileText className="text-muted-foreground mx-auto size-10" />
           <span className="mt-3 block text-sm font-extrabold">
             Document asset
           </span>
@@ -432,15 +776,14 @@ function MediaPreview({ asset }: { asset: AdminMediaAsset }) {
 
 function EmptyMediaState() {
   return (
-    <div className="grid min-h-72 place-items-center rounded-[var(--radius-sm)] border bg-surface p-8 text-center">
+    <div className="bg-surface grid min-h-72 place-items-center rounded-[var(--radius-sm)] border p-8 text-center">
       <div className="max-w-sm">
-        <span className="mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)] bg-secondary text-primary">
+        <span className="bg-secondary text-primary mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)]">
           <Images className="size-6" aria-hidden="true" />
         </span>
         <h3 className="mt-4 font-extrabold">No media assets found</h3>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Change the search, type, or usage filters to review more mocked media
-          records.
+        <p className="text-muted-foreground mt-2 text-sm leading-6">
+          Change the search, type, or usage filters to review more media assets.
         </p>
       </div>
     </div>
@@ -478,16 +821,10 @@ function UsageBadge({ usage }: { usage: AdminMediaUsage }) {
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-bold text-muted-foreground">{label}</p>
+      <p className="text-muted-foreground text-xs font-bold">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
     </div>
   );
-}
-
-function getVehicle(asset: AdminMediaAsset, vehicles: AdminVehicle[]) {
-  return asset.usedByVehicleId
-    ? vehicles.find((vehicle) => vehicle.id === asset.usedByVehicleId)
-    : undefined;
 }
 
 function formatDimensions(asset: AdminMediaAsset) {

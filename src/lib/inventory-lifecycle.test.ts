@@ -7,6 +7,7 @@ import {
   InventoryPolicyError,
   resolveInventoryPolicyUpdate,
 } from "./inventory-lifecycle.ts";
+import type { InventoryPolicyMediaAsset } from "./inventory-lifecycle.ts";
 import type { InventoryPolicyState } from "./inventory-policy.ts";
 import {
   inventoryIdSchema,
@@ -20,6 +21,13 @@ const published: InventoryPolicyState = {
   status: "published",
   inspectionStatus: "passed",
   isFeatured: true,
+};
+
+const approvedVehicleImage: InventoryPolicyMediaAsset = {
+  type: "image",
+  bucketAccess: "public_read",
+  publicApprovedAt: new Date("2026-01-01T00:00:00.000Z"),
+  publicApprovedById: "staff_1",
 };
 
 describe("inventory input and lifecycle boundary", () => {
@@ -146,6 +154,51 @@ describe("inventory input and lifecycle boundary", () => {
     );
   });
 
+  it("requires one explicitly approved public image before publication", () => {
+    const draft = { ...published, status: "draft" } as const;
+    const invalidMediaSets: readonly InventoryPolicyMediaAsset[][] = [
+      [],
+      [{ ...approvedVehicleImage, bucketAccess: "private" }],
+      [{ ...approvedVehicleImage, publicApprovedAt: null }],
+      [{ ...approvedVehicleImage, publicApprovedById: null }],
+      [{ ...approvedVehicleImage, type: "document" }],
+    ];
+
+    for (const mediaAssets of invalidMediaSets) {
+      assert.throws(
+        () =>
+          resolveInventoryPolicyUpdate(
+            draft,
+            { status: "published" },
+            mediaAssets,
+          ),
+        (error: unknown) =>
+          error instanceof InventoryPolicyError &&
+          error.code === "PUBLIC_IMAGE_REQUIRED" &&
+          error.status === 422,
+      );
+    }
+
+    assert.equal(
+      resolveInventoryPolicyUpdate(draft, { status: "published" }, [
+        approvedVehicleImage,
+      ]).status,
+      "published",
+    );
+  });
+
+  it("keeps already-published legacy vehicles available without media", () => {
+    assert.deepEqual(
+      resolveInventoryPolicyUpdate(published, { isFeatured: false }, []),
+      {
+        status: "published",
+        inspectionStatus: "passed",
+        isFeatured: false,
+        isAvailable: true,
+      },
+    );
+  });
+
   it("withdraws advertised/reserved stock and clears promotion in one result", () => {
     for (const status of ["published", "reserved"] as const) {
       for (const inspectionStatus of [
@@ -174,9 +227,13 @@ describe("inventory input and lifecycle boundary", () => {
       status: "reserved",
     });
 
-    const restored = resolveInventoryPolicyUpdate(reserved, {
-      status: "published",
-    });
+    const restored = resolveInventoryPolicyUpdate(
+      reserved,
+      {
+        status: "published",
+      },
+      [approvedVehicleImage],
+    );
     assert.equal(reserved.isAvailable, false);
     assert.equal(reserved.isFeatured, false);
     assert.equal(restored.isAvailable, true);
@@ -185,6 +242,7 @@ describe("inventory input and lifecycle boundary", () => {
       resolveInventoryPolicyUpdate(
         { ...reserved, isFeatured: true },
         { status: "published" },
+        [approvedVehicleImage],
       ).isFeatured,
       false,
     );
@@ -229,7 +287,9 @@ describe("inventory input and lifecycle boundary", () => {
       for (const to of statuses) {
         const current = { ...published, status: from };
         if (from === to || allowed[from].includes(to)) {
-          const result = resolveInventoryPolicyUpdate(current, { status: to });
+          const result = resolveInventoryPolicyUpdate(current, { status: to }, [
+            approvedVehicleImage,
+          ]);
           assert.equal(result.status, to);
           assert.equal(result.isAvailable, to === "published");
           assert.equal(
@@ -267,11 +327,15 @@ describe("inventory input and lifecycle boundary", () => {
           error.code === "INSPECTION_REQUIRED",
       );
       assert.deepEqual(
-        resolveInventoryPolicyUpdate(draft, {
-          status: "published",
-          inspectionStatus: "passed",
-          isFeatured: true,
-        }),
+        resolveInventoryPolicyUpdate(
+          draft,
+          {
+            status: "published",
+            inspectionStatus: "passed",
+            isFeatured: true,
+          },
+          [approvedVehicleImage],
+        ),
         {
           status: "published",
           inspectionStatus: "passed",

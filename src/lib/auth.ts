@@ -7,6 +7,7 @@ import { admin } from "better-auth/plugins";
 
 import { prisma } from "@/lib/db";
 import { ac, adminRole, userRole } from "@/lib/permissions";
+import { getTrustedOrigins } from "@/lib/trusted-origins";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -37,10 +38,7 @@ export const auth = betterAuth({
   baseURL,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   // Exact origins only; localhost is trusted outside production.
-  trustedOrigins: [
-    "https://www.kuraishicars.com",
-    ...(isProduction ? [] : ["http://localhost:3000"]),
-  ],
+  trustedOrigins: getTrustedOrigins(isProduction),
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,

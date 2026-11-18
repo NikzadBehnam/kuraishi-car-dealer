@@ -1,7 +1,6 @@
 import { vehicles } from "@/data/vehicles";
 import type {
   AdminLead,
-  AdminMediaAsset,
   AdminVehicle,
   AdminVehicleStatus,
 } from "@/types/admin";
@@ -97,46 +96,5 @@ export const adminLeads: AdminLead[] = [
     updatedAt: "2026-07-29T16:30:00.000Z",
     message: "Customer selected another dealer due to delivery timing.",
     notesCount: 2,
-  },
-];
-
-export const adminMediaAssets: AdminMediaAsset[] = [
-  ...adminVehicles.slice(0, 6).map((vehicle, index) => ({
-    id: `media-${index + 1}`,
-    type: "image" as const,
-    usage: "vehicle" as const,
-    title: `${vehicle.make} ${vehicle.model} hero image`,
-    filename: `${vehicle.slug}-hero.webp`,
-    url: vehicle.images[0],
-    alt: `${vehicle.make} ${vehicle.model} ${vehicle.variant}`,
-    sizeKb: 420 + index * 32,
-    width: 1400,
-    height: 934,
-    usedByVehicleId: vehicle.id,
-    uploadedAt: vehicle.lastUpdatedAt,
-  })),
-  {
-    id: "media-brand-1",
-    type: "brand",
-    usage: "brand",
-    title: "Kuraishi full logo light",
-    filename: "kuraishi-full-light.png",
-    url: "/images/brand/kuraishi-full-light.png",
-    alt: "Kuraishi Autohandel full logo",
-    sizeKb: 228,
-    width: 1305,
-    height: 304,
-    uploadedAt: "2026-07-01T08:00:00.000Z",
-  },
-  {
-    id: "media-doc-1",
-    type: "document",
-    usage: "legal",
-    title: "Placeholder privacy document",
-    filename: "privacy-placeholder.pdf",
-    url: "#",
-    alt: "Privacy placeholder document",
-    sizeKb: 96,
-    uploadedAt: "2026-07-14T10:30:00.000Z",
   },
 ];

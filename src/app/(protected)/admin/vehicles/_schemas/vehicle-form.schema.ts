@@ -33,6 +33,12 @@ export const vehicleFormSchema = z.object({
   co2Emission: z.number().min(0).optional(),
   featuresText: z.string().min(1, "Add at least one feature."),
   labelsText: z.string().optional(),
+  mediaAssetIds: z
+    .array(z.string().min(1).max(128))
+    .max(20, "A vehicle can have at most 20 images.")
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "An image cannot be attached more than once.",
+    }),
   status: vehicleStatusSchema,
   inspectionStatus: inspectionStatusSchema,
   isFeatured: z.boolean(),

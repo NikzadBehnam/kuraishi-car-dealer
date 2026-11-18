@@ -8,6 +8,7 @@ import {
   ImagePreviewSlider,
   type PreviewImage,
 } from "@/components/shared/image-preview-slider";
+import { VehicleImagePlaceholder } from "@/components/vehicle/vehicle-image-placeholder";
 
 interface VehicleImageGalleryProps {
   images: string[];
@@ -20,10 +21,19 @@ export function VehicleImageGallery({
 }: VehicleImageGalleryProps) {
   const [open, setOpen] = useState(false);
   const [initialIndex, setInitialIndex] = useState(0);
-  const previewImages: PreviewImage[] = images.map((src, index) => ({
+  const availableImages = images.filter((src) => src.trim().length > 0);
+  const previewImages: PreviewImage[] = availableImages.map((src, index) => ({
     src,
     alt: `${title} Ansicht ${index + 1}`,
   }));
+
+  if (availableImages.length === 0) {
+    return (
+      <div className="relative aspect-[16/10] overflow-hidden rounded-[var(--radius-sm)]">
+        <VehicleImagePlaceholder />
+      </div>
+    );
+  }
 
   const openPreview = (index: number) => {
     setInitialIndex(index);
@@ -44,13 +54,13 @@ export function VehicleImageGallery({
             fill
             sizes="(max-width: 1024px) 100vw, 60vw"
             className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-            src={images[0]}
+            src={availableImages[0]}
             alt={`${title} Frontansicht`}
           />
           <GalleryHint />
         </button>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-1">
-          {images.slice(1, 3).map((image, index) => (
+          {availableImages.slice(1, 3).map((image, index) => (
             <button
               type="button"
               className="group relative aspect-[16/10] overflow-hidden rounded-[var(--radius-sm)] focus-visible:outline-none md:aspect-auto"

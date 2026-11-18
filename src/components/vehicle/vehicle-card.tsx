@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VehicleActions } from "./vehicle-actions";
+import { VehicleImagePlaceholder } from "./vehicle-image-placeholder";
 import { routeBuilders } from "@/config/routes.config";
 export function VehicleCard({
   vehicle,
@@ -22,6 +23,7 @@ export function VehicleCard({
   variant?: "grid" | "list" | "compact";
 }) {
   const detailsHref = routeBuilders.vehicleDetails(vehicle.slug);
+  const primaryImage = vehicle.images.find((src) => src.trim().length > 0);
 
   return (
     <Card
@@ -36,13 +38,17 @@ export function VehicleCard({
         href={detailsHref}
         aria-label={`${vehicle.make} ${vehicle.model} Details ansehen`}
       >
-        <Image
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          src={vehicle.images[0]}
-          alt={`${vehicle.make} ${vehicle.model} ${vehicle.variant}`}
-        />
+        {primaryImage ? (
+          <Image
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            src={primaryImage}
+            alt={`${vehicle.make} ${vehicle.model} ${vehicle.variant}`}
+          />
+        ) : (
+          <VehicleImagePlaceholder />
+        )}
         {vehicle.labels.length > 0 && (
           <div className="absolute top-3 left-3 flex flex-wrap gap-2">
             {vehicle.labels.map((label) => (

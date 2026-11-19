@@ -100,6 +100,12 @@ const lifecycleMutationResponseSchema = z.strictObject({
   changed: z.boolean(),
 });
 const lifecycleMutationErrorSchema = z.strictObject({ error: z.string() });
+const duplicateMutationResponseSchema = z.strictObject({
+  vehicleId: z.string().min(1),
+  version: z.number().int().positive(),
+  stockNumber: z.string().min(1),
+  slug: z.string().min(1),
+});
 
 export function VehicleInventoryTable({
   vehicles,
@@ -556,6 +562,8 @@ function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
     "sold" | "archived" | null
   >(null);
   const [isChangingLifecycle, setIsChangingLifecycle] = useState(false);
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const router = useRouter();
 
   const confirmLifecycleAction = async () => {
@@ -614,6 +622,48 @@ function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
     }
   };
 
+  const confirmDuplicate = async () => {
+    if (isDuplicating) return;
+    setIsDuplicating(true);
+    try {
+      const response = await fetch(
+        `/api/admin/vehicles/${encodeURIComponent(vehicle.id)}/duplicate`,
+        {
+          method: "POST",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expectedVersion: vehicle.version }),
+        },
+      );
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const parsedError = lifecycleMutationErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not duplicate the vehicle.",
+        );
+      }
+
+      const duplicate = duplicateMutationResponseSchema.parse(payload);
+      setIsDuplicateDialogOpen(false);
+      toast.success(
+        `${duplicate.stockNumber} created as a draft without images.`,
+      );
+      router.push(
+        `${adminRoutes.vehicles}/${encodeURIComponent(duplicate.vehicleId)}/edit`,
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not duplicate the vehicle.",
+      );
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -643,7 +693,7 @@ function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
               Edit
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => mockRowAction("Duplicate", title)}>
+          <DropdownMenuItem onSelect={() => setIsDuplicateDialogOpen(true)}>
             <Copy />
             Duplicate
           </DropdownMenuItem>
@@ -705,6 +755,42 @@ function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={isDuplicateDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !isDuplicating) setIsDuplicateDialogOpen(false);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Duplicate {title} as a draft?</DialogTitle>
+            <DialogDescription>
+              This creates a draft with a new stock number and URL, copies the
+              vehicle details, and clears its VIN, sale, reservation, and
+              publication state. Images are not copied; add images in the editor
+              before publishing.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isDuplicating}
+              onClick={() => setIsDuplicateDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isDuplicating}
+              onClick={() => void confirmDuplicate()}
+            >
+              {isDuplicating ? "Creating…" : "Create draft copy"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -728,10 +814,6 @@ function StatusBadge({ status }: { status: AdminVehicleStatus }) {
 
 function formatDateTime(value: string) {
   return dateTime.format(new Date(value));
-}
-
-function mockRowAction(action: string, title: string) {
-  toast.info(`${action} is UI-only for ${title}.`);
 }
 
 function mockBulkAction(action: string, ids: readonly string[]) {

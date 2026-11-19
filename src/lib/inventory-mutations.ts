@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
 import { Prisma } from "../generated/prisma/client.ts";
 import { z } from "zod";
@@ -161,6 +162,11 @@ export const vehicleLifecycleMutationSchema = z.strictObject({
   vehicleId: inventoryIdSchema,
   expectedVersion: z.number().int().min(1).max(2_147_483_647),
   status: z.enum(["sold", "archived"]),
+});
+
+export const duplicateVehicleMutationSchema = z.strictObject({
+  vehicleId: inventoryIdSchema,
+  expectedVersion: z.number().int().min(1).max(2_147_483_647),
 });
 
 export const publishVehicleSchema = vehicleDraftFieldsSchema
@@ -583,6 +589,132 @@ export async function createDraftVehicle(input: unknown) {
       { isolationLevel: "Serializable" },
     );
   } catch (error) {
+    prismaMutationError(error);
+  }
+}
+
+export async function duplicateVehicle(input: unknown) {
+  const session = await requireSession();
+  const { vehicleId, expectedVersion } =
+    duplicateVehicleMutationSchema.parse(input);
+  const token = randomUUID().replaceAll("-", "");
+  const stockNumber = `COPY-${token}`;
+  const slug = `copy-${token.toLowerCase()}`;
+
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const source = await tx.vehicle.findUnique({
+          where: { id: vehicleId },
+          select: {
+            version: true,
+            make: true,
+            model: true,
+            variant: true,
+            description: true,
+            location: true,
+            exteriorColor: true,
+            condition: true,
+            price: true,
+            marginEstimate: true,
+            firstRegistration: true,
+            mileage: true,
+            powerKw: true,
+            ownerCount: true,
+            fuelType: true,
+            transmissionType: true,
+            bodyType: true,
+            consumption: true,
+            consumptionUnit: true,
+            co2Emission: true,
+            features: true,
+            labels: true,
+          },
+        });
+        if (!source) {
+          throw new InventoryMutationError(404, "Vehicle was not found.");
+        }
+        if (source.version !== expectedVersion) {
+          throw new InventoryMutationError(
+            409,
+            "The vehicle changed since it was loaded. Reload it before duplicating.",
+          );
+        }
+
+        const draft = vehicleDraftFieldsSchema.parse({
+          stockNumber,
+          slug,
+          make: source.make,
+          model: source.model,
+          variant: source.variant,
+          description: source.description,
+          location: source.location,
+          exteriorColor: source.exteriorColor,
+          condition: source.condition,
+          price: source.price?.toFixed(2) ?? null,
+          marginEstimate: source.marginEstimate?.toFixed(2) ?? null,
+          firstRegistration: source.firstRegistration,
+          mileage: source.mileage,
+          powerKw: source.powerKw?.toFixed(2) ?? null,
+          ownerCount: source.ownerCount,
+          vinLastSix: null,
+          fuelType: source.fuelType,
+          transmissionType: source.transmissionType,
+          bodyType: source.bodyType,
+          consumption: source.consumption?.toFixed(2) ?? null,
+          consumptionUnit: source.consumptionUnit,
+          co2Emission: source.co2Emission,
+          features: source.features,
+          labels: source.labels,
+        });
+        assertValidConsumption(draft);
+
+        const dealerId = await getSingleDealershipId(tx);
+        const vehicle = await tx.vehicle.create({
+          data: {
+            ...draft,
+            dealerId,
+            createdById: session.user.id,
+            updatedById: session.user.id,
+            acquisitionDate: todayInDealershipTimezone(),
+            status: "draft",
+            inspectionStatus: "pending",
+            isFeatured: false,
+            publishedAt: null,
+            reservedUntil: null,
+            soldAt: null,
+          },
+          select: {
+            id: true,
+            version: true,
+            stockNumber: true,
+            slug: true,
+          },
+        });
+        await tx.vehicleChange.create({
+          data: {
+            vehicleId: vehicle.id,
+            actorId: session.user.id,
+            version: vehicle.version,
+            previousStatus: null,
+            status: "draft",
+            previousInspectionStatus: null,
+            inspectionStatus: "pending",
+          },
+        });
+        return {
+          vehicleId: vehicle.id,
+          version: vehicle.version,
+          stockNumber: vehicle.stockNumber,
+          slug: vehicle.slug,
+        };
+      },
+      { isolationLevel: "Serializable" },
+    );
+  } catch (error) {
+    if (error instanceof InventoryMutationError) {
+      throw error;
+    }
     prismaMutationError(error);
   }
 }

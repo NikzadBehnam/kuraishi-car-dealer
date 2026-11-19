@@ -221,6 +221,11 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         error instanceof Error && error.name === "AuthorizationError",
     );
     await assert.rejects(
+      mutations.duplicateVehicle({ invalid: true }),
+      (error: unknown) =>
+        error instanceof Error && error.name === "AuthorizationError",
+    );
+    await assert.rejects(
       mediaAttachments.listVehicleMediaAssets("vehicle_1"),
       (error: unknown) =>
         error instanceof Error && error.name === "AuthorizationError",
@@ -563,6 +568,212 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         error.name === "InventoryMutationError" &&
         "status" in error &&
         error.status === 409,
+    );
+  });
+
+  it("duplicates a sold vehicle into a fresh image-free draft", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const vehicleCountBefore = await prisma.vehicle.count({
+      where: { createdById: actorId },
+    });
+    const imageId = await createImageAsset({ publicRead: true });
+    const source = await createDraft([imageId]);
+    const initial = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: source.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const published = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: source.vehicleId,
+        expectedVersion: source.version,
+        stockNumber: initial.stockNumber,
+        slug: initial.slug,
+        make: "Škoda",
+        model: "Octavia",
+        variant: "Style",
+        description:
+          "A well-maintained vehicle with a complete and verified history.",
+        location: "Vienna",
+        exteriorColor: "Blue",
+        marginEstimate: "2100.50",
+        firstRegistration: "2020-05",
+        mileage: 45000,
+        powerKw: "110.00",
+        ownerCount: 2,
+        vinLastSix: "ABC123",
+        consumption: "5.50",
+        consumptionUnit: "l_per_100_km",
+        co2Emission: 120,
+        features: ["Heated seats", "Parking sensors"],
+        labels: ["family"],
+        mediaAssetIds: [imageId],
+      }),
+    );
+    const oldAcquisitionDate = new Date("2022-01-02T00:00:00.000Z");
+    const reservedUntil = new Date("2026-03-01T10:00:00.000Z");
+    await prisma.vehicle.update({
+      where: { id: source.vehicleId },
+      data: {
+        status: "reserved",
+        reservedUntil,
+        acquisitionDate: oldAcquisitionDate,
+      },
+    });
+    const sold = await mutations.transitionVehicleLifecycle({
+      vehicleId: source.vehicleId,
+      expectedVersion: published.version,
+      status: "sold",
+    });
+
+    const duplicate = await mutations.duplicateVehicle({
+      vehicleId: source.vehicleId,
+      expectedVersion: sold.version,
+    });
+    const duplicateVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: duplicate.vehicleId },
+    });
+    const duplicateHistory = await prisma.vehicleChange.findMany({
+      where: { vehicleId: duplicate.vehicleId },
+      select: {
+        version: true,
+        previousStatus: true,
+        status: true,
+        previousInspectionStatus: true,
+        inspectionStatus: true,
+        previousSoldAt: true,
+        soldAt: true,
+      },
+    });
+
+    assert.notEqual(duplicate.vehicleId, source.vehicleId);
+    assert.notEqual(duplicate.stockNumber, initial.stockNumber);
+    assert.notEqual(duplicate.slug, initial.slug);
+    assert.match(duplicate.stockNumber, /^COPY-[A-F0-9]{32}$/);
+    assert.match(duplicate.slug, /^copy-[a-f0-9]{32}$/);
+    assert.equal(duplicate.version, 1);
+    assert.equal(duplicateVehicle.status, "draft");
+    assert.equal(duplicateVehicle.inspectionStatus, "pending");
+    assert.equal(duplicateVehicle.isFeatured, false);
+    assert.equal(duplicateVehicle.publishedAt, null);
+    assert.equal(duplicateVehicle.reservedUntil, null);
+    assert.equal(duplicateVehicle.soldAt, null);
+    assert.equal(duplicateVehicle.vinLastSix, null);
+    assert.notEqual(
+      duplicateVehicle.acquisitionDate.toISOString(),
+      oldAcquisitionDate.toISOString(),
+    );
+    assert.equal(duplicateVehicle.make, "Škoda");
+    assert.equal(duplicateVehicle.model, "Octavia");
+    assert.equal(duplicateVehicle.variant, "Style");
+    assert.equal(duplicateVehicle.price?.toFixed(2), "24900.00");
+    assert.equal(duplicateVehicle.marginEstimate?.toFixed(2), "2100.50");
+    assert.deepEqual(duplicateVehicle.features, [
+      "Heated seats",
+      "Parking sensors",
+    ]);
+    assert.deepEqual(duplicateVehicle.labels, ["family"]);
+    assert.equal(
+      await prisma.vehicleMedia.count({
+        where: { vehicleId: duplicate.vehicleId },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.vehicleMedia.count({
+        where: { vehicleId: source.vehicleId, mediaAssetId: imageId },
+      }),
+      1,
+    );
+    assert.deepEqual(duplicateHistory, [
+      {
+        version: 1,
+        previousStatus: null,
+        status: "draft",
+        previousInspectionStatus: null,
+        inspectionStatus: "pending",
+        previousSoldAt: null,
+        soldAt: null,
+      },
+    ]);
+
+    await assert.rejects(
+      mutations.duplicateVehicle({
+        vehicleId: source.vehicleId,
+        expectedVersion: sold.version - 1,
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+    await assert.rejects(
+      mutations.duplicateVehicle({
+        vehicleId: `missing-${randomUUID()}`,
+        expectedVersion: 1,
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 404,
+    );
+    assert.equal(
+      await prisma.vehicle.count({ where: { createdById: actorId } }),
+      vehicleCountBefore + 2,
+    );
+  });
+
+  it("does not copy publication or featured state from a published source", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset({ publicRead: true });
+    const source = await createDraft([imageId]);
+    const initial = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: source.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const published = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: source.vehicleId,
+        expectedVersion: source.version,
+        stockNumber: initial.stockNumber,
+        slug: initial.slug,
+        mediaAssetIds: [imageId],
+      }),
+    );
+    await prisma.vehicle.update({
+      where: { id: source.vehicleId },
+      data: { isFeatured: true },
+    });
+
+    const duplicate = await mutations.duplicateVehicle({
+      vehicleId: source.vehicleId,
+      expectedVersion: published.version,
+    });
+    const duplicateVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: duplicate.vehicleId },
+    });
+    const originalVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: source.vehicleId },
+    });
+
+    assert.equal(originalVehicle.isFeatured, true);
+    assert.equal(originalVehicle.status, "published");
+    assert.ok(originalVehicle.publishedAt);
+    assert.equal(duplicateVehicle.isFeatured, false);
+    assert.equal(duplicateVehicle.status, "draft");
+    assert.equal(duplicateVehicle.publishedAt, null);
+    assert.equal(
+      await prisma.vehicleMedia.count({
+        where: { vehicleId: duplicate.vehicleId },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.vehicleMedia.count({
+        where: { vehicleId: source.vehicleId, mediaAssetId: imageId },
+      }),
+      1,
     );
   });
 

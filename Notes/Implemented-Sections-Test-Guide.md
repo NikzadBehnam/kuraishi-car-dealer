@@ -17,7 +17,7 @@ This guide covers the integrated work currently on `feature/admin-workspace-sear
 - Section 11.01-11.04: protected database-backed inquiry inbox, server-side search and pagination, selected detail, historical vehicle context, contact links, and per-inquiry notification status/failure display.
 - Section 11.05-11.06: append-only authored inquiry notes; database and browser verification remain deferred.
 - Section 12.01-12.07: database-backed dashboard aggregates and latest-five inquiries; unsupported view counters are hidden by decision. Section 12.08 database/browser verification remains pending.
-- Section 13.01: inventory-only top-bar search routed through the existing bounded, authenticated inventory query.
+- Section 13.01-13.03: inventory-only top-bar search routed through the existing bounded, authenticated inventory query; lead/media global-result routing is not applicable.
 
 Section 04 is complete but was not merged to `master` before Section 05 began; the current branch retains integrated work through Section 13.01. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
@@ -455,14 +455,15 @@ The dashboard uses authenticated database aggregates and recent inquiry rows; it
 4. Confirm the newest five inquiries appear with current/historical vehicle context and each Open link selects the correct inquiry in the protected inbox. A new database should show the explicit no-inquiries state and zero inventory percentages without NaN.
 5. Confirm an anonymous visit cannot read dashboard metrics. Do not use real customer data or Production. This browser retest remains deferred at the user's request.
 
-## 17. Section 13.01 — inventory-only workspace search
+## 17. Sections 13.01-13.03 — inventory-only workspace search
 
-The user chose inventory-only scope. The top-bar form submits a GET request to `/admin/vehicles`; the existing staff route validates and bounds the search and calls the session-protected inventory query. Search does not include leads or media.
+The user chose inventory-only scope. The top-bar form submits a GET request to `/admin/vehicles`; the existing staff route validates and bounds the search and calls the session-protected inventory query. Search does not include leads or media. Existing inventory UI supplies the fixed page size, route loading skeleton, explicit no-results state, generic retry error boundary, keyboard-operable search form, and links to public detail/staff preview/edit routes.
 
-1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`. The source suite covers staff inventory query parameter defaults, length bounds, repeated values, unsupported status/page values, and unknown parameters.
+1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`. Source tests cover staff inventory query parameter defaults, length bounds, repeated values, unsupported status/page values, and unknown parameters. The gated DB suite also covers staff authentication, search, result limits, and pagination; do not run it before satisfying the inventory-test safety gate in Section 2.
 2. On an isolated non-Production app, sign in as ordinary staff and submit a make, model, stock number, or location from the top bar. Confirm it opens `/admin/vehicles` with the search applied, matching rows are shown, and a non-match has the existing explicit empty state.
-3. Confirm an empty search returns the full bounded inventory list. Try an overlong/repeated query value and confirm the server rejects it with the existing invalid-filter state rather than running an unbounded search.
-4. Confirm the top-bar search does not show inquiry or media results. Browser checks remain deferred at the user's request.
+3. Confirm a pending query displays the vehicle-list skeleton, database errors show the generic retry state, and result actions keyboard-navigate to the appropriate public detail, staff preview, or edit route.
+4. Confirm an empty search returns the fixed-size paginated inventory list. Try an overlong/repeated query value and confirm the server rejects it with the existing invalid-filter state rather than running an unbounded search.
+5. Confirm the top-bar search does not show inquiry or media results. Browser checks remain deferred at the user's request.
 
 ## 18. Completion record
 
@@ -486,6 +487,6 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Section 10.07 provider verification                                       | Pending | No real provider call/email; isolated DB and simulator verification not run             |
 | Section 11.01-11.04 real protected inbox                                  | Partial | Source tests pass; DB suite and deferred browser retest remain pending                  |
 | Section 11.05-11.06 append-only staff notes                               | Partial | Source tests pass; migration, gated DB suite, and browser retest remain pending         |
-| Section 13.01 inventory-only workspace search                             | Partial | Source tests pass; browser verification remains deferred                                |
+| Sections 13.01-13.03 inventory-only workspace search                      | Partial | Source tests pass; gated DB assertions and browser verification remain pending          |
 | Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified                                          |
 | Homepage/list database propagation                                        | Pending | Section 05.01-05.02                                                                     |

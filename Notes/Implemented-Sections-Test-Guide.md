@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers implemented work on `backend/inquiry-intake`, based on `backend/dealership-settings` and including the integrated Sections 04-08 work:
+This guide covers implemented work on `backend/lead-notifications`, based on `backend/inquiry-intake` and including the integrated Sections 04-09 work:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -10,20 +10,21 @@ This guide covers implemented work on `backend/inquiry-intake`, based on `backen
 - Section 06.01-06.09: live public detail lookup, approved gallery media, dealership contact, similar inventory and record-derived metadata.
 - Section 07.01-07.04: anonymous live comparison selection and rendering against current eligible inventory.
 - Section 08.01-08.08: persisted dealership settings, validated admin editing, shared public business data and the approved initial-data migration.
-- Section 09.01-09.04: inquiry persistence schema and shared form/server validation foundation; no live submission endpoint yet.
+- Section 09.01-09.04 and 09.06-09.11: inquiry persistence, shared validation, guarded isolated-test intake, retries and vehicle/service context; Production remains disabled.
+- Section 10.01 (partial): Resend staff-only provider selection, disabled/default and isolated simulator-only configuration preparation; no email transport yet.
 
 Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-08 work. The user deferred the combined manual retest until later. Sections 06.10, 07.05 and 08.09 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
-1. Use the Section 09 branch, not `master`:
+1. Use the Section 10 branch, not `master`:
 
    ```powershell
    git branch --show-current
    git status --short --branch
    ```
 
-   The branch should be `backend/inquiry-intake`. It includes the integrated Sections 04-08 work and the Section 09 foundation so they can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
+   The branch should be `backend/lead-notifications`. It includes the integrated Sections 04-09 work and Section 10 configuration preparation so they can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
 2. Use Node 25.8.0, or a Node version that supports the test-runner flags in the package scripts. The machine PATH previously selected Node 14, which cannot run these scripts; Node 22.21.1 also lacked `--test-isolation=none`.
 
@@ -312,21 +313,81 @@ Intake is off by default and code-blocked in Production. Isolated development/Ve
 
 Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. No migrations, DB suites or browser checks above have been run for this milestone; use the completion record below to track the deferred results.
 
-## 12. Completion record
+## 12. Section 10.01 — Resend account and DNS setup (partial implementation)
+
+The selected scope is **email notifications to staff only**, not automated visitor replies. This milestone prepares configuration; it does not send anything, validate credentials against Resend, or connect email to inquiry acceptance. Section 10.01 remains open until external setup is confirmed. Do not purchase a paid plan or change Production settings just to follow this guide.
+
+### A. Create the account and sending domain
+
+1. Open [Resend](https://resend.com/) and create/sign in to your dealership-owned account. Verify your account email and enable the available account security protections. Do not share login credentials with the assistant.
+2. Open **Domains** -> **Add Domain**. Enter exactly:
+
+   ```text
+   notifications.kuraishi-autohandel.at
+   ```
+
+   The user confirmed ownership/DNS access for the parent domain. This dedicated sending subdomain does not replace the website, existing staff mailboxes, auth URL or canonical domain.
+
+3. Select **Ireland (`eu-west-1`)** as the sending region, if available for your account.
+   - Important: this controls sending location, **not data residency**. Resend documents that account data, email metadata, logs and API records are stored in the US, regardless of sending region.
+   - Leave business/legal approval of this processing and inquiry retention/deletion open under Section 09.05. Review the provider agreement, subprocessors and privacy terms before real customer use; this guide is not a compliance determination.
+4. Open the domain's **Records** tab. In a separate tab, open the DNS management panel for `kuraishi-autohandel.at` at your actual registrar/DNS host.
+5. Add **only the sending-verification records shown by Resend**, copying each record's type/name/value and priority where supplied. These normally include DKIM/SPF and a return-path MX record; follow your actual generated records rather than guessed examples.
+   - DNS providers differ: some expect a relative name and append the parent domain automatically; others accept the full name. Check the resulting record is not suffixed twice.
+   - Do not remove or overwrite the website's A/AAAA/CNAME records, existing root mailbox MX records, or unrelated TXT records.
+   - Do not add receiving/inbound-email records: inbound processing is not part of this integration.
+   - Do not create duplicate SPF records at the same host. If a record at the exact requested host already exists, stop and resolve the conflict with your DNS administrator.
+   - If the panel uses proxying for a required CNAME record, use DNS-only as Resend instructs.
+6. Return to Resend and start/recheck verification. Wait until sending verification shows **Verified**. Do not treat saving a DNS record as proof of verification; propagation may take time.
+7. Leave open/click tracking disabled for inquiry notifications. Review DMARC for the sending domain with your DNS administrator using Resend's generated guidance; do not overwrite an existing policy blindly.
+8. The proposed sender is `anfragen@notifications.kuraishi-autohandel.at`. Verifying this subdomain permits sending from that address; it does not create an inbox or forwarding rule for replies. Real staff recipients must later be existing monitored mailboxes.
+
+### B. Create a restricted test key and prepare private configuration
+
+1. Open **API Keys** -> **Create API Key**.
+2. Name it for this application/environment, choose **Sending access**, and restrict it to `notifications.kuraishi-autohandel.at`. Do not use a Full Access account key. Keep development/Preview credentials separate from any later approved Production key.
+3. Save the secret directly in your ignored local server environment file, normally `.env.local`, as `RESEND_API_KEY`. Preserve the existing database/auth settings. Never paste the key into chat, commit it, put it in a `NEXT_PUBLIC_` variable, or include it in screenshots.
+4. Keep these non-secret settings disabled while account/DNS setup is incomplete:
+
+   ```dotenv
+   INQUIRY_EMAIL_MODE="disabled"
+   INQUIRY_EMAIL_FROM="anfragen@notifications.kuraishi-autohandel.at"
+   INQUIRY_EMAIL_TO="delivered@resend.dev"
+   INQUIRY_EMAIL_INBOX_ORIGIN="http://localhost:3000"
+   ```
+
+5. Once external setup is ready, isolated **configuration tests** may use `INQUIRY_EMAIL_MODE="test"` with `INQUIRY_TEST_MODE="true"` and the other Section 09 safety prerequisites satisfied. No live email sender is connected yet; changing these values alone cannot send an inquiry notification.
+   - Local inbox origin must be exactly `http://localhost:3000`, with no trailing slash/path.
+   - On actual Vercel Preview, use the exact current `https://<deployment>.vercel.app` origin, scoped only to Preview. Do not point test inbox links at Production.
+   - Test recipients are restricted to `delivered@resend.dev`, Resend's delivery simulator. Do not replace it with a real visitor or staff mailbox. Simulator delivery is not proof of real staff inbox arrival.
+   - Live mode and Production notification configuration are deliberately unsupported in this milestone.
+6. In Resend's account/usage/billing dashboard, review the plan's current daily/monthly sending limits and API rate limit. Test messages count against provider quotas. Record non-secret limits/setup status for later retry configuration; do not assume an old advertised quota or authorize a paid upgrade.
+
+### C. Verify preparation and report readiness
+
+1. Run `pnpm test` and `pnpm typecheck`. Configuration tests use synthetic values and make no network calls; they do not prove your account/key/domain are working.
+2. Confirm Resend shows the sending subdomain as verified, and the restricted key is privately configured. Do not manually send real customer content or point setup tests at the contact form expecting email yet.
+3. Report only: **domain Verified / pending**, **private test key configured / pending**, and the non-secret plan limits. No key, login, private recipient address, customer data or connection string is needed in chat.
+4. Next development is the safe staff notification template (10.02), then durable delivery status and bounded retries (10.04-10.05), followed by synthetic provider verification (10.07). Staff-visible inbox data remains Section 11. No mail should be sent directly inside inquiry acceptance as a substitute for durable delivery state.
+
+Official references: [verify a domain](https://resend.com/docs/add-a-domain), [restricted API keys](https://resend.com/docs/dashboard/api-keys/introduction), [test addresses](https://resend.com/docs/dashboard/emails/send-test-emails), [sending regions and data residency](https://resend.com/docs/dashboard/domains/regions), and [API/idempotency limits](https://resend.com/docs/api-reference/emails/send-email).
+
+## 13. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
-| Area                                                                      | Result  | Notes                                          |
-| ------------------------------------------------------------------------- | ------- | ---------------------------------------------- |
-| Branch and non-Production target confirmed                                |         |                                                |
-| TypeScript, lint, formatting and unit tests                               |         |                                                |
-| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                |
-| Section 03 media DB/storage suites                                        |         |                                                |
-| Section 03 manual media workflow                                          |         |                                                |
-| Section 04 manual admin/public/dashboard workflow                         |         |                                                |
-| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                            |
-| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                            |
-| Section 08 dealership settings workflow                                   | Pending | Section 08.09                                  |
-| Section 09 guarded inquiry intake                                         | Pending | Isolated DB/browser checks; Production blocked |
-| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified |
-| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                            |
+| Area                                                                      | Result  | Notes                                            |
+| ------------------------------------------------------------------------- | ------- | ------------------------------------------------ |
+| Branch and non-Production target confirmed                                |         |                                                  |
+| TypeScript, lint, formatting and unit tests                               |         |                                                  |
+| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                  |
+| Section 03 media DB/storage suites                                        |         |                                                  |
+| Section 03 manual media workflow                                          |         |                                                  |
+| Section 04 manual admin/public/dashboard workflow                         |         |                                                  |
+| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                              |
+| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                              |
+| Section 08 dealership settings workflow                                   | Pending | Section 08.09                                    |
+| Section 09 guarded inquiry intake                                         | Pending | Isolated DB/browser checks; Production blocked   |
+| Section 10.01 Resend setup                                                | Pending | Account/DNS/key/quota confirmation; no transport |
+| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified   |
+| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                              |

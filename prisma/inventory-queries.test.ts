@@ -231,6 +231,21 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     }
   });
 
+  it("allows staff to preview saved drafts while public detail remains unavailable", async () => {
+    session = { user: { role: "user" } };
+    const draft = await queries.getStaffVehicle(ids[5]);
+
+    assert.ok(draft);
+    assert.equal(draft.status, "draft");
+    assert.equal(await queries.getPublicVehicle(draft.slug), null);
+    assert.equal(
+      (await queries.listPublicVehicles({ search: draft.make })).items.some(
+        (vehicle) => vehicle.id === draft.id,
+      ),
+      false,
+    );
+  });
+
   it("paginates staff inventory with fresh counts and clamps stale page requests", async () => {
     session = { user: { role: "user" } };
     const newId = `page-${prefix}`;

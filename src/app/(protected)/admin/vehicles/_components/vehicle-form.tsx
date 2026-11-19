@@ -645,15 +645,33 @@ export function VehicleForm({
             </p>
           </div>
           <div className="grid w-full gap-2 sm:w-auto sm:grid-flow-col">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => toast.info("Preview is UI-only in this phase.")}
-            >
-              <Eye />
-              Preview
-            </Button>
+            {vehicle ? (
+              <Button
+                asChild
+                variant="outline"
+                className="w-full rounded-[var(--radius-sm)] sm:w-auto"
+              >
+                <Link
+                  href={`${adminRoutes.vehicles}/${encodeURIComponent(vehicle.id)}/preview`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Eye />
+                  Preview saved version
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-[var(--radius-sm)] sm:w-auto"
+                disabled
+                title="Save a draft before previewing it."
+              >
+                <Eye />
+                Save draft to preview
+              </Button>
+            )}
             {mode === "create" && (
               <Button
                 type="submit"

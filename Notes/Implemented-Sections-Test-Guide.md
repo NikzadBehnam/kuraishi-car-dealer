@@ -212,7 +212,7 @@ Use the isolated non-Production app, inventory and media resources. Create and c
 1. **Database-backed detail and truthful stored data**
    - Open a published, inspection-passed vehicle and compare its detail page with the saved admin record: make/model/variant, price, location, registration, mileage, fuel, transmission, power, body type, color, condition, owners, consumption, CO₂, features, labels and description.
    - Check missing optional values: they must remain blank/unavailable, not show fixture values, invented owners, or zeroes. Confirm no hard-coded preparation or 120-point inspection claims appear.
-   - Open a Reserved vehicle that passed inspection. It should show Reserved, not immediately available, and should not offer comparison actions. Open a Sold vehicle; it may have a detail page, but must show Sold and unavailable with a general contact action.
+   - Open a Reserved vehicle that passed inspection. It should show Reserved, not immediately available, while retaining the comparison action allowed by the shared policy. Open a Sold vehicle; it may have a detail page, but must show Sold and unavailable, omit comparison actions and use a general contact action.
    - Try guessed URLs for Draft, Archived, and inspection-ineligible Published/Reserved vehicles. They should return the same not-found view; page metadata should be noindex.
 2. **Approved gallery media and accessible text**
    - Attach multiple images in a known order, including a private or unapproved image. Confirm only approved public images appear, in attachment order, and the first is used for social preview metadata.

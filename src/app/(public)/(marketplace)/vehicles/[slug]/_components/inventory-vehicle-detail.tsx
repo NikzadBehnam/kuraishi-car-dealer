@@ -281,7 +281,7 @@ export function InventoryVehicleDetail({
               </Button>
             </div>
             <div className="p-6">
-              {vehicle.status === "published" && (
+              {vehicle.status !== "sold" && (
                 <VehicleActions vehicleId={vehicle.id} />
               )}
               <hr className="my-6" />

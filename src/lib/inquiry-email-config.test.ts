@@ -8,7 +8,7 @@ const testEnv = {
   INQUIRY_TEST_MODE: "true",
   INQUIRY_EMAIL_MODE: "test",
   RESEND_API_KEY: "re_synthetic_not_a_real_key",
-  INQUIRY_EMAIL_FROM: "anfragen@notifications.kuraishi-autohandel.at",
+  INQUIRY_EMAIL_FROM: "anfragen@notifications.kuraishicars.com",
   INQUIRY_EMAIL_TO: "delivered@resend.dev",
   INQUIRY_EMAIL_INBOX_ORIGIN: "http://localhost:3000",
 };
@@ -67,10 +67,11 @@ describe("inquiry notification configuration", () => {
     for (const from of [
       "",
       "visitor@example.invalid",
-      "anfragen@kuraishi-autohandel.at",
-      "anfragen@notifications.kuraishi-autohandel.at.attacker.example",
-      "Dealer <anfragen@notifications.kuraishi-autohandel.at>",
-      "anfragen@notifications.kuraishi-autohandel.at\r\nBcc: other@example.invalid",
+      "anfragen@kuraishicars.com",
+      "anfragen@notifications.kuraishi-autohandel.at",
+      "anfragen@notifications.kuraishicars.com.attacker.example",
+      "Dealer <anfragen@notifications.kuraishicars.com>",
+      "anfragen@notifications.kuraishicars.com\r\nBcc: other@example.invalid",
     ]) {
       assert.throws(
         () => parseInquiryEmailConfig({ ...testEnv, INQUIRY_EMAIL_FROM: from }),

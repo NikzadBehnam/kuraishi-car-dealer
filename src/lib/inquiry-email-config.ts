@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { inquiryTestModeEnabled } from "./inquiry-validation.ts";
 
-const senderDomain = "notifications.kuraishi-autohandel.at";
+const senderDomain = "notifications.kuraishicars.com";
 const testRecipient = "delivered@resend.dev";
 const senderSchema = z
   .email()

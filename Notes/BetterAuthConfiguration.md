@@ -1,29 +1,29 @@
 # Better Auth implementation checklist
 
-## Goal and scope
+## Original goal and scope
 
-Configure Better Auth for this Next.js App Router project, using the planned Prisma and Neon stack. Require a valid authenticated session before rendering the dashboard, disable public self-registration, and reserve account creation for one bootstrapped master admin. This is an implementation guide only; no authentication code or dependencies have been added.
+This record captures the decisions and implementation history for Better Auth in this Next.js App Router project. The integration uses Prisma and Neon, validates sessions before rendering the dashboard, disables public self-registration, and reserves staff account creation for the master admin. For current rollout and verification status, consult the [checklist](./Checklist.md) and [full test guide](./Implemented-Sections-Test-Guide.md).
 
 UploadThing is a separate image/file-upload concern. It is not required to configure Better Auth and is outside this checklist.
 
 ### Current project state
 
-- The project is a frontend prototype, not a working backend: it has no configured database, persistent users or sessions, authentication API, or upload provider.
-- The login and registration forms are UI-only and do not create sessions or accounts: [login-form.tsx](<../src/app/(auth)/login/login-form.tsx>) and [register-form.tsx](<../src/app/(auth)/register/register-form.tsx>).
-- The `(protected)` route-group name does not enforce access. The current [admin layout](<../src/app/(protected)/admin/layout.tsx>) renders the admin shell without checking a session.
-- The current [proxy](../src/proxy.ts) handles locale routing only; it is not an authentication guard.
-- Better Auth, Prisma, Neon, and UploadThing are not configured in the project yet. Treat Prisma and Neon setup as prerequisites for the persistent Better Auth database described below.
+- Better Auth email/password sign-in uses persisted sessions. Public self-registration and self-service password reset are disabled.
+- The [admin layout](<../src/app/(protected)/admin/layout.tsx>) validates the session server-side, and protected server operations check their own session or admin role. The `(protected)` route-group name alone does not enforce access.
+- Staff account creation is at `/admin/accounts/new` and is limited to the master admin; `/register` is not a public route.
+- The [proxy](../src/proxy.ts) handles locale routing and is not the authentication boundary.
+- Prisma and Neon are configured for persistence. UploadThing remains unrelated to auth and is not the media-storage integration used by this project.
 
 ## Decisions captured from your update
 
 - [x] **Account provisioning:** Public self-registration is disabled. Bootstrap one master admin through a trusted, one-time setup. Only that account may access the account-creation flow. Accounts it creates receive the regular `user` role and may use the full dashboard, but not account creation. The master admin may also use the dashboard.
 - [x] **Email verification:** Not required. Do not add a verification-email dependency or block sign-in on email verification.
-- [x] **Password reset:** No self-service password-reset flow for now. Account creation must establish an initial password securely; define an operational recovery path, such as the master admin resetting a regular user's password. Plan a separate recovery procedure for the master admin.
+- [x] **Password reset:** No self-service password-reset flow. Regular users request a password change from the master admin; a guarded one-off recovery procedure exists for the master admin. See Account recovery below.
 - [x] **Profile data:** Map first and last name to Better Auth's `name`. _Decided: phone is **not** stored on the auth user record, so no additional field is needed._ Keep password confirmation client-side only.
 - [x] **Consent storage:** _Decided: consent does not need to be auditable, so nothing is persisted._
 - [x] **Origins:** _Decided (Vercel deployment): trust only `http://localhost:3000` and `https://www.kuraishicars.com`; no preview-deployment origins._
 
-The checklist interprets “registration” as creating additional accounts, not public sign-up. The existing registration page must become a master-admin-only account-creation flow or be replaced by one; it must not remain a public registration route.
+The checklist interprets “registration” as creating additional staff accounts, not public sign-up. That workflow is implemented as a master-admin-only account-creation flow and must not become a public registration route.
 
 ## Implementation checklist
 
@@ -43,7 +43,7 @@ The checklist interprets “registration” as creating additional accounts, not
 - [x] Add Better Auth's Admin plugin for the privileged account-creation workflow. Keep exactly one master account in the `admin` role; the account-creation flow must always assign new accounts the regular `user` role and must not accept a role from the form. Do not expose role-promotion or other Admin plugin actions that are outside this account-creation requirement. _Done: [permissions.ts](../src/lib/permissions.ts) limits the `admin` role to `create`, `list`, `get` and `set-password`. There is no `set-role`, `ban`, `impersonate`, `delete` or `update`. Better Auth rejects any role in create-user without `set-role`, so new accounts always get `user`. The single-admin rule still depends on the bootstrap in section 3._
 - [x] Configure email verification as not required. Do not add a verification-email sender or present verification as part of successful account creation. _Done: `requireEmailVerification: false`, no sender._
 - [x] Do not add a public forgot-password flow or password-reset email sender. Define how the master admin will securely set a new password for a regular user and how the master admin account itself can be recovered. _No public reset flow added. Regular users: the master admin uses Better Auth `set-password`. Master-admin recovery is documented in Account recovery below; it uses a guarded one-off script, Better Auth's password hasher, the direct Production database connection, and session revocation._
-- [x] Set `BETTER_AUTH_SECRET` to a cryptographically random secret of at least 32 characters and set `BETTER_AUTH_URL` to the canonical application origin. Fail clearly when required production configuration is missing; do not use a sample/default secret in production. _Done: auth.ts throws if either is missing, the secret is under 32 characters, or the production URL is not HTTPS. Local values are in `.env.local`; production values still have to be set in Vercel (`BETTER_AUTH_URL=https://www.kuraishicars.com` plus a different secret)._
+- [x] Set `BETTER_AUTH_SECRET` to a cryptographically random secret of at least 32 characters and set `BETTER_AUTH_URL` to the canonical application origin. Fail clearly when required production configuration is missing; do not use a sample/default secret in production. _Done: `auth.ts` throws if either is missing, the secret is under 32 characters, or the production URL is not HTTPS. Local values are in `.env.local`; Vercel Production has `BETTER_AUTH_URL=https://www.kuraishicars.com` and a distinct secret, which was rotated and redeployed. No credential values are stored here._
 - [x] Set `trustedOrigins` to the exact local, production, and intentionally supported preview origins. Keep CSRF/origin checks enabled; do not trust arbitrary request hosts or forwarded headers. _Done: `https://www.kuraishicars.com`, plus `http://localhost:3000` outside production. No previews._
 - [x] Keep production auth on HTTPS and verify that session cookies are `HttpOnly` and `Secure`. Avoid custom cross-subdomain cookie settings unless the deployment requires them. _Configured: `useSecureCookies` in production, no cross-subdomain cookies. Verifying the real cookie flags in the deployment remains in section 7._
 - [x] Start with Better Auth's database-backed sessions and documented defaults. Do not add cookie caching or stateless sessions without a specific requirement and an explicit review of revocation/session invalidation behavior. _Done: defaults, no cookie cache._

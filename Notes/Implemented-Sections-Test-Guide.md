@@ -21,7 +21,7 @@ This guide covers the integrated work currently on `feature/admin-workspace-sear
 - Section 13.04: live staff identity in the sidebar and truthful staff sign-in copy; top-bar sign-out behavior is unchanged.
 - Section 13.05: Create account is restricted to master admins, while ordinary staff operations remain available to authenticated staff.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; the current branch retains integrated work through Section 13.05. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
+Section 04 is complete but was not merged to `master` before Section 05 began; the current branch retains integrated work through Section 13.06. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
@@ -182,7 +182,7 @@ Use only a safe non-Production app environment and existing test accounts. The d
 7. **Public detail and dashboard propagation**
    - After each create/edit/publish/lifecycle/duplicate/delete and bulk action, revisit the admin dashboard and verify total and status counts.
    - Public detail should reflect Published, Reserved and Sold records immediately when loaded; Draft and Archived records should be hidden. A failed stale write must leave persisted state/counts unchanged and show error feedback only.
-   - Verify homepage/catalog propagation in Section 05 below. Lead metrics remain UI-only, and resolving comparison IDs to live inventory remains Section 07.
+   - Verify homepage/catalog propagation in Section 05 below. Dashboard metrics are database-backed per Section 12, and comparison IDs resolve against live eligible inventory per Section 07.
 
 ## 7. Section 05 — live homepage and public catalog (05.01-05.06, 05.08-05.09)
 

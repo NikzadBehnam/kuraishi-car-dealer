@@ -1,12 +1,12 @@
 # Kuraishi Car Dealer - AI Agent Project Handoff
 
-This document is a source-grounded technical overview of the project as of the current workspace state. It is intended to be pasted or attached as context for another AI coding agent.
+This document summarizes the implemented project architecture. For active section status, safety gates, and retest instructions, use the [checklist](Notes/Checklist.md) and [full test guide](Notes/Implemented-Sections-Test-Guide.md); they take precedence over this overview.
 
 ## 1. Project Purpose
 
-Kuraishi Car Dealer is a Next.js App Router application for a German-language car dealership / vehicle marketplace. It currently implements a production-oriented UI prototype with typed local demo data, German public pages, vehicle browsing, comparison state in the browser, UI-only forms, auth screens, and an admin back office prototype.
+Kuraishi Car Dealer is a Next.js App Router application for a German-language dealership and vehicle marketplace. The public catalog and protected staff workspace use database-backed vehicle and business records; comparison selection remains anonymous browser state.
 
-Important boundary: there is no real backend yet. Authentication, sessions, database persistence, CRM/email delivery, media uploads, booking, inventory mutations, and account services are not implemented. Most submit/action handlers show Sonner toasts and intentionally remain UI-only.
+Better Auth provides staff email/password sign-in with persisted sessions. The admin layout and each server-side data operation validate sessions; only the master admin may create accounts. Prisma/Neon support persisted inventory, dealership settings, inquiries and notes, dashboard metrics, and media workflows. Inquiry notification delivery is gated and is not enabled for Production. Customer accounts, self-service password reset, confirmed booking/slot management, CRM integration, and vehicle-view tracking are not implemented.
 
 ## 2. Stack and Tooling
 
@@ -32,7 +32,7 @@ Scripts in `package.json`:
 - `pnpm format` / `pnpm format:check`: Prettier
 - `pnpm test` / `pnpm test:watch`: Node tests over `src/**/*.test.ts`
 
-Verified in this workspace: `pnpm test` passes 5 tests across route config, formatters, and vehicle filters.
+Run `pnpm test` for source tests. The inventory and media database suites use isolated environment files, apply migrations, and must not run until their documented safety gates are satisfied.
 
 ## 3. Top-Level Files
 
@@ -44,8 +44,8 @@ Verified in this workspace: `pnpm test` passes 5 tests across route config, form
 - `eslint.config.mjs`: Next core web vitals + TypeScript ESLint config, ignores `.next`, `dist`, `outputs`, `work`.
 - `postcss.config.mjs`: Tailwind v4 PostCSS plugin.
 - `components.json`: shadcn config, aliases, `new-york` style, Lucide icon library.
-- `README.md`: high-level project overview. Note: some README text is stale; it says Vitest and says no admin/auth layouts exist, but the current code uses Node tests and includes `(auth)` plus `(protected)/admin`.
-- `docs/routing-architecture.md`: localized routing design. Also partially stale regarding future protected architecture because admin/auth code now exists.
+- `README.md`: high-level project overview.
+- `Notes/Checklist.md` and `Notes/Implemented-Sections-Test-Guide.md`: active implementation status and retest guidance.
 - `PROJECT_AI_HANDOFF.md`: this handoff document.
 
 ## 4. Source Structure
@@ -56,8 +56,8 @@ Main directories:
 - `src/components`: shared UI, layout, admin layout, vehicle cards/actions, providers, theme, motion helpers.
 - `src/config`: site identity, route contracts, navigation, admin routes, animation constants.
 - `src/content/de`: centralized German visible copy.
-- `src/data`: typed local demo data for vehicles, dealers, and admin mock records.
-- `src/lib`: pure utilities such as filtering, formatting, metadata, route matching, class merging.
+- `src/data`: legacy typed demo/fixture data; live catalog and admin records use server-side data access.
+- `src/lib`: server-only Prisma/auth/business operations alongside shared filtering, formatting, metadata, and route utilities.
 - `src/types`: domain contracts for vehicles, dealers, and admin entities.
 - `public/images`: brand assets and vehicle type images.
 
@@ -105,7 +105,6 @@ Do not link to `internalRoutes` from user-facing UI. Public links should use `pu
 Admin/auth routes are direct and not localized:
 
 - `/login`
-- `/register`
 - `/admin`
 - `/admin/vehicles`
 - `/admin/vehicles/new`
@@ -113,8 +112,9 @@ Admin/auth routes are direct and not localized:
 - `/admin/leads`
 - `/admin/media`
 - `/admin/settings`
+- `/admin/accounts/new` (master admin only)
 
-There is no middleware/auth guard protecting `/admin`; the `(protected)` route-group name is organizational only.
+`src/app/(protected)/admin/layout.tsx` validates the Better Auth session on the server before rendering the admin shell. Data operations and server actions enforce their own session or admin boundary; the route-group name alone is not the security control.
 
 ## 6. App Layouts and Boundaries
 
@@ -145,7 +145,7 @@ Auth layout:
 
 - `src/app/(auth)/layout.tsx`: no shell, sets non-indexing metadata.
 - `src/app/(auth)/_components`: auth shell/field primitives.
-- Login/register forms are client-side and UI-only.
+- `/login` signs in through Better Auth. Public registration and self-service password reset are not offered.
 
 Admin layout:
 
@@ -160,12 +160,12 @@ Marketing:
 - `src/app/(public)/(marketing)/page.tsx`: home page. Uses hero video, featured vehicles, and benefits.
 - `src/app/(public)/(marketing)/about-us/page.tsx`: about page with stats and showroom image.
 - `src/app/(public)/(marketing)/services/page.tsx`: service cards for trade-in, purchase, warranty, insurance, registration, workshop.
-- `src/app/(public)/(marketing)/contact/page.tsx`: contact form plus dealer contact panel using `siteConfig`.
+- `src/app/(public)/(marketing)/contact/page.tsx`: inquiry form plus dealer contact panel using `siteConfig`; inquiry acceptance is handled server-side.
 
 Marketplace:
 
-- `src/app/(public)/(marketplace)/vehicles/page.tsx`: vehicle listing. Reads the initial keyword search from the `q` URL parameter and passes local vehicles to `VehicleSearchResults`.
-- `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: vehicle detail. Static params are generated from local `vehicles`. Missing slug calls `notFound()`. No standalone page header: the side column contains the breadcrumb, title, variant, availability, location, price, and dealer contact/actions. It appears before the gallery on mobile. Equipment and description share a divided panel with a responsive equipment list. Also shows facts, similar vehicles, and mobile sticky CTA.
+- `src/app/(public)/(marketplace)/vehicles/page.tsx`: database-backed vehicle listing with bounded keyword search and URL state.
+- `src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx`: database-backed eligible vehicle detail; missing or nonpublic vehicles call `notFound()`. The side column contains the breadcrumb, title, variant, availability, location, price, and dealer contact/actions. It appears before the gallery on mobile. Equipment and description share a divided panel with a responsive equipment list. Also shows facts, similar vehicles, and mobile sticky CTA.
 - `src/app/(public)/(marketplace)/vehicle-comparison/page.tsx`: reads browser-local comparison selections through `ComparisonTable`.
 
 Legal:
@@ -179,9 +179,9 @@ All legal pages use `LegalPage` and placeholder copy from `src/content/de/legal-
 
 Auth:
 
-- `src/app/(auth)/login/page.tsx`: `AuthShell` + `LoginForm`.
-- `src/app/(auth)/register/page.tsx`: `AuthShell` + `RegisterForm`.
-- Login/register schemas are in `src/app/(auth)/_schemas/auth.schema.ts`.
+- `src/app/(auth)/login/page.tsx`: `AuthShell` + Better Auth `LoginForm`.
+- `src/app/(auth)/_schemas/auth.schema.ts`: login validation.
+- `src/app/(protected)/admin/accounts/new`: master-admin-only staff account creation.
 
 Admin:
 
@@ -191,9 +191,9 @@ Admin:
 - `src/app/(protected)/admin/vehicles/[id]/edit/page.tsx`: edit vehicle form; unknown id calls `notFound()`.
 - `src/app/(protected)/admin/leads/page.tsx`: leads inbox.
 - `src/app/(protected)/admin/media/page.tsx`: media library.
-- `src/app/(protected)/admin/settings/page.tsx`: UI settings panel.
+- `src/app/(protected)/admin/settings/page.tsx`: database-backed dealership settings panel.
 
-## 8. Data Model and Mock Data
+## 8. Data Model and Legacy Fixtures
 
 Vehicle contract: `src/types/vehicle.ts`
 
@@ -206,29 +206,19 @@ Dealer contract: `src/types/dealer.ts`
 
 - `Dealer`: id, name, rating, review count, phone, email, address, opening hours.
 
-Public mock data:
+Legacy/demo public fixtures:
 
-- `src/data/vehicles.ts`: 24 generated vehicle records based on a tuple list. Images are Unsplash URLs. Slugs are lowercased make/model/index with spaces replaced by hyphens. First 6 vehicles are featured.
-- `src/data/dealers.ts`: one dealer record, `kuraishi-wien`.
+- `src/data/vehicles.ts` and `src/data/dealers.ts` retain legacy/demo fixtures. They are not the source of truth for the live public catalog or admin inventory.
 
-Admin contract: `src/types/admin.ts`
+The Prisma schema in `prisma/schema.prisma` is the persistence model for Better Auth and the implemented business data. Server-side query/mutation modules map those records to typed application DTOs. Consult the schema and `src/lib` data-access modules before changing persisted fields.
 
-- Extends vehicles into `AdminVehicle` with stock number, status, inspection status, acquisition/published/reserved/sold timestamps, VIN ending, owner count, views, inquiries, and margin estimate.
-- Defines leads and media assets. Contact leads can carry their requested appointment type and preferred date.
-
-Admin mock data:
-
-- `src/data/admin/index.ts`: derives `adminVehicles` from public `vehicles`, then defines `adminLeads` and `adminMediaAssets`.
-- Admin dates are static 2026 demo timestamps.
+`src/data/admin/index.ts` still exports a legacy `adminVehicles` fixture derived from demo vehicles. Do not use it as persisted inventory or reintroduce synthetic views, leads, or other unsupported metrics.
 
 ## 9. State and Business Logic
 
 Vehicle filtering:
 
-- `src/lib/vehicle-filters.ts` exports `filterVehicles(input, query)` for the listing's single live keyword search.
-- Matches all whitespace-separated terms across make, model, variant, German body/fuel/transmission labels, color, location, registration, equipment, and labels; ignores case and accents.
-- Results sort featured vehicles first. Former structured filter and sort controls are removed.
-- Uses `toSorted`, so it does not mutate the source array.
+- Public catalog and admin inventory searches use bounded database queries; inspect their query modules and validation before changing search behavior.
 
 Formatting:
 
@@ -241,30 +231,29 @@ Route helpers:
 
 Browser state:
 
-- `src/components/providers/vehicle-state-provider.tsx`: client context storing `comparison` as a Set.
+- `src/components/providers/vehicle-state-provider.tsx`: client context storing anonymous comparison selections as a Set.
 - Persistence key: `kuraishi-comparison`.
 - Comparison limit is 3 vehicles.
-- Mutations write to `localStorage` and show German toasts.
+- Comparison selections write to `localStorage`; this state is not tied to staff or customer accounts.
 - Provider is mounted globally in `src/app/layout.tsx`, so vehicle actions and the comparison page can use it.
 
 ## 10. Forms and Validation
 
-All forms are client-side UI prototypes.
+Forms combine client-side validation/interaction with server-side operations where implemented. A client toast or hidden control is never proof of persistence or authorization.
 
 - Contact form:
   - Schema: `src/app/(public)/(marketing)/contact/_schemas/contact-form.schema.ts`
   - Component: `src/app/(public)/(marketing)/contact/_components/contact-form.tsx`
-  - Fields include name, email, phone, appointment type, preferred date, message, consent.
+  - Validated inquiry submissions are accepted server-side with idempotency and rate-limit checks. A preferred date is a request, not a confirmed appointment.
 
 - Auth forms:
-  - Schema: `src/app/(auth)/_schemas/auth.schema.ts`
-  - Components: login/register forms.
-  - Messages are English; other public validation is German.
+  - Login uses Better Auth; public sign-up and self-service password reset are disabled.
+  - Staff account creation is a separate master-admin-only workflow.
 
 - Admin vehicle form:
   - Schema: `src/app/(protected)/admin/vehicles/_schemas/vehicle-form.schema.ts`
   - Component: `src/app/(protected)/admin/vehicles/_components/vehicle-form.tsx`
-  - Handles create/edit UI for public + admin vehicle fields.
+  - Creates and edits persisted inventory through protected server operations.
 
 ## 11. Component Inventory
 
@@ -287,12 +276,12 @@ Vehicle components:
 Admin components:
 
 - `src/components/admin/layout/*`: shell, top bar, sidebar, breadcrumbs.
-- `src/app/(protected)/admin/_components/dashboard-overview.tsx`: dashboard metrics and panels.
-- `src/app/(protected)/admin/vehicles/_components/vehicle-inventory-table.tsx`: inventory list with search/sort/status filter, selection, UI-only actions.
+- `src/app/(protected)/admin/_components/dashboard-overview.tsx`: live dashboard metrics and panels; unsupported view tracking is omitted.
+- `src/app/(protected)/admin/vehicles/_components/vehicle-inventory-table.tsx`: database-backed inventory list with bounded search, lifecycle actions, and selection.
 - `src/app/(protected)/admin/vehicles/_components/vehicle-form.tsx`: create/edit form.
-- `src/app/(protected)/admin/leads/_components/leads-inbox.tsx`: contact and vehicle inquiry filtering, request details, and UI-only actions.
-- `src/app/(protected)/admin/media/_components/media-library.tsx`: media filtering/detail/upload placeholders.
-- `src/app/(protected)/admin/settings/_components/settings-panel.tsx`: dealership and contact UI settings.
+- `src/app/(protected)/admin/leads/_components/leads-inbox.tsx`: persisted inquiry inbox with notes and protected operations.
+- `src/app/(protected)/admin/media/_components/media-library.tsx`: media library UI backed by server-side media/storage operations.
+- `src/app/(protected)/admin/settings/_components/settings-panel.tsx`: persisted dealership and contact settings.
 
 Design system:
 
@@ -353,11 +342,7 @@ Remote assets:
 
 ## 15. Tests
 
-Current tests:
-
-- `src/config/routes.config.test.ts`: checks German public vs English internal route config and vehicle route builder.
-- `src/lib/formatters.test.ts`: checks German formatting for currency, mileage, registration.
-- `src/lib/vehicle-filters.test.ts`: checks multi-term search, German labels/equipment, accents, empty/unmatched queries, and featured ordering without source mutation.
+Source tests live under `src/**/*.test.ts` and use Node's built-in test runner. Focused database integration suites live under `prisma/` and require their documented isolated test environment; do not point them at normal development or Production databases.
 
 Recommended validation commands before/after code changes:
 
@@ -368,15 +353,14 @@ Recommended validation commands before/after code changes:
 
 ## 16. Current Implementation Gaps / Warnings
 
-- No real authentication, authorization, sessions, or role checks. `/admin` is only a UI route.
-- No database or API route handlers.
-- No server actions for form submissions.
-- No real uploads or media storage.
-- No email/CRM/booking/inventory integrations.
-- Contact, auth, admin actions, settings, media upload, appointment operations, and admin vehicle save actions are UI-only toasts.
+- Public staff self-registration and self-service password reset are intentionally disabled; staff accounts are created by the master admin.
+- There is no customer account system, confirmed booking/slot management, or CRM integration. Inquiry date preferences are not bookings.
+- Production email delivery is not enabled. Inquiry acceptance and notification outbox behavior must not be described as proof that an external email was delivered.
+- Vehicle-view analytics are not implemented; do not add or surface synthetic view counts.
+- Some legacy/demo fixtures remain under `src/data`; do not present them as live inventory or use them as a fallback when a database query fails.
 - Legal pages are placeholders and must be replaced before production.
-- README and routing documentation are partially outdated relative to current admin/auth implementation.
-- Browser local state is anonymous per device and stored in `localStorage`, not tied to users.
+- Isolated database suites and combined browser retesting remain subject to the safety gates and pending items in the checklist/test guide.
+- Browser comparison state is anonymous per device and stored in `localStorage`, not tied to users.
 
 ## 17. Guidance for Future Agents
 
@@ -391,10 +375,10 @@ When adding public routes:
 
 When adding backend behavior:
 
-1. Keep existing typed contracts in `src/types` as mapping boundaries.
-2. Replace local `src/data` imports in route wrappers with server-side data access.
-3. Replace UI-only submit handlers with server actions or API clients.
-4. Add real auth/role checks for `/admin`; do not rely on route groups, robots, or proxy rules.
+1. Follow existing Prisma schema, DTO adapters, validation, and server-side query/mutation modules.
+2. Call `requireSession()` or `requireAdmin()` at every protected Server Action, Route Handler, and data-operation boundary; a layout guard or hidden button is not sufficient.
+3. Keep public projections restricted to explicitly eligible/public data; never expose staff-only fields or private inquiry data.
+4. Preserve explicit errors and prevent success-shaped fallbacks when database or provider operations fail.
 5. Keep public canonical routes German unless product requirements change.
 
 When modifying UI:

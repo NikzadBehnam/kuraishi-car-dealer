@@ -1,10 +1,11 @@
 # Kuraishi car dealer
 
-Production-oriented Phase 1 user interface for a German dealership and vehicle marketplace. The application uses local typed demo data and browser storage; it deliberately does not simulate production authentication, inventory, payments, email delivery, or booking infrastructure.
+Next.js application for a German car dealership, with a public vehicle marketplace and a protected staff workspace. Better Auth provides staff sign-in, and Prisma/Neon back the implemented inventory, dealership settings, inquiries, and dashboard features. Some demo data and browser-local state remain; see the checklist and test guide for implementation and deployment status.
 
 ## Technology stack
 
 - Next.js App Router and React: server-first routing, metadata, loading and error boundaries
+- Better Auth, Prisma, and Neon Postgres: staff authentication and persisted business data
 - TypeScript strict mode: domain and component safety
 - Tailwind CSS v4: token-driven responsive styling
 - shadcn/ui conventions with Radix primitives: accessible, customizable UI foundations
@@ -12,13 +13,13 @@ Production-oriented Phase 1 user interface for a German dealership and vehicle m
 - React Hook Form, Zod and resolvers: typed forms and German validation messages
 - Lucide React: tree-shakeable accessible icons
 - Sonner: transient German action notifications
-- Vitest: useful unit tests for business utilities
+- Node.js built-in test runner: source tests run with `pnpm test`
 
 ## Commands
 
 ```bash
 pnpm install
-pnpm dev
+pnpm serve
 pnpm build
 pnpm start
 pnpm lint
@@ -30,18 +31,17 @@ pnpm test
 
 ## Architecture
 
-- `src/app`: German public route segments, Server Component pages, metadata, loading and error boundaries
+- `src/app`: English physical route files localized to German public URLs, Server Component pages, metadata, loading and error boundaries
 - `src/components`: reusable English-named layout, UI, search, vehicle, form and provider components
 - `src/config`: site identity, routes, navigation and motion configuration
 - `src/content/de`: centralized German visible copy
-- `src/data`: local vehicles and dealers
-- `src/types`: backend-ready domain contracts
-- `src/schemas`: Zod validation schemas with German messages
-- `src/lib`: formatting, filtering and shared utilities
+- `src/data`: legacy/demo vehicles and dealers; not the source of truth for live inventory
+- `src/types`: domain contracts and data-transfer types
+- `src/lib`: server-side data access, validation, formatting, filtering, and shared utilities
 
-Server Components are the default. Client Components are limited to filters, local comparison state, mobile navigation, calculators, forms and notifications.
+Server Components are the default. Client Components are limited to interactive filters, anonymous local comparison state, mobile navigation, forms, and notifications. Protected admin pages and server data operations validate sessions independently.
 
-The localized App Router strategy is documented in [`docs/routing-architecture.md`](docs/routing-architecture.md).
+The localized route contracts are defined in `src/config/routes.config.ts`; the architecture overview is in [`PROJECT_AI_HANDOFF.md`](PROJECT_AI_HANDOFF.md).
 
 ## Customization
 
@@ -49,17 +49,21 @@ The localized App Router strategy is documented in [`docs/routing-architecture.m
 - Fonts: `src/app/layout.tsx` (`next/font`) and the font variables in `globals.css`
 - Dealership identity and contact details: `src/config/site.config.ts`
 - German content: `src/content/de`
-- Vehicle data: `src/data/vehicles.ts`
+- Legacy/demo vehicle fixtures: `src/data/vehicles.ts`
 - Dealer data: `src/data/dealers.ts`
 - Motion settings: `src/config/animation.config.ts`
 
 ## Search and local state
 
-Keyword search is implemented in `src/lib/vehicle-filters.ts`, independent of the visual components, so it can be moved to an API or database query later. The vehicle listing has one live search field, initialized from the `q` URL parameter. Search terms match across vehicle details and German labels, ignoring case and accents; all terms must match. Featured vehicles remain first. Comparison selections use a focused React provider and browser `localStorage`; a production account service can replace this persistence boundary.
+The public vehicle catalog uses bounded server-side database search, and the staff workspace has a separate bounded inventory search. Comparison selections remain anonymous browser `localStorage` state and are not linked to staff or customer accounts.
 
-## Forms and future integrations
+## Authentication and backend boundaries
 
-Forms use schemas from `src/schemas`. Submission currently waits briefly and returns an explicit UI-only success state. Replace those submit handlers with server actions or API clients for CRM, booking, email and inventory services. Vehicle and dealer types are intentionally suitable for API mapping.
+- Better Auth email/password sign-in uses persisted sessions. Public self-registration is disabled; only the master admin can create staff accounts.
+- Inventory, dealership settings, inquiry intake/inbox/notes, and dashboard metrics have database-backed implementations. Media workflows also have server-side storage integrations. Migration, isolated-test, and deployment status is tracked per section in [`Notes/Checklist.md`](Notes/Checklist.md).
+- Inquiry intake is guarded and configured separately from notification delivery. Email delivery is not enabled for Production, and an inquiry's preferred date is not a confirmed booking.
+- Customer accounts, self-service password reset, a booking/slot system, CRM integration, and vehicle-view tracking are not implemented. Unsupported view counts are not shown.
+- Legal pages remain placeholders and require qualified review before Production use.
 
 ## Legal notice
 

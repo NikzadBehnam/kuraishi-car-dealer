@@ -7,6 +7,7 @@ import { CarFront } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { adminNavigation, adminRoutes } from "@/config/admin-routes.config";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 export function AdminSidebar({
@@ -39,7 +40,7 @@ export function AdminSidebar({
             <AdminNavigationList pathname={pathname} onNavigate={onNavigate} />
           </nav>
         </div>
-        <AdminIdentityCard dealershipName={dealershipName} />
+        <AdminIdentityCard />
       </div>
     </aside>
   );
@@ -72,7 +73,7 @@ export function AdminMobileSidebar({
       <nav aria-label="Admin mobile navigation" className="grid content-start">
         <AdminNavigationList pathname={pathname} onNavigate={onNavigate} />
       </nav>
-      <AdminIdentityCard compact dealershipName={dealershipName} />
+      <AdminIdentityCard compact />
     </div>
   );
 }
@@ -114,16 +115,25 @@ function AdminNavigationList({
   );
 }
 
-function AdminIdentityCard({
-  compact = false,
-  dealershipName,
-}: {
-  compact?: boolean;
-  dealershipName: string;
-}) {
+function AdminIdentityCard({ compact = false }: { compact?: boolean }) {
+  const { data: session } = authClient.useSession();
+  const displayName = session?.user.name ?? "Account";
+  const roleLabel = session?.user.role
+    ? session.user.role === "admin"
+      ? "Administrator"
+      : "Staff member"
+    : "Signed-in staff";
+  const initials =
+    displayName
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "A";
+
   return (
     <section
-      aria-label="Current admin"
+      aria-label="Signed-in staff account"
       className={cn(
         "bg-surface rounded-[var(--radius-sm)] border",
         compact ? "p-3" : "p-4",
@@ -132,23 +142,28 @@ function AdminIdentityCard({
       <div className="flex items-center gap-3">
         <Avatar className="size-10">
           <AvatarFallback className="bg-accent text-accent-foreground text-sm">
-            KA
+            {initials}
           </AvatarFallback>
         </Avatar>
         <span className="min-w-0">
           <span className="block truncate text-sm font-extrabold">
-            {dealershipName} Admin
+            {displayName}
           </span>
           <span className="text-muted-foreground block truncate text-xs">
-            Operations Manager
+            {roleLabel}
           </span>
+          {!compact && session?.user.email && (
+            <span className="text-muted-foreground block truncate text-xs">
+              {session.user.email}
+            </span>
+          )}
         </span>
       </div>
       {!compact && <Separator className="my-3" />}
       {!compact && (
         <p className="text-muted-foreground text-xs leading-5">
-          Mocked identity for the admin UI phase. Authentication will be added
-          later.
+          Signed in to the dealership staff workspace. Use the account menu to
+          sign out.
         </p>
       )}
     </section>

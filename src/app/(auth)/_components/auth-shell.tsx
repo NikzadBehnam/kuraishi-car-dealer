@@ -39,7 +39,7 @@ export function AuthShell({
                   {siteConfig.brandName}
                 </span>
                 <span className="text-muted-foreground block text-xs">
-                  Client account access
+                  Staff account access
                 </span>
               </span>
             </Link>
@@ -50,25 +50,26 @@ export function AuthShell({
               <ShieldCheck className="size-6" aria-hidden="true" />
             </div>
             <p className="text-muted-foreground text-sm font-bold tracking-[0.18em] uppercase">
-              Future account workspace
+              Dealership operations
             </p>
             <h1 className="mt-4 text-3xl font-extrabold tracking-tight">
-              Manage comparisons and inquiries from one place.
+              Manage dealership operations from one place.
             </h1>
             <p className="text-muted-foreground mt-4 text-sm leading-6">
-              This is a UI-only authentication surface prepared for the later
-              client and admin auth phase. No credentials are checked yet.
+              Sign in with your staff account to access inventory, inquiries,
+              media, and dealership settings. Staff accounts are created by an
+              administrator.
             </p>
           </div>
 
           <div className="text-muted-foreground grid gap-3 text-sm">
             <div className="flex items-center gap-2">
               <span className="bg-success size-2 rounded-full" />
-              Mock forms only
+              Protected staff access
             </div>
             <div className="flex items-center gap-2">
               <span className="bg-info size-2 rounded-full" />
-              Dark mode ready
+              Administrator-managed accounts
             </div>
           </div>
         </section>
@@ -100,7 +101,7 @@ export function AuthShell({
                       {siteConfig.brandName}
                     </p>
                     <p className="text-muted-foreground truncate text-xs">
-                      Client account access
+                      Staff account access
                     </p>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers the integrated work currently on `feature/admin-workspace-search`, based on `backend/dashboard-metrics`, including Sections 04-13.01:
+This guide covers the integrated work currently on `feature/admin-workspace-search`, based on `backend/dashboard-metrics`, including Sections 04-13.04:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -18,8 +18,9 @@ This guide covers the integrated work currently on `feature/admin-workspace-sear
 - Section 11.05-11.06: append-only authored inquiry notes; database and browser verification remain deferred.
 - Section 12.01-12.07: database-backed dashboard aggregates and latest-five inquiries; unsupported view counters are hidden by decision. Section 12.08 database/browser verification remains pending.
 - Section 13.01-13.03: inventory-only top-bar search routed through the existing bounded, authenticated inventory query; lead/media global-result routing is not applicable.
+- Section 13.04: live staff identity in the sidebar and truthful staff sign-in copy; top-bar sign-out behavior is unchanged.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; the current branch retains integrated work through Section 13.01. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
+Section 04 is complete but was not merged to `master` before Section 05 began; the current branch retains integrated work through Section 13.04. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
@@ -465,7 +466,17 @@ The user chose inventory-only scope. The top-bar form submits a GET request to `
 4. Confirm an empty search returns the fixed-size paginated inventory list. Try an overlong/repeated query value and confirm the server rejects it with the existing invalid-filter state rather than running an unbounded search.
 5. Confirm the top-bar search does not show inquiry or media results. Browser checks remain deferred at the user's request.
 
-## 18. Completion record
+## 18. Section 13.04 — truthful staff identity and sign-in copy
+
+The admin sidebar reads the signed-in user's name, email, and role from Better Auth's client session hook. The auth shell now describes the protected dealership staff workspace and administrator-managed accounts. Server-side session checks and the existing account-menu sign-out flow are unchanged.
+
+1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`.
+2. On the isolated app, sign in as ordinary staff and confirm the sidebar shows the session name, email, and staff role (the compact/mobile card shows name and role). Sign out through the existing top-bar account menu and confirm redirect to `/login`.
+3. Sign in as master admin and confirm the sidebar role says Administrator and the top-bar account menu still exposes Create account. Verify a regular staff account continues to use ordinary inventory, inquiry, media, and settings features.
+4. Open `/login` while signed out. Confirm the auth shell says staff account access, protected staff operations, and administrator-managed account creation; it does not describe client account management, mock forms, or future authentication.
+5. These browser checks remain deferred at the user's request. Do not use real credentials in screenshots or reports.
+
+## 19. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
@@ -488,5 +499,6 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Section 11.01-11.04 real protected inbox                                  | Partial | Source tests pass; DB suite and deferred browser retest remain pending                  |
 | Section 11.05-11.06 append-only staff notes                               | Partial | Source tests pass; migration, gated DB suite, and browser retest remain pending         |
 | Sections 13.01-13.03 inventory-only workspace search                      | Partial | Source tests pass; gated DB assertions and browser verification remain pending          |
+| Section 13.04 truthful staff identity and sign-in copy                    | Partial | Typecheck/source tests pass; authenticated browser verification remains deferred        |
 | Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified                                          |
 | Homepage/list database propagation                                        | Pending | Section 05.01-05.02                                                                     |

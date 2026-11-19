@@ -1224,6 +1224,65 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     );
   });
 
+  it("resolves public detail pages without a session and exposes only approved public images", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const publicImageId = await createImageAsset({ publicRead: true });
+    const privateImageId = await createImageAsset();
+    const draft = await createDraft([publicImageId, privateImageId]);
+    await prisma.vehicle.update({
+      where: { id: draft.vehicleId },
+      data: {
+        status: "published",
+        inspectionStatus: "passed",
+        publishedAt: new Date(),
+      },
+    });
+    const publishedVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+      select: { slug: true },
+    });
+    const hiddenPublicImageId = await createImageAsset({ publicRead: true });
+    const hiddenDraft = await createDraft([hiddenPublicImageId]);
+    const hiddenVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: hiddenDraft.vehicleId },
+      select: { slug: true },
+    });
+
+    session = null;
+    const detail = await queries.resolvePublicVehicleDetail(
+      publishedVehicle.slug,
+    );
+    if (detail.kind !== "visible") {
+      throw new Error("An eligible published vehicle must resolve publicly.");
+    }
+    assert.equal(detail.vehicle.id, draft.vehicleId);
+    assert.equal(detail.vehicle.dealerName, "Vehicle media test dealership");
+
+    const images = await mediaAttachments.listPublicVehicleMediaAssets(
+      draft.vehicleId,
+    );
+    assert.deepEqual(
+      images.assets.map(({ id }) => id),
+      [publicImageId],
+    );
+    assert.ok(images.assets[0]?.previewUrl.startsWith("https://"));
+
+    assert.deepEqual(
+      await queries.resolvePublicVehicleDetail(hiddenVehicle.slug),
+      { kind: "ineligible" },
+    );
+    assert.deepEqual(
+      await mediaAttachments.listPublicVehicleMediaAssets(
+        hiddenDraft.vehicleId,
+      ),
+      { assets: [] },
+    );
+    assert.deepEqual(
+      await queries.resolvePublicVehicleDetail(`missing-${randomUUID()}`),
+      { kind: "missing" },
+    );
+  });
+
   it("deletes only confirmed never-published drafts and retains their media assets", async () => {
     session = { user: { id: actorId, role: "user" } };
     const imageId = await createImageAsset();

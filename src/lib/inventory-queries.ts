@@ -11,6 +11,7 @@ import {
 import type {
   InventoryPageDTO,
   PublicInventoryVehicleDTO,
+  PublicVehicleDetailResolution,
   PublicVehicleInquiryDTO,
   PublicVehicleMetadataDTO,
   PublicVehicleSitemapEntryDTO,
@@ -272,6 +273,39 @@ export async function getPublicVehicle(
     select: publicVehicleSelect,
   });
   return row ? serializePublicVehicle(row) : null;
+}
+
+export async function resolvePublicVehicleDetail(
+  slug: unknown,
+): Promise<PublicVehicleDetailResolution> {
+  const parsedSlug = inventorySlugSchema.safeParse(slug);
+  if (!parsedSlug.success) {
+    return { kind: "missing" };
+  }
+
+  const row = await prisma.vehicle.findUnique({
+    where: { slug: parsedSlug.data },
+    select: {
+      ...publicVehicleSelect,
+      dealer: { select: { name: true } },
+    },
+  });
+  if (!row) {
+    return { kind: "missing" };
+  }
+
+  const { dealer, ...vehicleRow } = row;
+  if (!getPublicVehicleVisibility(vehicleRow).detail) {
+    return { kind: "ineligible" };
+  }
+
+  return {
+    kind: "visible",
+    vehicle: {
+      ...serializePublicVehicle(vehicleRow),
+      dealerName: dealer.name,
+    },
+  };
 }
 
 export async function getPublicComparisonVehicle(

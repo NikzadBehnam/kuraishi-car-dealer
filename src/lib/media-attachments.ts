@@ -12,6 +12,7 @@ import {
   inventoryIdSchema,
   inventoryPaginationSchema,
 } from "./inventory-validation.ts";
+import { getPublicVehicleWhere } from "./inventory-eligibility.ts";
 import { prisma } from "./db.ts";
 import { requireSession } from "./session.ts";
 
@@ -121,5 +122,50 @@ export async function listVehicleMediaAssets(vehicleId: unknown) {
         previewUrl: await getMediaPreviewUrl(storageClient, mediaAsset),
       })),
     ),
+  };
+}
+
+export async function listPublicVehicleMediaAssets(vehicleId: unknown) {
+  const id = inventoryIdSchema.parse(vehicleId);
+  const attachments = await prisma.vehicleMedia.findMany({
+    where: {
+      vehicleId: id,
+      vehicle: getPublicVehicleWhere("detail"),
+      mediaAsset: {
+        type: "image",
+        bucketAccess: "public_read",
+        publicApprovedAt: { not: null },
+        publicApprovedById: { not: null },
+      },
+    },
+    orderBy: { position: "asc" },
+    select: {
+      mediaAsset: {
+        select: {
+          id: true,
+          title: true,
+          altText: true,
+          objectKey: true,
+          bucketAccess: true,
+          publicApprovedAt: true,
+          publicApprovedById: true,
+        },
+      },
+    },
+  });
+
+  return {
+    assets: attachments.map(({ mediaAsset }) => {
+      const previewUrl = getPublicMediaObjectUrl(mediaAsset);
+      if (!previewUrl) {
+        throw new Error("Approved public media has no public object URL.");
+      }
+      return {
+        id: mediaAsset.id,
+        title: mediaAsset.title,
+        altText: mediaAsset.altText,
+        previewUrl,
+      };
+    }),
   };
 }

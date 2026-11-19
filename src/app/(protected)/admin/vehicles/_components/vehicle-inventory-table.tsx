@@ -30,6 +30,7 @@ import {
   formatFuelType,
   formatMileage,
 } from "@/lib/formatters";
+import { getPublicVehicleVisibility } from "@/lib/inventory-policy";
 import {
   inventorySelectionSchema,
   MAX_INVENTORY_SELECTION_SIZE,
@@ -769,6 +770,11 @@ function VehicleRowActions({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  const hasPublicDetailPage = getPublicVehicleVisibility({
+    status: vehicle.status,
+    inspectionStatus: vehicle.inspectionStatus,
+    isFeatured: vehicle.isFeatured,
+  }).detail;
 
   const confirmLifecycleAction = async () => {
     if (!lifecycleAction || isChangingLifecycle) return;
@@ -932,12 +938,27 @@ function VehicleRowActions({
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuLabel>{vehicle.stockNumber}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href={routeBuilders.vehicleDetails(vehicle.slug)}>
-              <Eye />
-              View public page
-            </Link>
-          </DropdownMenuItem>
+          {hasPublicDetailPage ? (
+            <DropdownMenuItem asChild>
+              <Link
+                href={routeBuilders.vehicleDetails(
+                  encodeURIComponent(vehicle.slug),
+                )}
+              >
+                <Eye />
+                View public page
+              </Link>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem asChild>
+              <Link
+                href={`${adminRoutes.vehicles}/${encodeURIComponent(vehicle.id)}/preview`}
+              >
+                <Eye />
+                Staff-only preview
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem asChild>
             <Link href={`${adminRoutes.vehicles}/${vehicle.id}/edit`}>
               <FilePenLine />

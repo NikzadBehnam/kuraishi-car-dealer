@@ -50,6 +50,15 @@ export interface PublicInventoryVehicleDTO extends Omit<
   hasPassedInspection: boolean;
 }
 
+export interface PublicVehicleDetailDTO extends PublicInventoryVehicleDTO {
+  dealerName: string;
+}
+
+export type PublicVehicleDetailResolution =
+  | { kind: "missing" }
+  | { kind: "ineligible" }
+  | { kind: "visible"; vehicle: PublicVehicleDetailDTO };
+
 export interface StaffInventoryVehicleDTO extends InventoryVehicleDTO {
   stockNumber: string;
   marginEstimate: string | null;

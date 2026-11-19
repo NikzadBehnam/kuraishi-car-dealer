@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 
 import { Prisma } from "../src/generated/prisma/client.ts";
+import { inquiryPrivacyNotice } from "../src/content/de/inquiry-privacy.ts";
+import { inquiryServiceMapping } from "../src/lib/inquiry-validation.ts";
 import { createInventoryTestDatabase } from "./inventory-test-client.ts";
 
 const { prisma, connectionString } = createInventoryTestDatabase();
@@ -223,6 +225,103 @@ describe("isolated inventory migration", { concurrency: false }, () => {
       assert.equal(updated.consumptionUnit, "kwh_per_100_km");
       assert.equal(updated.firstRegistration, "2024-05");
       assert.equal(updated.co2Emission, 0);
+    });
+  });
+
+  it("persists inquiry preferences and privacy evidence while retaining vehicle history", async () => {
+    await withVehicle(async (tx, vehicleId) => {
+      const vehicle = await tx.vehicle.findUniqueOrThrow({
+        where: { id: vehicleId },
+      });
+      const acknowledgedAt = new Date("2026-11-19T13:00:00.000Z");
+      const base = {
+        customerName: "Synthetic Visitor",
+        customerEmail: "visitor@example.invalid",
+        message: "Synthetic inquiry only.",
+        privacyNoticeVersion: inquiryPrivacyNotice.version,
+        privacyNoticeText: inquiryPrivacyNotice.text,
+        privacyAcknowledgedAt: acknowledgedAt,
+      };
+      for (const { requestedService, source } of Object.values(
+        inquiryServiceMapping,
+      )) {
+        const general = await tx.inquiry.create({
+          data: { ...base, requestedService, source },
+        });
+        assert.equal(general.requestedService, requestedService);
+        assert.equal(general.source, source);
+        assert.equal(general.preferredDate, null);
+        assert.equal(general.customerPhone, null);
+        assert.equal(general.vehicleId, null);
+      }
+
+      const contextual = await tx.inquiry.create({
+        data: {
+          ...base,
+          ...inquiryServiceMapping.Probefahrt,
+          customerPhone: "+43 664 123 45 67",
+          preferredDate: new Date("2028-02-29T00:00:00.000Z"),
+          vehicleId,
+          vehicleSlugSnapshot: vehicle.slug,
+          vehicleTitleSnapshot: `${vehicle.make} ${vehicle.model}`,
+        },
+      });
+      assert.equal(
+        contextual.preferredDate?.toISOString(),
+        "2028-02-29T00:00:00.000Z",
+      );
+      assert.equal(
+        contextual.privacyAcknowledgedAt.toISOString(),
+        acknowledgedAt.toISOString(),
+      );
+      assert.equal(contextual.privacyNoticeText, inquiryPrivacyNotice.text);
+      assert.equal(
+        contextual.privacyNoticeVersion,
+        inquiryPrivacyNotice.version,
+      );
+
+      const cases: [Prisma.Sql, string][] = [
+        [Prisma.sql`"source" = 'contact'`, "23514"],
+        [Prisma.sql`"vehicleSlugSnapshot" = NULL`, "23514"],
+        [Prisma.sql`"privacyNoticeVersion" = ''`, "23514"],
+        [Prisma.sql`"privacyNoticeText" = ''`, "23514"],
+        [Prisma.sql`"privacyAcknowledgedAt" = NULL`, "23502"],
+        [Prisma.sql`"message" = ${"x".repeat(1001)}`, "22001"],
+      ];
+      for (const [assignment, sqlState] of cases) {
+        await tx.$executeRaw`SAVEPOINT inquiry_constraint_case`;
+        try {
+          await assert.rejects(
+            tx.$executeRaw(
+              Prisma.sql`UPDATE "Inquiry" SET ${assignment} WHERE "id" = ${contextual.id}`,
+            ),
+            (error: unknown) => hasPostgresCode(error, sqlState),
+          );
+        } finally {
+          await tx.$executeRaw`ROLLBACK TO SAVEPOINT inquiry_constraint_case`;
+          await tx.$executeRaw`RELEASE SAVEPOINT inquiry_constraint_case`;
+        }
+      }
+
+      await tx.vehicle.update({
+        where: { id: vehicleId },
+        data: { status: "archived" },
+      });
+      assert.equal(
+        (await tx.inquiry.findUniqueOrThrow({ where: { id: contextual.id } }))
+          .vehicleId,
+        vehicleId,
+      );
+      await tx.vehicle.delete({ where: { id: vehicleId } });
+      const retained = await tx.inquiry.findUniqueOrThrow({
+        where: { id: contextual.id },
+      });
+      assert.equal(retained.vehicleId, null);
+      assert.equal(retained.vehicleSlugSnapshot, vehicle.slug);
+      assert.equal(
+        retained.vehicleTitleSnapshot,
+        `${vehicle.make} ${vehicle.model}`,
+      );
     });
   });
 

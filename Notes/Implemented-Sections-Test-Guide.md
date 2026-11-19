@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers implemented work on `backend/dealership-settings`, based on `feature/live-vehicle-comparison` and including the integrated Sections 04-07 work:
+This guide covers implemented work on `backend/inquiry-intake`, based on `backend/dealership-settings` and including the integrated Sections 04-08 work:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -10,19 +10,20 @@ This guide covers implemented work on `backend/dealership-settings`, based on `f
 - Section 06.01-06.09: live public detail lookup, approved gallery media, dealership contact, similar inventory and record-derived metadata.
 - Section 07.01-07.04: anonymous live comparison selection and rendering against current eligible inventory.
 - Section 08.01-08.08: persisted dealership settings, validated admin editing, shared public business data and the approved initial-data migration.
+- Section 09.01-09.04: inquiry persistence schema and shared form/server validation foundation; no live submission endpoint yet.
 
 Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-08 work. The user deferred the combined manual retest until later. Sections 06.10, 07.05 and 08.09 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
-1. Use the Section 08 branch, not `master`:
+1. Use the Section 09 branch, not `master`:
 
    ```powershell
    git branch --show-current
    git status --short --branch
    ```
 
-   The branch should be `backend/dealership-settings`. It includes the integrated Sections 04-08 work so they can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
+   The branch should be `backend/inquiry-intake`. It includes the integrated Sections 04-08 work and the Section 09 foundation so they can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
 2. Use Node 25.8.0, or a Node version that supports the test-runner flags in the package scripts. The machine PATH previously selected Node 14, which cannot run these scripts; Node 22.21.1 also lacked `--test-isolation=none`.
 
@@ -278,19 +279,33 @@ The current implementation is on `backend/dealership-settings`. Do not deploy or
 
 Section 08.09 remains pending until isolated DB verification and the user's deferred manual retest.
 
-## 11. Completion record
+## 11. Section 09 — inquiry foundation only (09.01-09.04)
+
+This milestone does **not** accept inquiries, send emails, confirm appointments, or wire the staff leads inbox. Public launch remains blocked by unfinished intake/abuse controls and business/legal approval of retention and deletion.
+
+1. Run `pnpm test`. Inquiry validation coverage includes all five approved types and source mappings, optional phone/date values, name/email/phone/message bounds, required consent, forged server-owned fields, invalid/leap dates, and Europe/Vienna midnight/DST.
+2. Run `pnpm typecheck` and `pnpm exec prisma validate`. These do not prove that the migration has run or that a request is stored.
+3. Only after the inventory-test credential is rotated and the isolated empty target independently confirmed, run `pnpm test:inventory-db`. Its new rollback-only case checks inquiry persistence, source/privacy/snapshot constraints, and retained vehicle-history snapshots after archive/deletion. Do not apply migrations to the normal app database or Production as part of this guide.
+4. On an already configured isolated app, open the contact page. Confirm Beratung is the default, phone/date are labelled optional, and a selected date can be cleared.
+5. Confirm an explicit online-intake-unavailable notice and disabled submit control are present. No fabricated success should appear. Use only synthetic form data, and do not expect an inbox record from this milestone.
+
+Vehicle-context resolution, durable public submission, rate limits, retries/deduplication, service CTAs and real inbox visibility remain later work. The previous database-test safety gate and deferred manual-retest status are unchanged.
+
+## 12. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
-| Area                                                                      | Result  | Notes                                          |
-| ------------------------------------------------------------------------- | ------- | ---------------------------------------------- |
-| Branch and non-Production target confirmed                                |         |                                                |
-| TypeScript, lint, formatting and unit tests                               |         |                                                |
-| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                |
-| Section 03 media DB/storage suites                                        |         |                                                |
-| Section 03 manual media workflow                                          |         |                                                |
-| Section 04 manual admin/public/dashboard workflow                         |         |                                                |
-| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                            |
-| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                            |
-| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified |
-| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                            |
+| Area                                                                      | Result  | Notes                                           |
+| ------------------------------------------------------------------------- | ------- | ----------------------------------------------- |
+| Branch and non-Production target confirmed                                |         |                                                 |
+| TypeScript, lint, formatting and unit tests                               |         |                                                 |
+| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                 |
+| Section 03 media DB/storage suites                                        |         |                                                 |
+| Section 03 manual media workflow                                          |         |                                                 |
+| Section 04 manual admin/public/dashboard workflow                         |         |                                                 |
+| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                             |
+| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                             |
+| Section 08 dealership settings workflow                                   | Pending | Section 08.09                                   |
+| Section 09 inquiry foundation                                             | Pending | Schema/validation only; live intake unavailable |
+| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified  |
+| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                             |

@@ -1,14 +1,15 @@
 "use client";
-import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { LoaderCircle, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import {
   contactFormSchema,
   type ContactFormValues,
 } from "../_schemas/contact-form.schema";
 import { formContent } from "@/content/de/forms";
+import { dealershipDate } from "@/lib/business-date";
+import { inquiryAppointmentTypes } from "@/lib/inquiry-validation";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -19,37 +20,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 export function ContactForm() {
-  const [submitted, setSubmitted] = useState(false);
   const {
     register,
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
-      appointmentType: "Probefahrt",
+      appointmentType: "Beratung",
+      phone: "",
+      preferredDate: "",
       message: "",
       consent: false,
     },
   });
-  const submit = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 650));
-    setSubmitted(true);
-    toast.success("Ihre Anfrage wurde erfolgreich gesendet.");
+  const submit = () => {
+    toast.error(formContent.unavailable);
   };
-  if (submitted)
-    return (
-      <div className="py-16 text-center" role="status">
-        <div className="text-success text-5xl">✓</div>
-        <h2 className="section-title mt-5">{formContent.successTitle}</h2>
-        <p className="text-muted-foreground mt-3">
-          {formContent.successDescription}
-        </p>
-      </div>
-    );
   return (
     <form noValidate onSubmit={handleSubmit(submit)} className="grid gap-5">
+      <p
+        className="text-muted-foreground rounded-xl border p-4 text-sm"
+        role="status"
+      >
+        {formContent.unavailable}
+      </p>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
           id="appointment-type"
@@ -68,13 +64,7 @@ export function ContactForm() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[
-                    "Probefahrt",
-                    "Beratung",
-                    "Fahrzeugbewertung",
-                    "Werkstatt",
-                    "Rückruf",
-                  ].map((item) => (
+                  {inquiryAppointmentTypes.map((item) => (
                     <SelectItem key={item} value={item}>
                       {item}
                     </SelectItem>
@@ -93,16 +83,42 @@ export function ContactForm() {
             name="preferredDate"
             control={control}
             render={({ field }) => (
-              <DatePicker
-                id="preferred-date"
-                className="focus-visible:outline-none!"
-                value={field.value}
-                onChange={field.onChange}
-                invalid={!!errors.preferredDate}
-                minDate={new Date()}
-                placeholder="Wunschtermin auswählen"
-              />
+              <div className="grid gap-2">
+                <DatePicker
+                  id="preferred-date"
+                  className="focus-visible:outline-none!"
+                  value={field.value}
+                  onChange={field.onChange}
+                  invalid={!!errors.preferredDate}
+                  minDate={new Date(`${dealershipDate()}T00:00:00`)}
+                  placeholder="Wunschtermin auswählen"
+                />
+                {field.value ? (
+                  <button
+                    type="button"
+                    className="text-muted-foreground text-left text-sm underline"
+                    onClick={() => field.onChange("")}
+                  >
+                    Wunschtermin entfernen
+                  </button>
+                ) : null}
+              </div>
             )}
+          />
+        </Field>
+        <Field
+          id="contact-phone"
+          label={formContent.phone}
+          error={errors.phone?.message}
+        >
+          <input
+            id="contact-phone"
+            className="control focus-visible:outline-none!"
+            type="tel"
+            autoComplete="tel"
+            maxLength={32}
+            aria-invalid={!!errors.phone}
+            {...register("phone")}
           />
         </Field>
         <Field
@@ -156,11 +172,11 @@ export function ContactForm() {
       )}
       <Button
         variant="accent"
-        disabled={isSubmitting}
+        disabled
         className="w-full justify-center rounded-[var(--radius-sm)] focus-visible:outline-none!"
       >
-        {isSubmitting ? <LoaderCircle className="animate-spin" /> : <Send />}
-        {isSubmitting ? "Wird gesendet …" : "Anfrage senden"}
+        <Send />
+        Anfrage senden (noch nicht verfügbar)
       </Button>
     </form>
   );

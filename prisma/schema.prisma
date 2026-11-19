@@ -65,6 +65,20 @@ enum MediaBucketAccess {
   public_read
 }
 
+enum InquirySource {
+  contact
+  test_drive @map("test-drive")
+  callback
+}
+
+enum InquiryService {
+  test_drive
+  consultation
+  vehicle_valuation
+  workshop
+  callback
+}
+
 model Dealer {
   id          String    @id @default(cuid())
   name        String
@@ -126,6 +140,7 @@ model Vehicle {
   updatedBy         User                     @relation("VehicleUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
   changes           VehicleChange[]
   mediaAttachments  VehicleMedia[]
+  inquiries         Inquiry[]
   dealerId          String
   dealer            Dealer                   @relation(fields: [dealerId], references: [id], onDelete: Restrict)
 
@@ -135,6 +150,29 @@ model Vehicle {
   @@index([status, inspectionStatus, isFeatured, id])
   @@index([createdById])
   @@index([updatedById])
+}
+
+model Inquiry {
+  id                    String         @id @default(cuid())
+  customerName          String         @db.VarChar(200)
+  customerEmail         String         @db.VarChar(254)
+  customerPhone         String?        @db.VarChar(32)
+  message               String         @db.VarChar(1000)
+  source                InquirySource
+  requestedService      InquiryService
+  preferredDate         DateTime?      @db.Date
+  vehicleId             String?
+  vehicle               Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  vehicleSlugSnapshot   String?        @db.VarChar(200)
+  vehicleTitleSnapshot  String?        @db.VarChar(500)
+  privacyNoticeVersion  String         @db.VarChar(64)
+  privacyNoticeText     String         @db.Text
+  privacyAcknowledgedAt DateTime       @db.Timestamptz(3)
+  createdAt             DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime       @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@index([createdAt(sort: Desc), id])
+  @@index([vehicleId])
 }
 
 model VehicleChange {

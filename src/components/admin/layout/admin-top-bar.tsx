@@ -101,17 +101,27 @@ export function AdminTopBar({ dealershipName }: { dealershipName: string }) {
           </span>
         </Link>
 
-        <div className="relative ml-auto hidden w-full max-w-sm md:block">
+        <form
+          action={adminRoutes.vehicles}
+          method="get"
+          role="search"
+          aria-label="Search inventory"
+          className="relative ml-auto hidden w-full max-w-sm md:block"
+        >
           <Search
             className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
             aria-hidden="true"
           />
           <Input
-            aria-label="Search admin workspace"
-            placeholder="Search admin workspace"
+            type="search"
+            name="search"
+            maxLength={100}
+            autoComplete="off"
+            aria-label="Search inventory"
+            placeholder="Search inventory"
             className="bg-background h-9 pl-9"
           />
-        </div>
+        </form>
 
         <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
           <ThemeToggle />

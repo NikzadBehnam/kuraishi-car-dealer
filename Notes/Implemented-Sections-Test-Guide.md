@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers the integrated work currently on `backend/dashboard-metrics`, including Sections 04-12:
+This guide covers the integrated work currently on `feature/admin-workspace-search`, based on `backend/dashboard-metrics`, including Sections 04-13.01:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -17,19 +17,20 @@ This guide covers the integrated work currently on `backend/dashboard-metrics`, 
 - Section 11.01-11.04: protected database-backed inquiry inbox, server-side search and pagination, selected detail, historical vehicle context, contact links, and per-inquiry notification status/failure display.
 - Section 11.05-11.06: append-only authored inquiry notes; database and browser verification remain deferred.
 - Section 12.01-12.07: database-backed dashboard aggregates and latest-five inquiries; unsupported view counters are hidden by decision. Section 12.08 database/browser verification remains pending.
+- Section 13.01: inventory-only top-bar search routed through the existing bounded, authenticated inventory query.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains integrated work through Section 12. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
+Section 04 is complete but was not merged to `master` before Section 05 began; the current branch retains integrated work through Section 13.01. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
-1. Use the Section 10 branch, not `master`:
+1. Use `feature/admin-workspace-search`, not `master`, for the current Section 13.01 implementation:
 
    ```powershell
    git branch --show-current
    git status --short --branch
    ```
 
-   The branch should be `backend/admin-leads`. It includes the integrated Section 10 work and real inquiry inbox through 11.04. Preserve unrelated local work; do not switch branches over uncommitted changes.
+   The branch should be `feature/admin-workspace-search`. It includes the integrated Sections 04-12 work plus the inventory-only top-bar search. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
 2. Use Node 25.8.0, or a Node version that supports the test-runner flags in the package scripts. The machine PATH previously selected Node 14, which cannot run these scripts; Node 22.21.1 also lacked `--test-isolation=none`.
 
@@ -454,7 +455,16 @@ The dashboard uses authenticated database aggregates and recent inquiry rows; it
 4. Confirm the newest five inquiries appear with current/historical vehicle context and each Open link selects the correct inquiry in the protected inbox. A new database should show the explicit no-inquiries state and zero inventory percentages without NaN.
 5. Confirm an anonymous visit cannot read dashboard metrics. Do not use real customer data or Production. This browser retest remains deferred at the user's request.
 
-## 17. Completion record
+## 17. Section 13.01 — inventory-only workspace search
+
+The user chose inventory-only scope. The top-bar form submits a GET request to `/admin/vehicles`; the existing staff route validates and bounds the search and calls the session-protected inventory query. Search does not include leads or media.
+
+1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`. The source suite covers staff inventory query parameter defaults, length bounds, repeated values, unsupported status/page values, and unknown parameters.
+2. On an isolated non-Production app, sign in as ordinary staff and submit a make, model, stock number, or location from the top bar. Confirm it opens `/admin/vehicles` with the search applied, matching rows are shown, and a non-match has the existing explicit empty state.
+3. Confirm an empty search returns the full bounded inventory list. Try an overlong/repeated query value and confirm the server rejects it with the existing invalid-filter state rather than running an unbounded search.
+4. Confirm the top-bar search does not show inquiry or media results. Browser checks remain deferred at the user's request.
+
+## 18. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
@@ -476,5 +486,6 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Section 10.07 provider verification                                       | Pending | No real provider call/email; isolated DB and simulator verification not run             |
 | Section 11.01-11.04 real protected inbox                                  | Partial | Source tests pass; DB suite and deferred browser retest remain pending                  |
 | Section 11.05-11.06 append-only staff notes                               | Partial | Source tests pass; migration, gated DB suite, and browser retest remain pending         |
+| Section 13.01 inventory-only workspace search                             | Partial | Source tests pass; browser verification remains deferred                                |
 | Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified                                          |
 | Homepage/list database propagation                                        | Pending | Section 05.01-05.02                                                                     |

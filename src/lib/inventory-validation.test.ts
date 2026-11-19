@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   firstRegistrationMonthSchema,
   publicCatalogSearchParamsSchema,
+  staffInventorySearchParamsSchema,
 } from "./inventory-validation.ts";
 
 function currentMonthInVienna() {
@@ -69,6 +70,36 @@ describe("public catalog URL parameters", () => {
     ]) {
       assert.equal(
         publicCatalogSearchParamsSchema.safeParse(input).success,
+        false,
+      );
+    }
+  });
+});
+
+describe("staff inventory URL parameters", () => {
+  it("accepts a bounded inventory search and defaults its pagination", () => {
+    assert.deepEqual(
+      staffInventorySearchParamsSchema.parse({ search: " BMW " }),
+      {
+        search: "BMW",
+        sort: "lastUpdatedAt",
+        direction: "desc",
+        page: 1,
+      },
+    );
+  });
+
+  it("rejects repeated, oversized, malformed, and unknown search parameters", () => {
+    for (const input of [
+      { search: ["BMW"] },
+      { search: "x".repeat(101) },
+      { page: "0" },
+      { page: "2.5" },
+      { status: "unpublished" },
+      { unexpected: "value" },
+    ]) {
+      assert.equal(
+        staffInventorySearchParamsSchema.safeParse(input).success,
         false,
       );
     }

@@ -1,4 +1,5 @@
 import type { Vehicle } from "@/types/vehicle";
+import type { InquiryNotificationErrorCode } from "@/lib/inquiry-notification-retry";
 
 export type AdminVehicleStatus =
   "draft" | "published" | "reserved" | "sold" | "archived";
@@ -38,6 +39,62 @@ export interface AdminLead {
   preferredDate?: string;
   message: string;
   notesCount: number;
+}
+
+export type AdminInquiryDeliveryStatus =
+  | "disabled"
+  | "pending"
+  | "sending"
+  | "retry"
+  | "sent"
+  | "failed"
+  | "untracked";
+
+export interface AdminInquiryVehicle {
+  id: string;
+  make: string;
+  model: string;
+  variant: string | null;
+  stockNumber: string;
+  mileage: number | null;
+  location: string | null;
+}
+
+export interface AdminInquiryListItem {
+  id: string;
+  source: AdminLeadSource;
+  requestedService: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string | null;
+  vehicleId: string | null;
+  vehicleTitleSnapshot: string | null;
+  vehicleSlugSnapshot: string | null;
+  vehicle: AdminInquiryVehicle | null;
+  createdAt: string;
+  deliveryStatus: AdminInquiryDeliveryStatus;
+}
+
+export interface AdminInquiryDetail extends AdminInquiryListItem {
+  message: string;
+  preferredDate: string | null;
+  updatedAt: string;
+  delivery: {
+    status: Exclude<AdminInquiryDeliveryStatus, "untracked">;
+    attemptCount: number;
+    lastErrorCode: InquiryNotificationErrorCode | null;
+    nextAttemptAt: string;
+    sentAt: string | null;
+  } | null;
+}
+
+export interface AdminInquiryPage {
+  items: AdminInquiryListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  search: string;
 }
 
 export type AdminMediaType = "image" | "document" | "brand";

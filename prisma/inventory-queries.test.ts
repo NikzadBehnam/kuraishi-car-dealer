@@ -74,6 +74,7 @@ const queryClient = prisma.$extends({
 let queries: typeof import("../src/lib/inventory-queries.ts");
 let dealershipSettings: typeof import("../src/lib/dealership-settings.ts");
 let inquiryIntake: typeof import("../src/lib/inquiry-intake.ts");
+let adminInquiryQueries: typeof import("../src/lib/admin-inquiry-queries.ts");
 const inquiryKeys: string[] = [];
 const inquiryClients: string[] = [];
 let dbMock: ReturnType<typeof mock.module> | undefined;
@@ -189,6 +190,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     queries = await import("../src/lib/inventory-queries.ts");
     dealershipSettings = await import("../src/lib/dealership-settings.ts");
     inquiryIntake = await import("../src/lib/inquiry-intake.ts");
+    adminInquiryQueries = await import("../src/lib/admin-inquiry-queries.ts");
   });
 
   beforeEach(() => {
@@ -1555,6 +1557,38 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       dealershipDate(now),
     );
     assert.equal(first.vehicleId, null);
+    session = { user: { role: "user" } };
+    await prisma.inquiryNotification.update({
+      where: { inquiryId: first.id },
+      data: {
+        status: "failed",
+        attemptCount: 5,
+        lastErrorCode: "provider_unavailable",
+      },
+    });
+    const inbox = await adminInquiryQueries.getAdminInquiryPage({
+      q: "Synthetic test inquiry",
+      page: "1",
+      lead: first.id,
+    });
+    assert.equal(inbox.total, 5);
+    assert.equal(inbox.items.length, 5);
+    assert.equal(
+      inbox.items.find(({ id }) => id === first.id)?.deliveryStatus,
+      "failed",
+    );
+    assert.equal(inbox.selectedInquiry?.id, first.id);
+    assert.equal(inbox.selectedInquiry?.message, "Synthetic test inquiry.");
+    assert.equal(
+      inbox.selectedInquiry?.delivery?.lastErrorCode,
+      "provider_unavailable",
+    );
+    assert.equal("privacyNoticeText" in (inbox.selectedInquiry ?? {}), false);
+    session = null;
+    await assert.rejects(
+      adminInquiryQueries.getAdminInquiryPage({ q: "", page: "1" }),
+      AuthorizationError,
+    );
     const replay = submissions[0];
     await inquiryIntake.acceptInquiry(
       replay,

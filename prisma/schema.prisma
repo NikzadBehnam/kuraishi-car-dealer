@@ -79,6 +79,15 @@ enum InquiryService {
   callback
 }
 
+enum InquiryNotificationStatus {
+  disabled
+  pending
+  sending
+  retry
+  sent
+  failed
+}
+
 model Dealer {
   id          String    @id @default(cuid())
   name        String
@@ -153,28 +162,48 @@ model Vehicle {
 }
 
 model Inquiry {
-  id                    String         @id @default(cuid())
-  customerName          String         @db.VarChar(200)
-  customerEmail         String         @db.VarChar(254)
-  customerPhone         String?        @db.VarChar(32)
-  message               String         @db.VarChar(1000)
+  id                    String               @id @default(cuid())
+  customerName          String               @db.VarChar(200)
+  customerEmail         String               @db.VarChar(254)
+  customerPhone         String?              @db.VarChar(32)
+  message               String               @db.VarChar(1000)
   source                InquirySource
   requestedService      InquiryService
-  preferredDate         DateTime?      @db.Date
+  preferredDate         DateTime?            @db.Date
   vehicleId             String?
-  vehicle               Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
-  vehicleSlugSnapshot   String?        @db.VarChar(200)
-  vehicleTitleSnapshot  String?        @db.VarChar(500)
-  privacyNoticeVersion  String         @db.VarChar(64)
-  privacyNoticeText     String         @db.Text
-  privacyAcknowledgedAt DateTime       @db.Timestamptz(3)
-  submissionKey         String?        @unique @db.Uuid
-  submissionHash        String?        @db.VarChar(64)
-  createdAt             DateTime       @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime       @default(now()) @updatedAt @db.Timestamptz(3)
+  vehicle               Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  vehicleSlugSnapshot   String?              @db.VarChar(200)
+  vehicleTitleSnapshot  String?              @db.VarChar(500)
+  privacyNoticeVersion  String               @db.VarChar(64)
+  privacyNoticeText     String               @db.Text
+  privacyAcknowledgedAt DateTime             @db.Timestamptz(3)
+  submissionKey         String?              @unique @db.Uuid
+  submissionHash        String?              @db.VarChar(64)
+  createdAt             DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
+  notification          InquiryNotification?
 
   @@index([createdAt(sort: Desc), id])
   @@index([vehicleId])
+}
+
+model InquiryNotification {
+  id                String                    @id @default(cuid())
+  inquiryId         String                    @unique
+  inquiry           Inquiry                   @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  status            InquiryNotificationStatus
+  attemptCount      Int                       @default(0)
+  nextAttemptAt     DateTime                  @default(now()) @db.Timestamptz(3)
+  leaseExpiresAt    DateTime?                 @db.Timestamptz(3)
+  idempotencyKey    String                    @unique @db.VarChar(80)
+  providerMessageId String?                   @db.VarChar(200)
+  lastErrorCode     String?                   @db.VarChar(64)
+  sentAt            DateTime?                 @db.Timestamptz(3)
+  createdAt         DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime                  @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([status, leaseExpiresAt])
 }
 
 model InquiryRateLimit {

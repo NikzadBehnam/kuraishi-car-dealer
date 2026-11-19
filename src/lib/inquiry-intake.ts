@@ -5,6 +5,10 @@ import { inquiryPrivacyNotice } from "../content/de/inquiry-privacy.ts";
 import { prisma } from "./db.ts";
 import { getPublicVehicleEligibilitySql } from "./inventory-eligibility.ts";
 import {
+  getInitialInquiryNotificationStatus,
+  getInquiryNotificationIdempotencyKey,
+} from "./inquiry-notification-retry.ts";
+import {
   InquiryIntakeError,
   inquiryFieldsSchema,
   inquiryServiceMapping,
@@ -95,7 +99,7 @@ export async function acceptInquiry(
         }
       }
       const fields = submission.fields;
-      await tx.inquiry.create({
+      const inquiry = await tx.inquiry.create({
         data: {
           customerName: fields.name,
           customerEmail: fields.email,
@@ -117,6 +121,14 @@ export async function acceptInquiry(
           privacyAcknowledgedAt: now,
           submissionKey: submission.requestId,
           submissionHash: identity.payloadHash,
+        },
+        select: { id: true },
+      });
+      await tx.inquiryNotification.create({
+        data: {
+          inquiryId: inquiry.id,
+          status: getInitialInquiryNotificationStatus(process.env),
+          idempotencyKey: getInquiryNotificationIdempotencyKey(inquiry.id),
         },
         select: { id: true },
       });

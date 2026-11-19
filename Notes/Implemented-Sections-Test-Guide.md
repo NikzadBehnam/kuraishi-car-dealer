@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers the integrated work currently on `feature/admin-workspace-search`, based on `backend/dashboard-metrics`, including Sections 04-13.04:
+This guide covers the integrated work currently on `feature/admin-workspace-search`, based on `backend/dashboard-metrics`, including Sections 04-13.05:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -19,8 +19,9 @@ This guide covers the integrated work currently on `feature/admin-workspace-sear
 - Section 12.01-12.07: database-backed dashboard aggregates and latest-five inquiries; unsupported view counters are hidden by decision. Section 12.08 database/browser verification remains pending.
 - Section 13.01-13.03: inventory-only top-bar search routed through the existing bounded, authenticated inventory query; lead/media global-result routing is not applicable.
 - Section 13.04: live staff identity in the sidebar and truthful staff sign-in copy; top-bar sign-out behavior is unchanged.
+- Section 13.05: Create account is restricted to master admins, while ordinary staff operations remain available to authenticated staff.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; the current branch retains integrated work through Section 13.04. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
+Section 04 is complete but was not merged to `master` before Section 05 began; the current branch retains integrated work through Section 13.05. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
@@ -476,7 +477,16 @@ The admin sidebar reads the signed-in user's name, email, and role from Better A
 4. Open `/login` while signed out. Confirm the auth shell says staff account access, protected staff operations, and administrator-managed account creation; it does not describe client account management, mock forms, or future authentication.
 5. These browser checks remain deferred at the user's request. Do not use real credentials in screenshots or reports.
 
-## 19. Completion record
+## 19. Section 13.05 — account creation and ordinary staff access
+
+The account menu shows Create account only for role `admin`. The page redirects anonymous users to login and regular staff to the dashboard; the server action independently calls `requireAdmin()`. Normal inventory mutations, inquiry-note actions, and dealership settings use `requireSession()`, not the master-admin guard.
+
+1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`. Source tests verify anonymous and regular-staff denial plus master-admin allowance in the shared access policy.
+2. On the isolated app, sign in as ordinary staff. Confirm Create account is absent, a direct visit to `/admin/accounts/new` returns to the dashboard, and normal inventory/inquiry/settings operations remain available.
+3. Call the account-creation server action directly as anonymous and ordinary staff; both must be denied before account creation. Confirm the page and action work for master admin and new accounts receive the ordinary user role.
+4. Verify the account-menu link remains visible and the top-bar sign-out works for master admin. These browser/direct-action checks remain pending under 13.07 and are deferred with the combined manual retest.
+
+## 20. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
@@ -500,5 +510,6 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Section 11.05-11.06 append-only staff notes                               | Partial | Source tests pass; migration, gated DB suite, and browser retest remain pending         |
 | Sections 13.01-13.03 inventory-only workspace search                      | Partial | Source tests pass; gated DB assertions and browser verification remain pending          |
 | Section 13.04 truthful staff identity and sign-in copy                    | Partial | Typecheck/source tests pass; authenticated browser verification remains deferred        |
+| Section 13.05 account creation role boundary                              | Partial | Shared policy tests pass; direct action/browser verification remains under 13.07        |
 | Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified                                          |
 | Homepage/list database propagation                                        | Pending | Section 05.01-05.02                                                                     |

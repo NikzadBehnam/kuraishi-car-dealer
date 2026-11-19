@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { createPublicMetadata } from "@/lib/metadata";
 import { routeBuilders } from "@/config/routes.config";
-import { listPublicVehicleMediaAssets } from "@/lib/media-attachments";
-import { resolvePublicVehicleDetail } from "@/lib/inventory-queries";
+import {
+  getRelatedVehicles,
+  resolvePublicVehicleDetail,
+} from "@/lib/inventory-queries";
+import {
+  listPublicVehicleCardImages,
+  listPublicVehicleMediaAssets,
+} from "@/lib/media-attachments";
 
 import { InventoryVehicleDetail } from "./_components/inventory-vehicle-detail";
 
@@ -25,13 +32,25 @@ export async function generateMetadata({
 
   const { vehicle } = detail;
   const canonical = routeBuilders.vehicleDetails(vehicle.slug);
+  const title = `${vehicle.make} ${vehicle.model}`;
+  const description =
+    vehicle.description ??
+    `${vehicle.make} ${vehicle.model} bei ${vehicle.dealerName}.`;
+  const { assets } = await listPublicVehicleMediaAssets(vehicle.id);
+  const baseMetadata = createPublicMetadata(title, description, canonical);
   return {
-    title: `${vehicle.make} ${vehicle.model}`,
-    description:
-      vehicle.description ??
-      `${vehicle.make} ${vehicle.model} bei ${vehicle.dealerName}.`,
-    alternates: { canonical },
-    openGraph: { url: canonical },
+    ...baseMetadata,
+    openGraph: {
+      ...baseMetadata.openGraph,
+      images: assets[0]
+        ? [
+            {
+              url: assets[0].previewUrl,
+              alt: assets[0].altText?.trim() || assets[0].title,
+            },
+          ]
+        : [],
+    },
   };
 }
 
@@ -44,11 +63,27 @@ export default async function VehicleDetailPage({
   const detail = await resolvePublicVehicleDetail(slug);
   if (detail.kind !== "visible") notFound();
 
-  const { assets } = await listPublicVehicleMediaAssets(detail.vehicle.id);
+  const [media, candidates] = await Promise.all([
+    listPublicVehicleMediaAssets(detail.vehicle.id),
+    getRelatedVehicles({ id: detail.vehicle.id, limit: 3 }),
+  ]);
+  const relatedVehicles = candidates ?? [];
+  const relatedImages = await listPublicVehicleCardImages(
+    relatedVehicles.map(({ id }) => id),
+  );
   return (
     <InventoryVehicleDetail
       vehicle={detail.vehicle}
-      images={assets.map(({ previewUrl }) => previewUrl)}
+      images={media.assets.map(({ id, title, altText, previewUrl }) => ({
+        id,
+        title,
+        altText,
+        url: previewUrl,
+      }))}
+      relatedVehicles={relatedVehicles.map((vehicle) => ({
+        vehicle,
+        images: relatedImages.get(vehicle.id) ?? [],
+      }))}
     />
   );
 }

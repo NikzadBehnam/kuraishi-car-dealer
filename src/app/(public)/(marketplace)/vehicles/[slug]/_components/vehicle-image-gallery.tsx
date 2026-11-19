@@ -11,7 +11,12 @@ import {
 import { VehicleImagePlaceholder } from "@/components/vehicle/vehicle-image-placeholder";
 
 interface VehicleImageGalleryProps {
-  images: string[];
+  images: Array<{
+    id: string;
+    url: string;
+    title: string;
+    altText: string | null;
+  }>;
   title: string;
 }
 
@@ -21,10 +26,17 @@ export function VehicleImageGallery({
 }: VehicleImageGalleryProps) {
   const [open, setOpen] = useState(false);
   const [initialIndex, setInitialIndex] = useState(0);
-  const availableImages = images.filter((src) => src.trim().length > 0);
-  const previewImages: PreviewImage[] = availableImages.map((src, index) => ({
-    src,
-    alt: `${title} Ansicht ${index + 1}`,
+  const availableImages = images.filter(({ url }) => url.trim().length > 0);
+  const getImageAlt = (
+    image: VehicleImageGalleryProps["images"][number],
+    index: number,
+  ) =>
+    image.altText?.trim() ||
+    image.title.trim() ||
+    `${title} Fahrzeugansicht ${index + 1}`;
+  const previewImages: PreviewImage[] = availableImages.map((image, index) => ({
+    src: image.url,
+    alt: getImageAlt(image, index),
   }));
 
   if (availableImages.length === 0) {
@@ -54,8 +66,8 @@ export function VehicleImageGallery({
             fill
             sizes="(max-width: 1024px) 100vw, 60vw"
             className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-            src={availableImages[0]}
-            alt={`${title} Frontansicht`}
+            src={availableImages[0].url}
+            alt={getImageAlt(availableImages[0], 0)}
           />
           <GalleryHint />
         </button>
@@ -64,7 +76,7 @@ export function VehicleImageGallery({
             <button
               type="button"
               className="group relative aspect-[16/10] overflow-hidden rounded-[var(--radius-sm)] focus-visible:outline-none md:aspect-auto"
-              key={image}
+              key={image.id}
               aria-label={`${title} Bild ${index + 2} vergrößern`}
               onClick={() => openPreview(index + 1)}
             >
@@ -72,8 +84,8 @@ export function VehicleImageGallery({
                 fill
                 sizes="(max-width: 768px) 50vw, 25vw"
                 className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                src={image}
-                alt={`${title} Ansicht ${index + 2}`}
+                src={image.url}
+                alt={getImageAlt(image, index + 1)}
               />
               <GalleryHint compact />
             </button>

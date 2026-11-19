@@ -6,6 +6,7 @@ import {
   Check,
   Mail,
   MapPin,
+  Phone,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -13,7 +14,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { VehicleActions } from "@/components/vehicle/vehicle-actions";
+import { siteConfig } from "@/config/site.config";
 import { publicRoutes } from "@/config/routes.config";
 import {
   formatBodyType,
@@ -24,9 +27,18 @@ import {
   formatRegistration,
   formatTransmission,
 } from "@/lib/formatters";
-import type { PublicVehicleDetailDTO } from "@/types/inventory";
+import type {
+  PublicInventoryVehicleDTO,
+  PublicVehicleCardImageDTO,
+  PublicVehicleDetailDTO,
+} from "@/types/inventory";
 
 import { VehicleImageGallery } from "./vehicle-image-gallery";
+
+type RelatedVehicle = {
+  vehicle: PublicInventoryVehicleDTO;
+  images: PublicVehicleCardImageDTO[];
+};
 
 const conditionLabels = {
   used: "Gebrauchtwagen",
@@ -47,9 +59,16 @@ const consumptionUnitLabels = {
 export function InventoryVehicleDetail({
   vehicle,
   images,
+  relatedVehicles,
 }: {
   vehicle: PublicVehicleDetailDTO;
-  images: string[];
+  images: Array<{
+    id: string;
+    url: string;
+    title: string;
+    altText: string | null;
+  }>;
+  relatedVehicles: RelatedVehicle[];
 }) {
   const title = `${vehicle.make} ${vehicle.model}`;
   const contactHref =
@@ -62,6 +81,7 @@ export function InventoryVehicleDetail({
       : vehicle.status === "reserved"
         ? "Kontakt für Statusinformationen"
         : "Händler kontaktieren";
+  const phoneHref = `tel:${siteConfig.contact.phone.replace(/[^\d+]/g, "")}`;
   const consumption =
     vehicle.consumption !== null && vehicle.consumptionUnit !== null
       ? `${consumptionFormatter.format(vehicle.consumption)} ${consumptionUnitLabels[vehicle.consumptionUnit]}`
@@ -267,9 +287,16 @@ export function InventoryVehicleDetail({
               <hr className="my-6" />
               <h2 className="font-extrabold">{vehicle.dealerName}</h2>
               <p className="text-muted-foreground mt-2 text-sm">
-                Für weitere Informationen kontaktieren Sie unser Team.
+                {siteConfig.address.street}, {siteConfig.address.postalCode}{" "}
+                {siteConfig.address.city}
               </p>
               <Button asChild variant="outline" className="mt-4 w-full">
+                <a href={phoneHref}>
+                  <Phone />
+                  {siteConfig.contact.phone}
+                </a>
+              </Button>
+              <Button asChild variant="outline" className="mt-3 w-full">
                 <Link href={publicRoutes.contact}>Kontakt</Link>
               </Button>
             </div>
@@ -277,17 +304,61 @@ export function InventoryVehicleDetail({
         </aside>
       </div>
 
-      <section className="section-space bg-surface">
-        <div className="site-container flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="eyebrow">Fahrzeugbestand</p>
-            <h2 className="section-title mt-2">Weitere Fahrzeuge</h2>
+      {relatedVehicles.length > 0 && (
+        <section className="section-space bg-surface">
+          <div className="site-container">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="eyebrow">Fahrzeugbestand</p>
+                <h2 className="section-title mt-2">Ähnliche Fahrzeuge</h2>
+              </div>
+              <Button asChild variant="link">
+                <Link href={publicRoutes.vehicles}>Alle Fahrzeuge ansehen</Link>
+              </Button>
+            </div>
+            <div className="mt-7 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {relatedVehicles.map(({ vehicle: relatedVehicle, images }) => (
+                <VehicleCard
+                  key={relatedVehicle.id}
+                  vehicle={relatedVehicle}
+                  inventoryImages={images}
+                />
+              ))}
+            </div>
           </div>
-          <Button asChild variant="link">
-            <Link href={publicRoutes.vehicles}>Alle Fahrzeuge ansehen</Link>
+        </section>
+      )}
+
+      <div className="bg-surface fixed inset-x-0 bottom-0 z-40 grid grid-cols-[1fr_auto] gap-2 border-t p-3 lg:hidden">
+        <div>
+          <p className="text-muted-foreground text-xs">
+            {vehicle.status === "sold" ? "Verkaufspreis" : "Angebotspreis"}
+          </p>
+          <p className="font-black tracking-tight">
+            {vehicle.price === null
+              ? "Preis auf Anfrage"
+              : formatCurrency(Number(vehicle.price))}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            asChild
+            variant="outline"
+            size="icon"
+            aria-label={`Anrufen: ${siteConfig.contact.phone}`}
+          >
+            <a href={phoneHref}>
+              <Phone />
+            </a>
+          </Button>
+          <Button asChild variant="accent">
+            <Link href={contactHref}>
+              <Mail />
+              {contactLabel}
+            </Link>
           </Button>
         </div>
-      </section>
+      </div>
     </>
   );
 }

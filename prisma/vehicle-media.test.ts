@@ -226,6 +226,11 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         error instanceof Error && error.name === "AuthorizationError",
     );
     await assert.rejects(
+      mutations.deleteDraftVehicle({ invalid: true }),
+      (error: unknown) =>
+        error instanceof Error && error.name === "AuthorizationError",
+    );
+    await assert.rejects(
       mutations.bulkTransitionVehicles({ invalid: true }),
       (error: unknown) =>
         error instanceof Error && error.name === "AuthorizationError",
@@ -1216,6 +1221,131 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         bucketAccess: "private",
         publicApprovedAt: null,
       })),
+    );
+  });
+
+  it("deletes only confirmed never-published drafts and retains their media assets", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset();
+    const draft = await createDraft([imageId]);
+
+    await assert.rejects(
+      mutations.deleteDraftVehicle({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version,
+        confirmPermanently: false,
+      }),
+      (error: unknown) => error instanceof ZodError,
+    );
+    await assert.rejects(
+      mutations.deleteDraftVehicle({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version + 1,
+        confirmPermanently: true,
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+
+    const deleted = await mutations.deleteDraftVehicle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: draft.version,
+      confirmPermanently: true,
+    });
+    assert.deepEqual(deleted, {
+      vehicleId: draft.vehicleId,
+      deleted: true,
+    });
+    assert.equal(
+      await prisma.vehicle.count({ where: { id: draft.vehicleId } }),
+      0,
+    );
+    assert.equal(
+      await prisma.vehicleChange.count({
+        where: { vehicleId: draft.vehicleId },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.vehicleMedia.count({
+        where: { mediaAssetId: imageId },
+      }),
+      0,
+    );
+    assert.equal(await prisma.mediaAsset.count({ where: { id: imageId } }), 1);
+  });
+
+  it("rejects deletion of missing, archived, published, or previously published vehicles", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const missingId = `missing-${randomUUID()}`;
+    await assert.rejects(
+      mutations.deleteDraftVehicle({
+        vehicleId: missingId,
+        expectedVersion: 1,
+        confirmPermanently: true,
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 404,
+    );
+
+    const archivedDraft = await createDraft();
+    await prisma.vehicle.update({
+      where: { id: archivedDraft.vehicleId },
+      data: { status: "archived" },
+    });
+    await assert.rejects(
+      mutations.deleteDraftVehicle({
+        vehicleId: archivedDraft.vehicleId,
+        expectedVersion: archivedDraft.version,
+        confirmPermanently: true,
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+
+    const publishedDraft = await createDraft();
+    await prisma.vehicle.update({
+      where: { id: publishedDraft.vehicleId },
+      data: { publishedAt: new Date() },
+    });
+    await assert.rejects(
+      mutations.deleteDraftVehicle({
+        vehicleId: publishedDraft.vehicleId,
+        expectedVersion: publishedDraft.version,
+        confirmPermanently: true,
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+
+    const historicDraft = await createDraft();
+    await prisma.vehicleChange.updateMany({
+      where: { vehicleId: historicDraft.vehicleId },
+      data: { status: "published" },
+    });
+    await assert.rejects(
+      mutations.deleteDraftVehicle({
+        vehicleId: historicDraft.vehicleId,
+        expectedVersion: historicDraft.version,
+        confirmPermanently: true,
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
     );
   });
 

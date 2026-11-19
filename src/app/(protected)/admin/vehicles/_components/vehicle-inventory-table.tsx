@@ -109,6 +109,10 @@ const duplicateMutationResponseSchema = z.strictObject({
   stockNumber: z.string().min(1),
   slug: z.string().min(1),
 });
+const deleteMutationResponseSchema = z.strictObject({
+  vehicleId: z.string().min(1),
+  deleted: z.literal(true),
+});
 const bulkLifecycleResponseSchema = z.strictObject({
   status: z.enum(["sold", "archived"]),
   succeeded: z.array(
@@ -228,6 +232,14 @@ export function VehicleInventoryTable({
 
   const updatePage = (nextPage: number) => {
     updateSearchParams({ page: nextPage === 1 ? null : String(nextPage) });
+  };
+
+  const removeDeletedVehicleFromSelection = (vehicleId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      next.delete(vehicleId);
+      return next;
+    });
   };
 
   const openBulkAction = (action: "sold" | "archived") => {
@@ -565,7 +577,12 @@ export function VehicleInventoryTable({
                     {formatDateTime(vehicle.updatedAt)}
                   </TableCell>
                   <TableCell className="px-3 text-right">
-                    <VehicleRowActions vehicle={vehicle} />
+                    <VehicleRowActions
+                      vehicle={vehicle}
+                      onDeleted={() =>
+                        removeDeletedVehicleFromSelection(vehicle.id)
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -735,7 +752,13 @@ function SortableHead({
   );
 }
 
-function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
+function VehicleRowActions({
+  vehicle,
+  onDeleted,
+}: {
+  vehicle: StaffInventoryVehicleDTO;
+  onDeleted: () => void;
+}) {
   const title = `${vehicle.make} ${vehicle.model}`;
   const [lifecycleAction, setLifecycleAction] = useState<
     "sold" | "archived" | null
@@ -743,6 +766,8 @@ function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
   const [isChangingLifecycle, setIsChangingLifecycle] = useState(false);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   const confirmLifecycleAction = async () => {
@@ -843,6 +868,53 @@ function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
     }
   };
 
+  const confirmDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/admin/vehicles/${encodeURIComponent(vehicle.id)}`,
+        {
+          method: "DELETE",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expectedVersion: vehicle.version,
+            confirmPermanently: true,
+          }),
+        },
+      );
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const parsedError = lifecycleMutationErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not delete the vehicle.",
+        );
+      }
+
+      const result = deleteMutationResponseSchema.parse(payload);
+      if (result.vehicleId !== vehicle.id) {
+        throw new Error("The server returned an unexpected vehicle.");
+      }
+      setIsDeleteDialogOpen(false);
+      onDeleted();
+      toast.success(
+        `${vehicle.stockNumber} deleted. Its media assets remain in the Media Library.`,
+      );
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not delete the vehicle.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -876,6 +948,12 @@ function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
             <Copy />
             Duplicate
           </DropdownMenuItem>
+          {vehicle.status === "draft" && vehicle.publishedAt === null && (
+            <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)}>
+              <Trash2 />
+              Delete permanently
+            </DropdownMenuItem>
+          )}
           {["published", "reserved"].includes(vehicle.status) && (
             <DropdownMenuItem onSelect={() => setLifecycleAction("sold")}>
               <BadgeCheck />
@@ -966,6 +1044,43 @@ function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
               onClick={() => void confirmDuplicate()}
             >
               {isDuplicating ? "Creating…" : "Create draft copy"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setIsDeleteDialogOpen(false);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {title} permanently?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the never-published draft and its status
+              history. Attached media assets remain in the Media Library.
+              Previously published vehicles cannot be deleted, and linked
+              records are never deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isDeleting}
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => void confirmDelete()}
+            >
+              {isDeleting ? "Deleting…" : "Delete draft permanently"}
             </Button>
           </DialogFooter>
         </DialogContent>

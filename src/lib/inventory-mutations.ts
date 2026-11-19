@@ -177,6 +177,12 @@ export const duplicateVehicleMutationSchema = z.strictObject({
   expectedVersion: z.number().int().min(1).max(2_147_483_647),
 });
 
+export const deleteVehicleMutationSchema = z.strictObject({
+  vehicleId: inventoryIdSchema,
+  expectedVersion: z.number().int().min(1).max(2_147_483_647),
+  confirmPermanently: z.literal(true),
+});
+
 export const publishVehicleSchema = vehicleDraftFieldsSchema
   .extend({
     mediaAssetIds: mediaAssetIdsSchema,
@@ -722,6 +728,85 @@ export async function duplicateVehicle(input: unknown) {
   } catch (error) {
     if (error instanceof InventoryMutationError) {
       throw error;
+    }
+    prismaMutationError(error);
+  }
+}
+
+export async function deleteDraftVehicle(input: unknown) {
+  await requireSession();
+  const { vehicleId, expectedVersion } =
+    deleteVehicleMutationSchema.parse(input);
+
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const current = await tx.vehicle.findUnique({
+          where: { id: vehicleId },
+          select: {
+            version: true,
+            status: true,
+            publishedAt: true,
+            changes: {
+              where: {
+                OR: [{ status: "published" }, { previousStatus: "published" }],
+              },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        });
+        if (!current) {
+          throw new InventoryMutationError(404, "Vehicle was not found.");
+        }
+        if (current.version !== expectedVersion) {
+          throw new InventoryMutationError(
+            409,
+            "The vehicle changed since it was loaded. Reload it before deleting.",
+          );
+        }
+        if (
+          current.status !== "draft" ||
+          current.publishedAt !== null ||
+          current.changes.length > 0
+        ) {
+          throw new InventoryMutationError(
+            409,
+            "Only never-published draft vehicles can be permanently deleted. Archive published vehicles instead.",
+          );
+        }
+
+        await tx.vehicleChange.deleteMany({ where: { vehicleId } });
+        const deleted = await tx.vehicle.deleteMany({
+          where: {
+            id: vehicleId,
+            version: expectedVersion,
+            status: "draft",
+            publishedAt: null,
+          },
+        });
+        if (deleted.count !== 1) {
+          throw new InventoryMutationError(
+            409,
+            "The vehicle changed since it was loaded. Reload it before deleting.",
+          );
+        }
+        return { vehicleId, deleted: true as const };
+      },
+      { isolationLevel: "Serializable" },
+    );
+  } catch (error) {
+    if (error instanceof InventoryMutationError) {
+      throw error;
+    }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      throw new InventoryMutationError(
+        409,
+        "This vehicle has linked records and cannot be permanently deleted.",
+      );
     }
     prismaMutationError(error);
   }

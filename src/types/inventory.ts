@@ -75,6 +75,11 @@ export interface StaffInventoryVehicleDTO extends InventoryVehicleDTO {
   version: number;
 }
 
+export interface InventoryDashboardSummaryDTO {
+  total: number;
+  statusCounts: Record<VehicleStatus, number>;
+}
+
 export type PublicVehicleMetadataDTO = Pick<
   PublicInventoryVehicleDTO,
   | "id"

@@ -13,6 +13,7 @@ import {
   getPrivateMediaBucket,
   getPublicMediaBucket,
 } from "../src/lib/media-storage.ts";
+import type { InventoryDashboardSummaryDTO } from "../src/types/inventory.ts";
 import { ZodError } from "zod";
 import { createMediaTestDatabase } from "./media-test-client.ts";
 
@@ -150,6 +151,17 @@ function isAnonymousAuthorizationFailure(error: unknown) {
     "status" in error &&
     error.status === 401
   );
+}
+
+function summaryAfterStatusChange(
+  summary: InventoryDashboardSummaryDTO,
+  from: keyof InventoryDashboardSummaryDTO["statusCounts"],
+  to: keyof InventoryDashboardSummaryDTO["statusCounts"],
+): InventoryDashboardSummaryDTO {
+  const statusCounts = { ...summary.statusCounts };
+  statusCounts[from] -= 1;
+  statusCounts[to] += 1;
+  return { total: summary.total, statusCounts };
 }
 
 describe("vehicle media persistence on isolated Neon resources", () => {
@@ -2009,5 +2021,280 @@ describe("vehicle media persistence on isolated Neon resources", () => {
       }),
       0,
     );
+  });
+
+  it("refreshes public detail data and dashboard counts after committed mutations", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const initialSummary = await queries.getInventoryDashboardSummary();
+    const imageId = await createImageAsset({ publicRead: true });
+    const draft = await createDraft([imageId]);
+    const afterCreate = await queries.getInventoryDashboardSummary();
+    assert.deepEqual(afterCreate, {
+      total: initialSummary.total + 1,
+      statusCounts: {
+        ...initialSummary.statusCounts,
+        draft: initialSummary.statusCounts.draft + 1,
+      },
+    });
+    const storedDraft = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    assert.equal(
+      (await queries.resolvePublicVehicleDetail(storedDraft.slug)).kind,
+      "ineligible",
+    );
+
+    let expectedSummary = afterCreate;
+    const edited = await mutations.updateVehicle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: draft.version,
+      make: "Propagation Skoda",
+    });
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+
+    const published = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: draft.vehicleId,
+        expectedVersion: edited.version,
+        stockNumber: storedDraft.stockNumber,
+        slug: storedDraft.slug,
+        make: "Propagation Skoda",
+        mediaAssetIds: [imageId],
+      }),
+    );
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "draft",
+      "published",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    let detail = await queries.resolvePublicVehicleDetail(storedDraft.slug);
+    assert.equal(detail.kind, "visible");
+    if (detail.kind === "visible") {
+      assert.equal(detail.vehicle.status, "published");
+      assert.equal(detail.vehicle.make, "Propagation Skoda");
+    }
+
+    await assert.rejects(
+      mutations.transitionVehicleLifecycle({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version,
+        status: "reserved",
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+
+    const reserved = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: published.version,
+      status: "reserved",
+    });
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "published",
+      "reserved",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    detail = await queries.resolvePublicVehicleDetail(storedDraft.slug);
+    assert.equal(detail.kind, "visible");
+    if (detail.kind === "visible") {
+      assert.equal(detail.vehicle.status, "reserved");
+      assert.equal(detail.vehicle.isAvailable, false);
+    }
+
+    const released = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: reserved.version,
+      status: "published",
+    });
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "reserved",
+      "published",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    detail = await queries.resolvePublicVehicleDetail(storedDraft.slug);
+    assert.equal(detail.kind, "visible");
+    if (detail.kind === "visible") {
+      assert.equal(detail.vehicle.status, "published");
+      assert.equal(detail.vehicle.isAvailable, true);
+    }
+
+    const reservedAgain = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: released.version,
+      status: "reserved",
+    });
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "published",
+      "reserved",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    const sold = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: reservedAgain.version,
+      status: "sold",
+    });
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "reserved",
+      "sold",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    detail = await queries.resolvePublicVehicleDetail(storedDraft.slug);
+    assert.equal(detail.kind, "visible");
+    if (detail.kind === "visible") {
+      assert.equal(detail.vehicle.status, "sold");
+      assert.equal(detail.vehicle.isAvailable, false);
+    }
+
+    const archived = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: sold.version,
+      status: "archived",
+    });
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "sold",
+      "archived",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    assert.equal(
+      (await queries.resolvePublicVehicleDetail(storedDraft.slug)).kind,
+      "ineligible",
+    );
+
+    const duplicate = await mutations.duplicateVehicle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: archived.version,
+    });
+    const afterDuplicate = await queries.getInventoryDashboardSummary();
+    assert.deepEqual(afterDuplicate, {
+      total: expectedSummary.total + 1,
+      statusCounts: {
+        ...expectedSummary.statusCounts,
+        draft: expectedSummary.statusCounts.draft + 1,
+      },
+    });
+    await mutations.deleteDraftVehicle({
+      vehicleId: duplicate.vehicleId,
+      expectedVersion: duplicate.version,
+      confirmPermanently: true,
+    });
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+
+    const bulkImageId = await createImageAsset({ publicRead: true });
+    const bulkDraft = await createDraft([bulkImageId]);
+    expectedSummary = {
+      total: expectedSummary.total + 1,
+      statusCounts: {
+        ...expectedSummary.statusCounts,
+        draft: expectedSummary.statusCounts.draft + 1,
+      },
+    };
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    const bulkDraftDetails = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: bulkDraft.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const bulkPublished = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: bulkDraft.vehicleId,
+        expectedVersion: bulkDraft.version,
+        stockNumber: bulkDraftDetails.stockNumber,
+        slug: bulkDraftDetails.slug,
+        mediaAssetIds: [bulkImageId],
+      }),
+    );
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "draft",
+      "published",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    const bulkSold = await mutations.bulkTransitionVehicles({
+      ids: [bulkDraft.vehicleId],
+      status: "sold",
+    });
+    assert.deepEqual(bulkSold.succeeded, [
+      { vehicleId: bulkDraft.vehicleId, changed: true },
+    ]);
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "published",
+      "sold",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    detail = await queries.resolvePublicVehicleDetail(bulkDraftDetails.slug);
+    assert.equal(detail.kind, "visible");
+    if (detail.kind === "visible") {
+      assert.equal(detail.vehicle.status, "sold");
+      assert.equal(detail.vehicle.isAvailable, false);
+    }
+
+    const bulkArchived = await mutations.bulkTransitionVehicles({
+      ids: [bulkDraft.vehicleId],
+      status: "archived",
+    });
+    assert.deepEqual(bulkArchived.succeeded, [
+      { vehicleId: bulkDraft.vehicleId, changed: true },
+    ]);
+    expectedSummary = summaryAfterStatusChange(
+      expectedSummary,
+      "sold",
+      "archived",
+    );
+    assert.deepEqual(
+      await queries.getInventoryDashboardSummary(),
+      expectedSummary,
+    );
+    assert.equal(
+      (await queries.resolvePublicVehicleDetail(bulkDraftDetails.slug)).kind,
+      "ineligible",
+    );
+    assert.equal(bulkPublished.created, false);
   });
 });

@@ -1,22 +1,14 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  BadgeCheck,
-  CarFront,
-  Inbox,
-} from "lucide-react";
+import { ArrowRight, BadgeCheck, CarFront, Inbox } from "lucide-react";
 
-import { adminLeads, adminVehicles } from "@/data/admin";
-import type {
-  AdminLead,
-  AdminVehicleStatus,
-} from "@/types/admin";
+import { adminLeads } from "@/data/admin";
+import type { AdminLead, AdminVehicleStatus } from "@/types/admin";
+import type { InventoryDashboardSummaryDTO } from "@/types/inventory";
 import { adminRoutes } from "@/config/admin-routes.config";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -43,14 +35,23 @@ const statusLabels: Record<AdminVehicleStatus, string> = {
   archived: "Archived",
 };
 
-export function DashboardOverview() {
-  const soldVehicles = adminVehicles.filter(
-    (vehicle) => vehicle.status === "sold",
-  );
+const vehicleStatuses: AdminVehicleStatus[] = [
+  "draft",
+  "published",
+  "reserved",
+  "sold",
+  "archived",
+];
+
+export function DashboardOverview({
+  inventorySummary,
+}: {
+  inventorySummary: InventoryDashboardSummaryDTO;
+}) {
   const stats = [
     {
       label: "Inventory",
-      value: integer.format(adminVehicles.length),
+      value: integer.format(inventorySummary.total),
       helper: "Vehicles tracked in admin",
       Icon: CarFront,
       tone: "primary",
@@ -64,7 +65,7 @@ export function DashboardOverview() {
     },
     {
       label: "Sold vehicles",
-      value: integer.format(soldVehicles.length),
+      value: integer.format(inventorySummary.statusCounts.sold),
       helper: "Closed inventory records",
       Icon: BadgeCheck,
       tone: "warning",
@@ -94,13 +95,13 @@ export function DashboardOverview() {
               <Icon className="size-5" aria-hidden="true" />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-bold text-muted-foreground">
+              <span className="text-muted-foreground block truncate text-sm font-bold">
                 {label}
               </span>
               <strong className="mt-1 block truncate text-2xl tracking-tight">
                 {value}
               </strong>
-              <span className="mt-1 block truncate text-xs text-muted-foreground">
+              <span className="text-muted-foreground mt-1 block truncate text-xs">
                 {helper}
               </span>
             </span>
@@ -112,7 +113,7 @@ export function DashboardOverview() {
         <RecentLeads leads={recentLeads} />
       </section>
 
-      <InventorySummary />
+      <InventorySummary inventorySummary={inventorySummary} />
     </div>
   );
 }
@@ -142,7 +143,7 @@ function RecentLeads({ leads }: { leads: AdminLead[] }) {
                 <TableCell className="px-3">
                   <div className="min-w-0">
                     <p className="truncate font-bold">{lead.customerName}</p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="text-muted-foreground truncate text-xs">
                       {lead.customerEmail}
                     </p>
                   </div>
@@ -152,7 +153,7 @@ function RecentLeads({ leads }: { leads: AdminLead[] }) {
                     {lead.source}
                   </Badge>
                 </TableCell>
-                <TableCell className="px-3 text-right text-xs font-bold text-muted-foreground">
+                <TableCell className="text-muted-foreground px-3 text-right text-xs font-bold">
                   {formatDateTime(lead.createdAt)}
                 </TableCell>
               </TableRow>
@@ -164,12 +165,16 @@ function RecentLeads({ leads }: { leads: AdminLead[] }) {
   );
 }
 
-function InventorySummary() {
-  const statusCounts = Object.keys(statusLabels).map((status) => ({
-    status: status as AdminVehicleStatus,
-    count: adminVehicles.filter((vehicle) => vehicle.status === status).length,
+function InventorySummary({
+  inventorySummary,
+}: {
+  inventorySummary: InventoryDashboardSummaryDTO;
+}) {
+  const statusCounts = vehicleStatuses.map((status) => ({
+    status,
+    count: inventorySummary.statusCounts[status],
   }));
-  const total = adminVehicles.length;
+  const total = inventorySummary.total;
 
   return (
     <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
@@ -180,18 +185,19 @@ function InventorySummary() {
       />
       <div className="mt-4 grid gap-3 lg:grid-cols-5">
         {statusCounts.map(({ status, count }) => {
-          const percentage = Math.round((count / total) * 100);
+          const percentage =
+            total === 0 ? 0 : Math.round((count / total) * 100);
 
           return (
             <div
               key={status}
-              className="rounded-[var(--radius-sm)] border bg-background p-3"
+              className="bg-background rounded-[var(--radius-sm)] border p-3"
             >
               <div className="flex items-center justify-between gap-3">
                 <StatusBadge status={status} />
                 <span className="text-sm font-extrabold">{count}</span>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
+              <div className="bg-secondary mt-3 h-2 overflow-hidden rounded-full">
                 <div
                   className={cn(
                     "h-full rounded-full",
@@ -204,29 +210,12 @@ function InventorySummary() {
                   style={{ width: `${percentage}%` }}
                 />
               </div>
-              <p className="mt-2 text-xs font-bold text-muted-foreground">
+              <p className="text-muted-foreground mt-2 text-xs font-bold">
                 {percentage}% of inventory
               </p>
             </div>
           );
         })}
-      </div>
-      <Separator className="my-4" />
-      <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-        <p>
-          <strong className="text-foreground">
-            {integer.format(adminVehicles.reduce((sum, item) => sum + item.views, 0))}
-          </strong>{" "}
-          total vehicle views
-        </p>
-        <p>
-          <strong className="text-foreground">
-            {integer.format(
-              adminVehicles.reduce((sum, item) => sum + item.inquiries, 0),
-            )}
-          </strong>{" "}
-          inventory inquiries
-        </p>
       </div>
     </Card>
   );
@@ -245,7 +234,7 @@ function SectionHeading({
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h2 className="text-base font-extrabold">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground mt-1 text-sm">{description}</p>
       </div>
       <Button asChild variant="link" className="h-auto text-sm">
         <Link href={href}>
@@ -266,8 +255,7 @@ function StatusBadge({ status }: { status: AdminVehicleStatus }) {
         status === "reserved" && "bg-warning/10 text-warning",
         status === "sold" && "bg-info/10 text-info",
         status === "draft" && "bg-accent/10 text-accent",
-        status === "archived" &&
-          "bg-muted text-muted-foreground dark:bg-muted",
+        status === "archived" && "bg-muted text-muted-foreground dark:bg-muted",
       )}
     >
       {statusLabels[status]}

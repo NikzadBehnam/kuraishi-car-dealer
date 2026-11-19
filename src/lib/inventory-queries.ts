@@ -10,6 +10,7 @@ import {
 } from "../generated/prisma/client.ts";
 import type {
   InventoryPageDTO,
+  InventoryDashboardSummaryDTO,
   PublicInventoryVehicleDTO,
   PublicVehicleDetailResolution,
   PublicVehicleInquiryDTO,
@@ -214,6 +215,28 @@ export async function listStaffVehicles(
   return {
     ...result,
     items: result.items.map(serializeStaffVehicle),
+  };
+}
+
+export async function getInventoryDashboardSummary(): Promise<InventoryDashboardSummaryDTO> {
+  await requireSession();
+  const grouped = await prisma.vehicle.groupBy({
+    by: ["status"],
+    _count: { _all: true },
+  });
+  const statusCounts: InventoryDashboardSummaryDTO["statusCounts"] = {
+    draft: 0,
+    published: 0,
+    reserved: 0,
+    sold: 0,
+    archived: 0,
+  };
+  for (const { status, _count } of grouped) {
+    statusCounts[status] = _count._all;
+  }
+  return {
+    total: Object.values(statusCounts).reduce((sum, count) => sum + count, 0),
+    statusCounts,
   };
 }
 

@@ -159,6 +159,38 @@ describe("isolated inventory migration", { concurrency: false }, () => {
     }
   });
 
+  it("initializes dealership settings from explicit schema defaults", async () => {
+    await withVehicle(async (tx, id) => {
+      const { dealer } = await tx.vehicle.findUniqueOrThrow({
+        where: { id },
+        select: {
+          dealer: {
+            select: {
+              shortName: true,
+              websiteUrl: true,
+              phone: true,
+              email: true,
+              street: true,
+              postalCode: true,
+              city: true,
+              country: true,
+              version: true,
+            },
+          },
+        },
+      });
+      assert.equal(dealer.shortName, "Kuraishi");
+      assert.equal(dealer.websiteUrl, "https://www.kuraishi-autohandel.at");
+      assert.equal(dealer.phone, "+43 664 123 45 67");
+      assert.equal(dealer.email, "office@kuraishi-autohandel.at");
+      assert.equal(dealer.street, "Treustraße 57/4/3");
+      assert.equal(dealer.postalCode, "1200");
+      assert.equal(dealer.city, "Wien");
+      assert.equal(dealer.country, "Österreich");
+      assert.equal(dealer.version, 1);
+    });
+  });
+
   it("round-trips incomplete drafts, exact money and explicit technical units", async () => {
     await withVehicle(async (tx, id) => {
       const draft = await tx.vehicle.findUniqueOrThrow({ where: { id } });

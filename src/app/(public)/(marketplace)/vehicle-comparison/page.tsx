@@ -3,11 +3,13 @@ import { ComparisonTable } from "./_components/vehicle-comparison-table";
 import { publicRoutes } from "@/config/routes.config";
 import { createPublicMetadata } from "@/lib/metadata";
 
-export const metadata = createPublicMetadata(
-  "Fahrzeugvergleich",
-  "Bis zu drei Fahrzeuge direkt miteinander vergleichen.",
-  publicRoutes.comparison,
-);
+export async function generateMetadata() {
+  return createPublicMetadata(
+    "Fahrzeugvergleich",
+    "Bis zu drei Fahrzeuge direkt miteinander vergleichen.",
+    publicRoutes.comparison,
+  );
+}
 export default function ComparisonPage() {
   return (
     <>

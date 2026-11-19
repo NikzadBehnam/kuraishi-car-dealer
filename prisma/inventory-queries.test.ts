@@ -22,6 +22,7 @@ import {
   getPublicVehicleWhere,
 } from "../src/lib/inventory-eligibility.ts";
 import { getPublicVehicleVisibility } from "../src/lib/inventory-policy.ts";
+import { getTrustedOrigins } from "../src/lib/trusted-origins.ts";
 import { filterVehicles } from "../src/lib/vehicle-filters.ts";
 import {
   importInventoryFixtures,
@@ -64,8 +65,11 @@ const queryClient = prisma.$extends({
   },
 });
 let queries: typeof import("../src/lib/inventory-queries.ts");
+let dealershipSettings: typeof import("../src/lib/dealership-settings.ts");
 let dbMock: ReturnType<typeof mock.module> | undefined;
 let sessionMock: ReturnType<typeof mock.module> | undefined;
+let cacheMock: ReturnType<typeof mock.module> | undefined;
+let revalidatedPath: string | undefined;
 
 async function deleteImportedTestRows(tx: Prisma.TransactionClient) {
   await tx.vehicleChange.deleteMany({ where: { vehicle: importedTestRows } });
@@ -165,12 +169,21 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         requireSession: async () => assertAuthenticatedSession(session),
       },
     });
+    cacheMock = mock.module("next/cache", {
+      namedExports: {
+        revalidatePath: (path: string, type?: string) => {
+          revalidatedPath = type ? `${path}:${type}` : path;
+        },
+      },
+    });
     queries = await import("../src/lib/inventory-queries.ts");
+    dealershipSettings = await import("../src/lib/dealership-settings.ts");
   });
 
   beforeEach(() => {
     session = null;
     databaseFailure = undefined;
+    revalidatedPath = undefined;
   });
 
   after(async () => {
@@ -202,6 +215,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     } finally {
       dbMock?.restore();
       sessionMock?.restore();
+      cacheMock?.restore();
       await prisma.$disconnect();
     }
   });
@@ -1324,6 +1338,79 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     assert.equal(
       await prisma.dealer.count({ where: { id: `missing-${prefix}` } }),
       0,
+    );
+  });
+
+  it("saves dealership settings for staff with validation, conflict and public refresh", async () => {
+    const publicSettings =
+      await dealershipSettings.getPublicDealershipSettings();
+    assert.equal(publicSettings.name, "Query test dealership");
+    assert.equal(Object.hasOwn(publicSettings, "version"), false);
+
+    await assert.rejects(
+      dealershipSettings.getAdminDealershipSettings(),
+      AuthorizationError,
+    );
+    const denied = await dealershipSettings.updateDealershipSettings({
+      ...publicSettings,
+      expectedVersion: 1,
+    });
+    assert.equal(denied.ok, false);
+    if (!denied.ok) {
+      assert.equal(denied.kind, "unauthorized");
+    }
+
+    session = { user: { role: "user" } };
+    const current = await dealershipSettings.getAdminDealershipSettings();
+    const { version, ...fields } = current;
+    const invalid = await dealershipSettings.updateDealershipSettings({
+      ...fields,
+      email: "invalid",
+      expectedVersion: version,
+    });
+    assert.equal(invalid.ok, false);
+    if (!invalid.ok) {
+      assert.equal(invalid.kind, "invalid");
+    }
+
+    const saved = await dealershipSettings.updateDealershipSettings({
+      ...fields,
+      name: "Updated query test dealership",
+      websiteUrl: "https://business.example",
+      expectedVersion: version,
+    });
+    assert.equal(saved.ok, true);
+    if (!saved.ok) {
+      throw new Error("Valid dealership settings must save.");
+    }
+    assert.equal(saved.settings.version, version + 1);
+    assert.equal(saved.settings.name, "Updated query test dealership");
+    assert.equal(saved.settings.websiteUrl, "https://business.example");
+    assert.equal(revalidatedPath, "/:layout");
+    assert.deepEqual(getTrustedOrigins(true), ["https://www.kuraishicars.com"]);
+
+    const refreshedPublicSettings =
+      await dealershipSettings.getPublicDealershipSettings();
+    assert.equal(refreshedPublicSettings.name, saved.settings.name);
+    assert.equal(refreshedPublicSettings.websiteUrl, saved.settings.websiteUrl);
+
+    const stale = await dealershipSettings.updateDealershipSettings({
+      ...fields,
+      expectedVersion: version,
+    });
+    assert.equal(stale.ok, false);
+    if (!stale.ok) {
+      assert.equal(stale.kind, "conflict");
+    }
+
+    const failure = new Error("Settings database unavailable.");
+    databaseFailure = failure;
+    await assert.rejects(
+      dealershipSettings.updateDealershipSettings({
+        ...fields,
+        expectedVersion: saved.settings.version,
+      }),
+      (error) => error === failure,
     );
   });
 

@@ -1,7 +1,15 @@
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { legalContent } from "@/content/de/legal-pages";
-export function LegalPage({ title }: { title: string }) {
+import type { PublicDealershipDTO } from "@/types/dealership-settings";
+
+export function LegalPage({
+  title,
+  dealership,
+}: {
+  title: string;
+  dealership?: PublicDealershipDTO;
+}) {
   return (
     <>
       <PageHeader
@@ -20,6 +28,22 @@ export function LegalPage({ title }: { title: string }) {
           <p className="text-muted-foreground mt-4 leading-7">
             {legalContent.body}
           </p>
+          {dealership ? (
+            <address className="mt-8 grid gap-2 not-italic">
+              <strong>{dealership.name}</strong>
+              <span>
+                {dealership.street}, {dealership.postalCode} {dealership.city},{" "}
+                {dealership.country}
+              </span>
+              <a href={`tel:${dealership.phone.replace(/[^\d+]/g, "")}`}>
+                {dealership.phone}
+              </a>
+              <a href={`mailto:${dealership.email}`}>{dealership.email}</a>
+              <a href={dealership.websiteUrl} target="_blank" rel="noreferrer">
+                {dealership.websiteUrl}
+              </a>
+            </address>
+          ) : null}
         </Card>
       </div>
     </>

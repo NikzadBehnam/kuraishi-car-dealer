@@ -7,6 +7,7 @@ import type {
   VehicleStatus,
   VehicleTransmissionType,
 } from "../generated/prisma/enums.ts";
+import type { PublicDealershipDTO } from "./dealership-settings.ts";
 
 interface InventoryVehicleDTO {
   id: string;
@@ -57,7 +58,7 @@ export interface PublicVehicleCardImageDTO {
 }
 
 export interface PublicVehicleDetailDTO extends PublicInventoryVehicleDTO {
-  dealerName: string;
+  dealer: PublicDealershipDTO;
 }
 
 export type PublicVehicleDetailResolution =

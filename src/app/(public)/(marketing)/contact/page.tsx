@@ -2,16 +2,19 @@ import { Globe, MapPin, Phone, Mail } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ContactForm } from "./_components/contact-form";
 import { Card } from "@/components/ui/card";
-import { siteConfig } from "@/config/site.config";
 import { publicRoutes } from "@/config/routes.config";
+import { getPublicDealershipSettings } from "@/lib/dealership-settings";
 import { createPublicMetadata } from "@/lib/metadata";
 
-export const metadata = createPublicMetadata(
-  "Kontakt & Termin",
-  "Persönliche Beratung und Terminvereinbarung bei Kuraishi Autohandel.",
-  publicRoutes.contact,
-);
-export default function ContactPage() {
+export async function generateMetadata() {
+  return createPublicMetadata(
+    "Kontakt & Termin",
+    "Persönliche Beratung und Terminvereinbarung beim Autohaus.",
+    publicRoutes.contact,
+  );
+}
+export default async function ContactPage() {
+  const settings = await getPublicDealershipSettings();
   return (
     <>
       <PageHeader
@@ -27,31 +30,36 @@ export default function ContactPage() {
           </div>
         </Card>
         <Card className="bg-brand-panel text-brand-panel-foreground rounded-t-none rounded-b-[15px] border-t-0 p-7 lg:rounded-l-none lg:rounded-r-[15px] lg:border-t lg:border-l-0">
-          <h2 className="section-title text-3xl">{siteConfig.name}</h2>
+          <h2 className="section-title text-3xl">{settings.name}</h2>
           <div className="text-brand-panel-muted mt-6 grid gap-4">
             <p className="flex gap-2">
               <MapPin className="size-5" />
-              {siteConfig.address.street}, {siteConfig.address.postalCode}{" "}
-              {siteConfig.address.city}, {siteConfig.address.country}
+              {settings.street}, {settings.postalCode} {settings.city},{" "}
+              {settings.country}
             </p>
             <p className="flex gap-2">
               <Phone className="size-5" />
-              {siteConfig.contact.phone}
+              {settings.phone}
             </p>
             <p className="flex gap-2">
               <Mail className="size-5" />
-              <a href={`mailto:${siteConfig.contact.email}`}>
-                {siteConfig.contact.email}
-              </a>
+              <a href={`mailto:${settings.email}`}>{settings.email}</a>
             </p>
             <p className="flex gap-2">
               <Globe className="size-5" />
-              <a href={siteConfig.url}>www.kuraishi-autohandel.at</a>
+              <a href={settings.websiteUrl} target="_blank" rel="noreferrer">
+                {settings.websiteUrl}
+              </a>
             </p>
           </div>
-          <div className="mt-7 grid min-h-60 place-items-center rounded-xl bg-white/8 font-bold">
-            Standort Wien · Route planen
-          </div>
+          <a
+            href={settings.mapUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-7 grid min-h-60 place-items-center rounded-xl bg-white/8 font-bold"
+          >
+            Route planen
+          </a>
         </Card>
       </div>
     </>

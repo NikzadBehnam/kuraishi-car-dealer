@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers implemented work on `feature/live-vehicle-comparison`, based on `backend/public-vehicle-detail` and including the integrated Sections 04-05 work:
+This guide covers implemented work on `backend/dealership-settings`, based on `feature/live-vehicle-comparison` and including the integrated Sections 04-07 work:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -9,19 +9,20 @@ This guide covers implemented work on `feature/live-vehicle-comparison`, based o
 - Section 05.01-05.06 and 05.08-05.09: live homepage/catalog inventory, bounded search, URL navigation, pagination and public eligibility.
 - Section 06.01-06.09: live public detail lookup, approved gallery media, dealership contact, similar inventory and record-derived metadata.
 - Section 07.01-07.04: anonymous live comparison selection and rendering against current eligible inventory.
+- Section 08.01-08.08: persisted dealership settings, validated admin editing, shared public business data and the approved initial-data migration.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-06 work. The user deferred the combined manual retest until later. Sections 06.10 and 07.05 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
+Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-08 work. The user deferred the combined manual retest until later. Sections 06.10, 07.05 and 08.09 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
-1. Use the Section 07 branch, not `master`:
+1. Use the Section 08 branch, not `master`:
 
    ```powershell
    git branch --show-current
    git status --short --branch
    ```
 
-   The branch should be `feature/live-vehicle-comparison`. It includes the integrated Sections 04-06 work so they can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
+   The branch should be `backend/dealership-settings`. It includes the integrated Sections 04-08 work so they can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
 2. Use Node 25.8.0, or a Node version that supports the test-runner flags in the package scripts. The machine PATH previously selected Node 14, which cannot run these scripts; Node 22.21.1 also lacked `--test-isolation=none`.
 
@@ -255,7 +256,29 @@ Use the isolated non-Production app and inventory database. The selected IDs are
    - In a safe isolated development environment only, verify a comparison query failure shows an error and retry control without clearing saved IDs. Do not simulate failures against Production.
    - Run `pnpm test` for local-storage validation/recovery coverage. Run `pnpm test:inventory-db` only after rotating the previously exposed test credential and independently confirming the target is isolated and empty; it covers bounded unique selection, current eligibility, selection ordering and database error propagation.
 
-## 10. Completion record
+## 10. Section 08 — dealership settings and shared public business data
+
+The current implementation is on `backend/dealership-settings`. Do not deploy or run its migration against Production. The inventory DB suite applies pending migrations, so first complete the credential rotation and isolated-empty-target checks in Section 1 above.
+
+1. **Automated verification**
+   - Run `pnpm typecheck`, `pnpm test`, `pnpm exec prisma validate`, and the repository lint/format checks.
+   - After the inventory test credential has been rotated and the isolated child independently confirmed empty, run `pnpm test:inventory-db`. It applies migrations and exercises settings save, public propagation, authorization, conflicts and failures. Do not run it before that safety gate.
+2. **Edit/save and validation**
+   - Sign in as ordinary staff and open Admin > Settings. Confirm the form shows the persisted dealership values.
+   - Try an invalid email, an HTTP Website URL, a non-Google Maps URL, and an overlong/control-character public value. Each should show an actionable validation error and leave stored values unchanged.
+   - Save a valid short-name or phone change. Confirm the pending state is visible, success feedback appears, and navigating away/back or refreshing retains the saved value.
+   - Open the form in two tabs. Save a change in the first tab, then submit the stale form in the second. Confirm the conflict is surfaced and the stale data is not silently written over the newer values.
+3. **Public propagation and retained configuration**
+   - Revisit the public homepage, header/footer, contact page, vehicle detail/dealer panel, marketing/legal pages and admin identity. Confirm the saved name/contact/address/map values appear consistently after refresh.
+   - Confirm additional phone numbers, opening hours and social links remain from approved static site configuration. Confirm the unverified legacy rating/review claim is not published.
+   - Confirm changing the business Website URL does not change canonical page URLs, sitemap origins, or auth trusted origins.
+4. **Access and failure behavior**
+   - Confirm an unauthenticated save is denied and ordinary authenticated staff can save permitted settings.
+   - In an isolated test environment only, verify database failures are shown as errors and do not produce success-shaped feedback. Do not induce failures or alter dealership rows in Production.
+
+Section 08.09 remains pending until isolated DB verification and the user's deferred manual retest.
+
+## 11. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 

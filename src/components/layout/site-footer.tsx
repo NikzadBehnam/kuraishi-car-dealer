@@ -5,6 +5,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { DealershipQrCode } from "@/components/layout/dealership-qr-code";
 import { routes } from "@/config/routes.config";
 import { siteConfig } from "@/config/site.config";
+import type { PublicDealershipDTO } from "@/types/dealership-settings";
 
 const vehicleLinks = [
   ["Alle Fahrzeuge", routes.vehicles],
@@ -31,48 +32,51 @@ const socialLinks = [
   { label: "YouTube", href: siteConfig.social.youtube, icon: "youtube" },
 ] as const;
 
-export function SiteFooter() {
+export function SiteFooter({ settings }: { settings: PublicDealershipDTO }) {
   return (
     <footer className="mt-20 border-t border-white/10 bg-[#0c192b] text-[#c9d3df]">
       <div className="site-container py-10 sm:py-14">
         <div className="grid gap-x-10 gap-y-9 border-b border-white/10 pb-10 sm:pb-12 md:grid-cols-2 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(18rem,0.9fr)]">
           <section className="min-w-0 md:col-span-2 lg:col-span-1">
-            <Link href={routes.home} aria-label="Kuraishi Startseite">
+            <Link
+              href={routes.home}
+              aria-label={`${settings.shortName} Startseite`}
+            >
               <BrandLogo
                 variant="full"
                 tone="dark"
+                alt={settings.name}
                 className="w-full max-w-[13rem] transition-transform duration-500 ease-out hover:scale-[1.01]"
               />
             </Link>
-            <p className="mt-4 max-w-md text-sm leading-6 text-[#aebbc9]">
-              {siteConfig.description}
+            <p className="mt-4 text-sm font-bold text-white">
+              {settings.tagline}
+            </p>
+            <p className="mt-2 max-w-md text-sm leading-6 text-[#aebbc9]">
+              {settings.description}
             </p>
             <address className="mt-6 grid gap-5 text-sm not-italic sm:grid-cols-2 lg:grid-cols-1">
               <div className="grid content-start gap-3">
-                <ContactLink href={siteConfig.mapUrl} icon={MapPin} external>
-                  {siteConfig.address.street}, {siteConfig.address.postalCode}{" "}
-                  {siteConfig.address.city}, {siteConfig.address.country}
+                <ContactLink href={settings.mapUrl} icon={MapPin} external>
+                  {settings.street}, {settings.postalCode} {settings.city},{" "}
+                  {settings.country}
                 </ContactLink>
-                <ContactLink
-                  href={`mailto:${siteConfig.contact.email}`}
-                  icon={Mail}
-                >
-                  {siteConfig.contact.email}
+                <ContactLink href={`mailto:${settings.email}`} icon={Mail}>
+                  {settings.email}
                 </ContactLink>
               </div>
               <div className="grid content-start gap-3">
-                {[
-                  siteConfig.contact.phone,
-                  ...siteConfig.contact.additionalPhones,
-                ].map((phone) => (
-                  <ContactLink
-                    key={phone}
-                    href={`tel:${phone.replace(/\s/g, "")}`}
-                    icon={Phone}
-                  >
-                    {phone}
-                  </ContactLink>
-                ))}
+                {[settings.phone, ...siteConfig.contact.additionalPhones].map(
+                  (phone) => (
+                    <ContactLink
+                      key={phone}
+                      href={`tel:${phone.replace(/\s/g, "")}`}
+                      icon={Phone}
+                    >
+                      {phone}
+                    </ContactLink>
+                  ),
+                )}
               </div>
             </address>
           </section>
@@ -81,7 +85,7 @@ export function SiteFooter() {
             <FooterGroup title="Fahrzeuge" links={vehicleLinks} />
             <FooterGroup title="Unternehmen" links={companyLinks} />
           </div>
-          <DealershipQrCode />
+          <DealershipQrCode settings={settings} />
         </div>
 
         <div className="flex flex-col gap-6 pt-7 md:flex-row md:items-center md:justify-between">
@@ -117,7 +121,7 @@ export function SiteFooter() {
         </div>
 
         <p className="mt-7 border-t border-white/10 pt-6 text-xs text-[#8fa0b2]">
-          © {new Date().getFullYear()} {siteConfig.name}. Alle Fahrzeugangaben
+          © {new Date().getFullYear()} {settings.name}. Alle Fahrzeugangaben
           sind unverbindlich.
         </p>
       </div>

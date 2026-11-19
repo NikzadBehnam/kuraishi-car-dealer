@@ -5,11 +5,13 @@ import { Card } from "@/components/ui/card";
 import { publicRoutes } from "@/config/routes.config";
 import { createPublicMetadata } from "@/lib/metadata";
 
-export const metadata = createPublicMetadata(
-  "Services",
-  "Services rund um Fahrzeugkauf, Fahrzeugankauf und Werkstatt.",
-  publicRoutes.services,
-);
+export async function generateMetadata() {
+  return createPublicMetadata(
+    "Services",
+    "Services rund um Fahrzeugkauf, Fahrzeugankauf und Werkstatt.",
+    publicRoutes.services,
+  );
+}
 const services = [
   "Inzahlungnahme",
   "Fahrzeugankauf",

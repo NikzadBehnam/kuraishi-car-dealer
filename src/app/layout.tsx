@@ -11,12 +11,13 @@ const jetBrainsMono = JetBrains_Mono({
   display: "swap",
 });
 export const metadata: Metadata = {
-  metadataBase: new URL(siteConfig.url),
-  title: { default: siteConfig.name, template: `%s | ${siteConfig.name}` },
-  description: siteConfig.description,
+  metadataBase: new URL(siteConfig.canonicalOrigin),
+  title: {
+    default: siteConfig.brandName,
+    template: `%s | ${siteConfig.brandName}`,
+  },
   openGraph: {
-    title: siteConfig.name,
-    description: siteConfig.description,
+    title: siteConfig.brandName,
     type: "website",
     locale: "de_AT",
   },

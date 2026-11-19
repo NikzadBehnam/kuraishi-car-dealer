@@ -10,6 +10,7 @@ interface BrandLogoProps {
   tone?: LogoTone;
   className?: string;
   priority?: boolean;
+  alt?: string;
 }
 
 const dimensions = {
@@ -22,6 +23,7 @@ export function BrandLogo({
   tone = "auto",
   className,
   priority = false,
+  alt = "Kuraishi Autohandel e.U.",
 }: BrandLogoProps) {
   const { width, height } = dimensions[variant];
   const imageClassName = "h-auto w-full";
@@ -35,7 +37,7 @@ export function BrandLogo({
         sizes="(max-width: 640px) 9rem, 15rem"
         className={cn(imageClassName, className)}
         priority={priority}
-        alt="Kuraishi Autohandel e.U."
+        alt={alt}
       />
     );
   }
@@ -49,7 +51,7 @@ export function BrandLogo({
         sizes="(max-width: 640px) 9rem, 15rem"
         className={`${imageClassName} brand-logo-light`}
         priority={priority}
-        alt="Kuraishi Autohandel e.U."
+        alt={alt}
       />
       <Image
         src={`/images/brand/kuraishi-${variant}-dark.png`}

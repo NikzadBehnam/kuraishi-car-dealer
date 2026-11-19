@@ -37,6 +37,10 @@ import {
 } from "./inventory-eligibility.ts";
 import { getPublicVehicleVisibility } from "./inventory-policy.ts";
 import {
+  publicDealershipSelect,
+  serializePublicDealership,
+} from "./dealership-settings.ts";
+import {
   inventoryIdSchema,
   inventoryPaginationInputSchema,
   inventoryPaginationSchema,
@@ -318,7 +322,7 @@ export async function resolvePublicVehicleDetail(
     where: { slug: parsedSlug.data },
     select: {
       ...publicVehicleSelect,
-      dealer: { select: { name: true } },
+      dealer: { select: publicDealershipSelect },
     },
   });
   if (!row) {
@@ -334,7 +338,7 @@ export async function resolvePublicVehicleDetail(
     kind: "visible",
     vehicle: {
       ...serializePublicVehicle(vehicleRow),
-      dealerName: dealer.name,
+      dealer: serializePublicDealership(dealer),
     },
   };
 }

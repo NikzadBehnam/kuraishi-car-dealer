@@ -17,11 +17,13 @@ import { createPublicMetadata } from "@/lib/metadata";
 import { getFeaturedVehicles } from "@/lib/inventory-queries";
 import { listPublicVehicleCardImages } from "@/lib/media-attachments";
 
-export const metadata = createPublicMetadata(
-  "Startseite",
-  homePageContent.description,
-  publicRoutes.home,
-);
+export async function generateMetadata() {
+  return createPublicMetadata(
+    "Startseite",
+    homePageContent.description,
+    publicRoutes.home,
+  );
+}
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {

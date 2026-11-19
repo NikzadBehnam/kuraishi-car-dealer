@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { AdminShell } from "@/components/admin/layout/admin-shell";
 import { hasAuthenticatedSession } from "@/lib/auth-access";
+import { getPublicDealershipSettings } from "@/lib/dealership-settings";
 import { getSafeReturnPath } from "@/lib/safe-redirect";
 import { getSession } from "@/lib/session";
 
@@ -32,5 +33,8 @@ export default async function AdminLayout({
     );
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  const dealership = await getPublicDealershipSettings();
+  return (
+    <AdminShell dealershipName={dealership.shortName}>{children}</AdminShell>
+  );
 }

@@ -8,7 +8,8 @@ import { routes } from "@/config/routes.config";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "@/components/brand-logo";
-export function SiteHeader() {
+
+export function SiteHeader({ dealershipName }: { dealershipName: string }) {
   const [open, setOpen] = useState(false);
   return (
     <header className="glass sticky top-0 z-50 h-[var(--header-height)] border-b">
@@ -16,9 +17,9 @@ export function SiteHeader() {
         <Link
           className="w-[clamp(8.5rem,14vw,11rem)] shrink-0"
           href={routes.home}
-          aria-label="Kuraishi Autohandel – Startseite"
+          aria-label={`${dealershipName} – Startseite`}
         >
-          <BrandLogo priority />
+          <BrandLogo alt={dealershipName} priority />
         </Link>
         <nav
           aria-label="Hauptnavigation"

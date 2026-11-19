@@ -29,7 +29,7 @@ import {
 import { adminRoutes } from "@/config/admin-routes.config";
 import { authClient } from "@/lib/auth-client";
 
-export function AdminTopBar() {
+export function AdminTopBar({ dealershipName }: { dealershipName: string }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { data: session } = authClient.useSession();
@@ -57,8 +57,8 @@ export function AdminTopBar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex h-16 min-w-0 w-full max-w-[92rem] items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
+    <header className="bg-surface/95 sticky top-0 z-50 border-b backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-[92rem] min-w-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button
@@ -76,23 +76,26 @@ export function AdminTopBar() {
             <SheetDescription className="sr-only">
               Navigate between admin workspace sections.
             </SheetDescription>
-            <AdminMobileSidebar onNavigate={() => setOpen(false)} />
+            <AdminMobileSidebar
+              dealershipName={dealershipName}
+              onNavigate={() => setOpen(false)}
+            />
           </SheetContent>
         </Sheet>
 
         <Link
           href={adminRoutes.dashboard}
           className="flex min-w-0 items-center gap-3"
-          aria-label="Kuraishi admin dashboard"
+          aria-label={`${dealershipName} admin dashboard`}
         >
-          <span className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-primary text-primary-foreground">
+          <span className="bg-primary text-primary-foreground grid size-10 shrink-0 place-items-center rounded-[var(--radius-sm)]">
             <CarFront className="size-5" aria-hidden="true" />
           </span>
           <span className="hidden min-w-0 sm:block">
             <span className="block truncate text-sm font-extrabold">
-              Kuraishi Admin
+              {dealershipName} Admin
             </span>
-            <span className="block truncate text-xs text-muted-foreground">
+            <span className="text-muted-foreground block truncate text-xs">
               Dealership operations
             </span>
           </span>
@@ -100,13 +103,13 @@ export function AdminTopBar() {
 
         <div className="relative ml-auto hidden w-full max-w-sm md:block">
           <Search
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
             aria-hidden="true"
           />
           <Input
             aria-label="Search admin workspace"
             placeholder="Search admin workspace"
-            className="h-9 bg-background pl-9"
+            className="bg-background h-9 pl-9"
           />
         </div>
 
@@ -116,17 +119,17 @@ export function AdminTopBar() {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-[var(--radius-sm)] border bg-background px-2.5 py-1.5 transition-colors hover:bg-surface-muted focus-visible:outline-none"
+                className="bg-background hover:bg-surface-muted flex items-center gap-2 rounded-[var(--radius-sm)] border px-2.5 py-1.5 transition-colors focus-visible:outline-none"
                 aria-label="Open admin account menu"
               >
                 <Avatar className="size-7">
-                  <AvatarFallback className="bg-accent text-xs text-accent-foreground">
+                  <AvatarFallback className="bg-accent text-accent-foreground text-xs">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden text-left leading-tight lg:grid">
                   <span className="text-xs font-extrabold">{displayName}</span>
-                  <span className="text-[0.68rem] text-muted-foreground">
+                  <span className="text-muted-foreground text-[0.68rem]">
                     {isMaster ? "Administrator" : "User"}
                   </span>
                 </span>
@@ -134,7 +137,7 @@ export function AdminTopBar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
-                <span className="block text-foreground">{displayName}</span>
+                <span className="text-foreground block">{displayName}</span>
                 <span className="mt-1 block font-semibold">
                   {session?.user.email}
                 </span>

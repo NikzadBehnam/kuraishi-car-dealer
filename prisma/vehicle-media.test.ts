@@ -1524,7 +1524,8 @@ describe("vehicle media persistence on isolated Neon resources", () => {
       throw new Error("An eligible published vehicle must resolve publicly.");
     }
     assert.equal(detail.vehicle.id, draft.vehicleId);
-    assert.equal(detail.vehicle.dealerName, "Vehicle media test dealership");
+    assert.equal(detail.vehicle.dealer.name, "Vehicle media test dealership");
+    assert.equal(detail.vehicle.dealer.phone, "+43 676 989 0630");
     assert.equal(detail.vehicle.ownerCount, 2);
 
     const images = await mediaAttachments.listPublicVehicleMediaAssets(

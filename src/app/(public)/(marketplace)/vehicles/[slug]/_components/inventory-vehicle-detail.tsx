@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { VehicleActions } from "@/components/vehicle/vehicle-actions";
-import { siteConfig } from "@/config/site.config";
 import { publicRoutes } from "@/config/routes.config";
 import {
   formatBodyType,
@@ -81,7 +80,7 @@ export function InventoryVehicleDetail({
       : vehicle.status === "reserved"
         ? "Kontakt für Statusinformationen"
         : "Händler kontaktieren";
-  const phoneHref = `tel:${siteConfig.contact.phone.replace(/[^\d+]/g, "")}`;
+  const phoneHref = `tel:${vehicle.dealer.phone.replace(/[^\d+]/g, "")}`;
   const consumption =
     vehicle.consumption !== null && vehicle.consumptionUnit !== null
       ? `${consumptionFormatter.format(vehicle.consumption)} ${consumptionUnitLabels[vehicle.consumptionUnit]}`
@@ -285,15 +284,15 @@ export function InventoryVehicleDetail({
                 <VehicleActions vehicleId={vehicle.id} />
               )}
               <hr className="my-6" />
-              <h2 className="font-extrabold">{vehicle.dealerName}</h2>
+              <h2 className="font-extrabold">{vehicle.dealer.name}</h2>
               <p className="text-muted-foreground mt-2 text-sm">
-                {siteConfig.address.street}, {siteConfig.address.postalCode}{" "}
-                {siteConfig.address.city}
+                {vehicle.dealer.street}, {vehicle.dealer.postalCode}{" "}
+                {vehicle.dealer.city}, {vehicle.dealer.country}
               </p>
               <Button asChild variant="outline" className="mt-4 w-full">
                 <a href={phoneHref}>
                   <Phone />
-                  {siteConfig.contact.phone}
+                  {vehicle.dealer.phone}
                 </a>
               </Button>
               <Button asChild variant="outline" className="mt-3 w-full">
@@ -345,7 +344,7 @@ export function InventoryVehicleDetail({
             asChild
             variant="outline"
             size="icon"
-            aria-label={`Anrufen: ${siteConfig.contact.phone}`}
+            aria-label={`Anrufen: ${vehicle.dealer.phone}`}
           >
             <a href={phoneHref}>
               <Phone />

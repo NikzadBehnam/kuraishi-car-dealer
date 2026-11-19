@@ -35,9 +35,13 @@ export async function generateMetadata({
   const title = `${vehicle.make} ${vehicle.model}`;
   const description =
     vehicle.description ??
-    `${vehicle.make} ${vehicle.model} bei ${vehicle.dealerName}.`;
+    `${vehicle.make} ${vehicle.model} bei ${vehicle.dealer.name}.`;
   const { assets } = await listPublicVehicleMediaAssets(vehicle.id);
-  const baseMetadata = createPublicMetadata(title, description, canonical);
+  const baseMetadata = await createPublicMetadata(
+    title,
+    description,
+    canonical,
+  );
   return {
     ...baseMetadata,
     openGraph: {

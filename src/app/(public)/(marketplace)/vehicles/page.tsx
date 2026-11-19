@@ -13,11 +13,13 @@ import {
   publicCatalogSearchParamsSchema,
 } from "@/lib/inventory-validation";
 
-export const metadata = createPublicMetadata(
-  "Fahrzeuge",
-  content.description,
-  publicRoutes.vehicles,
-);
+export async function generateMetadata() {
+  return createPublicMetadata(
+    "Fahrzeuge",
+    content.description,
+    publicRoutes.vehicles,
+  );
+}
 export const dynamic = "force-dynamic";
 
 export default async function VehiclesPage({

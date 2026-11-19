@@ -4,22 +4,29 @@ import { QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 import { siteConfig } from "@/config/site.config";
+import type { PublicDealershipDTO } from "@/types/dealership-settings";
 
-const qrValue = [
-  "BEGIN:VCARD",
-  "VERSION:3.0",
-  `FN:${siteConfig.name}`,
-  `ORG:${siteConfig.name}`,
-  ...[siteConfig.contact.phone, ...siteConfig.contact.additionalPhones].map(
-    (phone) => `TEL:${phone.replace(/\s/g, "")}`,
-  ),
-  `EMAIL:${siteConfig.contact.email}`,
-  `ADR:;;${siteConfig.address.street};${siteConfig.address.city};;${siteConfig.address.postalCode};${siteConfig.address.country}`,
-  `URL:${siteConfig.url}`,
-  "END:VCARD",
-].join("\n");
+function getQrValue(settings: PublicDealershipDTO) {
+  return [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    `FN:${settings.name}`,
+    `ORG:${settings.name}`,
+    ...[settings.phone, ...siteConfig.contact.additionalPhones].map(
+      (phone) => `TEL:${phone.replace(/\s/g, "")}`,
+    ),
+    `EMAIL:${settings.email}`,
+    `ADR:;;${settings.street};${settings.city};;${settings.postalCode};${settings.country}`,
+    `URL:${settings.websiteUrl}`,
+    "END:VCARD",
+  ].join("\n");
+}
 
-export function DealershipQrCode() {
+export function DealershipQrCode({
+  settings,
+}: {
+  settings: PublicDealershipDTO;
+}) {
   return (
     <section className="h-fit min-w-0 rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.04] p-5">
       <h2 className="flex items-center gap-2 text-sm font-extrabold text-white">
@@ -29,7 +36,7 @@ export function DealershipQrCode() {
       <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
         <div className="footer-qr relative shrink-0 overflow-hidden rounded-sm bg-white p-2">
           <QRCodeSVG
-            value={qrValue}
+            value={getQrValue(settings)}
             size={104}
             level="M"
             bgColor="#ffffff"

@@ -9,6 +9,8 @@ import { getPublicDealershipSettings } from "@/lib/dealership-settings";
 import { getSafeReturnPath } from "@/lib/safe-redirect";
 import { getSession } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Admin",
   robots: { index: false, follow: false },

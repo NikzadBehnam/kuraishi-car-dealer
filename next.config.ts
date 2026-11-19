@@ -36,12 +36,23 @@ const publicMediaPattern = publicBucket
     })()
   : null;
 
+const privateNoStoreHeader = {
+  key: "Cache-Control",
+  value: "private, no-store, max-age=0, must-revalidate",
+};
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       ...(publicMediaPattern ? [publicMediaPattern] : []),
     ],
+  },
+  async headers() {
+    return [
+      { source: "/admin/:path*", headers: [privateNoStoreHeader] },
+      { source: "/api/:path*", headers: [privateNoStoreHeader] },
+    ];
   },
 };
 

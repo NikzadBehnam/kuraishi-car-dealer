@@ -6,6 +6,7 @@ import {
   duplicateVehicleMutationSchema,
   InventoryMutationError,
 } from "@/lib/inventory-mutations";
+import { revalidateInventoryViews } from "@/lib/inventory-cache";
 import { isTrustedOrigin } from "@/lib/trusted-origins";
 
 export const runtime = "nodejs";
@@ -39,6 +40,7 @@ export async function POST(
     const { id } = await params;
     const body = duplicateBodySchema.parse(input);
     const result = await duplicateVehicle({ vehicleId: id, ...body });
+    revalidateInventoryViews();
     return Response.json(result, {
       status: 201,
       headers: { "Cache-Control": "no-store" },

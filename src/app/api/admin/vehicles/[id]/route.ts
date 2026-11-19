@@ -6,6 +6,7 @@ import {
   deleteVehicleMutationSchema,
   InventoryMutationError,
 } from "@/lib/inventory-mutations";
+import { revalidateInventoryViews } from "@/lib/inventory-cache";
 import { isTrustedOrigin } from "@/lib/trusted-origins";
 
 export const runtime = "nodejs";
@@ -39,6 +40,7 @@ export async function DELETE(
     const { id } = await params;
     const body = deleteBodySchema.parse(input);
     const result = await deleteDraftVehicle({ vehicleId: id, ...body });
+    revalidateInventoryViews();
     return Response.json(result, {
       headers: { "Cache-Control": "no-store" },
     });

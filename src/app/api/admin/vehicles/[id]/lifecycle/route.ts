@@ -8,6 +8,7 @@ import {
 } from "@/lib/inventory-mutations";
 import { InventoryPolicyError } from "@/lib/inventory-lifecycle";
 import { isTrustedOrigin } from "@/lib/trusted-origins";
+import { revalidateInventoryViews } from "@/lib/inventory-cache";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,9 @@ export async function POST(
       vehicleId: id,
       ...body,
     });
+    if (result.changed) {
+      revalidateInventoryViews();
+    }
     return Response.json(result, {
       headers: { "Cache-Control": "no-store" },
     });

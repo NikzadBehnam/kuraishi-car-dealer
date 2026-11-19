@@ -5,6 +5,7 @@ import {
   bulkTransitionVehicles,
   InventoryMutationError,
 } from "@/lib/inventory-mutations";
+import { revalidateInventoryViews } from "@/lib/inventory-cache";
 import { isTrustedOrigin } from "@/lib/trusted-origins";
 
 export const runtime = "nodejs";
@@ -28,7 +29,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    return Response.json(await bulkTransitionVehicles(input), {
+    const result = await bulkTransitionVehicles(input);
+    if (result.succeeded.some(({ changed }) => changed)) {
+      revalidateInventoryViews();
+    }
+    return Response.json(result, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

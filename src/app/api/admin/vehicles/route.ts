@@ -6,6 +6,7 @@ import {
   InventoryMutationError,
   updateVehicle,
 } from "@/lib/inventory-mutations";
+import { revalidateInventoryViews } from "@/lib/inventory-cache";
 import { isTrustedOrigin } from "@/lib/trusted-origins";
 
 export const runtime = "nodejs";
@@ -58,7 +59,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    return Response.json(await createDraftVehicle(input), {
+    const result = await createDraftVehicle(input);
+    revalidateInventoryViews();
+    return Response.json(result, {
       status: 201,
       headers: { "Cache-Control": "no-store" },
     });
@@ -81,7 +84,9 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    return Response.json(await updateVehicle(input), {
+    const result = await updateVehicle(input);
+    revalidateInventoryViews();
+    return Response.json(result, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

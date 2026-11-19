@@ -8,9 +8,9 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       disallow: [
-        "/api/",
-        "/admin/",
-        "/konto/",
+        "/api",
+        "/admin",
+        "/konto",
         `${publicRoutes.vehicles}?`,
         ...Object.values(internalRoutes).filter(
           (path) => path !== "/" && !publicPaths.has(path),

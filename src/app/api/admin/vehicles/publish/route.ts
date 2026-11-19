@@ -7,6 +7,7 @@ import {
 } from "@/lib/inventory-mutations";
 import { InventoryPolicyError } from "@/lib/inventory-lifecycle";
 import { isTrustedOrigin } from "@/lib/trusted-origins";
+import { revalidateInventoryViews } from "@/lib/inventory-cache";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await publishVehicle(input);
+    revalidateInventoryViews();
     return Response.json(result, {
       status: result.created ? 201 : 200,
       headers: { "Cache-Control": "no-store" },

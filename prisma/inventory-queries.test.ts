@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
 
 import { z } from "zod";
@@ -29,6 +29,13 @@ import {
   inventoryFixtures,
 } from "./inventory-fixtures.ts";
 import { createInventoryTestDatabase } from "./inventory-test-client.ts";
+import { inquiryPrivacyNotice } from "../src/content/de/inquiry-privacy.ts";
+import { dealershipDate } from "../src/lib/business-date.ts";
+import {
+  InquiryIntakeError,
+  inquiryAppointmentTypes,
+  type InquirySubmission,
+} from "../src/lib/inquiry-validation.ts";
 
 const { prisma } = createInventoryTestDatabase();
 const prefix = randomUUID();
@@ -66,6 +73,9 @@ const queryClient = prisma.$extends({
 });
 let queries: typeof import("../src/lib/inventory-queries.ts");
 let dealershipSettings: typeof import("../src/lib/dealership-settings.ts");
+let inquiryIntake: typeof import("../src/lib/inquiry-intake.ts");
+const inquiryKeys: string[] = [];
+const inquiryClients: string[] = [];
 let dbMock: ReturnType<typeof mock.module> | undefined;
 let sessionMock: ReturnType<typeof mock.module> | undefined;
 let cacheMock: ReturnType<typeof mock.module> | undefined;
@@ -178,6 +188,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     });
     queries = await import("../src/lib/inventory-queries.ts");
     dealershipSettings = await import("../src/lib/dealership-settings.ts");
+    inquiryIntake = await import("../src/lib/inquiry-intake.ts");
   });
 
   beforeEach(() => {
@@ -189,6 +200,12 @@ describe("isolated inventory queries", { concurrency: false }, () => {
   after(async () => {
     try {
       await prisma.$transaction(async (tx) => {
+        await tx.inquiry.deleteMany({
+          where: { submissionKey: { in: inquiryKeys } },
+        });
+        await tx.inquiryRateLimit.deleteMany({
+          where: { key: { in: inquiryClients } },
+        });
         await deleteImportedTestRows(tx);
         await tx.vehicle.deleteMany({
           where: { id: { in: [...ids, ...searchIds, ...serializationIds] } },
@@ -1487,6 +1504,231 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     assert.equal(
       await queries.getRelatedVehicles({ id: `missing-${prefix}` }),
       null,
+    );
+  });
+
+  it("accepts each inquiry type durably and enforces five new requests with idempotent retries", async () => {
+    const clientHash = createHash("sha256")
+      .update(`inquiry-${prefix}`)
+      .digest("hex");
+    inquiryClients.push(clientHash);
+    const now = new Date();
+    const submissions = inquiryAppointmentTypes.map(
+      (appointmentType): InquirySubmission => {
+        const requestId = randomUUID();
+        inquiryKeys.push(requestId);
+        return {
+          requestId,
+          fields: {
+            name: "Synthetic Visitor",
+            email: "visitor@example.invalid",
+            phone: "",
+            appointmentType,
+            preferredDate: dealershipDate(now),
+            message: "Synthetic test inquiry.",
+            consent: true,
+          },
+          vehicleSlug: null,
+          website: "",
+          privacyNoticeVersion: inquiryPrivacyNotice.version,
+        };
+      },
+    );
+    const identity = (submission: InquirySubmission) => ({
+      clientHash,
+      payloadHash: createHash("sha256")
+        .update(JSON.stringify(submission))
+        .digest("hex"),
+    });
+    for (const submission of submissions) {
+      await inquiryIntake.acceptInquiry(submission, identity(submission), now);
+    }
+    const first = await prisma.inquiry.findUniqueOrThrow({
+      where: { submissionKey: submissions[0].requestId },
+    });
+    assert.equal(first.customerName, "Synthetic Visitor");
+    assert.equal(first.customerPhone, null);
+    assert.equal(first.privacyNoticeText, inquiryPrivacyNotice.text);
+    assert.equal(first.privacyAcknowledgedAt.toISOString(), now.toISOString());
+    assert.equal(
+      first.preferredDate?.toISOString().slice(0, 10),
+      dealershipDate(now),
+    );
+    assert.equal(first.vehicleId, null);
+    const replay = submissions[0];
+    await inquiryIntake.acceptInquiry(
+      replay,
+      identity(replay),
+      new Date(now.getTime() + 86400000),
+    );
+    await assert.rejects(
+      inquiryIntake.acceptInquiry(replay, {
+        clientHash,
+        payloadHash: "0".repeat(64),
+      }),
+      (error: unknown) =>
+        error instanceof InquiryIntakeError && error.status === 409,
+    );
+    const sixth = { ...replay, requestId: randomUUID() };
+    inquiryKeys.push(sixth.requestId);
+    await assert.rejects(
+      inquiryIntake.acceptInquiry(sixth, identity(sixth), now),
+      (error: unknown) =>
+        error instanceof InquiryIntakeError && error.status === 429,
+    );
+    assert.equal(
+      await prisma.inquiry.count({
+        where: { submissionKey: { in: inquiryKeys } },
+      }),
+      5,
+    );
+    await inquiryIntake.acceptInquiry(
+      sixth,
+      identity(sixth),
+      new Date(now.getTime() + 901000),
+    );
+    assert.equal(
+      (
+        await prisma.inquiryRateLimit.findUniqueOrThrow({
+          where: { key: clientHash },
+        })
+      ).count,
+      1,
+    );
+  });
+
+  it("revalidates inquiry vehicle context and rejects forged or unavailable references", async () => {
+    const clientHash = createHash("sha256")
+      .update(`context-${prefix}`)
+      .digest("hex");
+    inquiryClients.push(clientHash);
+    const submission = (vehicleSlug: string | null): InquirySubmission => {
+      const requestId = randomUUID();
+      inquiryKeys.push(requestId);
+      return {
+        requestId,
+        fields: {
+          name: "Context Visitor",
+          email: "context@example.invalid",
+          appointmentType: "Beratung",
+          message: "Synthetic context.",
+          consent: true,
+        },
+        vehicleSlug,
+        website: "",
+        privacyNoticeVersion: inquiryPrivacyNotice.version,
+      };
+    };
+    const identity = (input: InquirySubmission) => ({
+      clientHash,
+      payloadHash: createHash("sha256")
+        .update(JSON.stringify(input))
+        .digest("hex"),
+    });
+    for (const index of [0, 3]) {
+      const input = submission(slug(index));
+      await inquiryIntake.acceptInquiry(input, identity(input));
+      const saved = await prisma.inquiry.findUniqueOrThrow({
+        where: { submissionKey: input.requestId },
+      });
+      assert.equal(saved.vehicleId, ids[index]);
+      assert.equal(saved.vehicleSlugSnapshot, slug(index));
+      assert.equal(saved.vehicleTitleSnapshot, `Example Query ${index}`);
+    }
+    for (const vehicleSlug of [
+      slug(4),
+      slug(5),
+      slug(6),
+      `missing-${prefix}`,
+    ]) {
+      const input = submission(vehicleSlug);
+      await assert.rejects(
+        inquiryIntake.acceptInquiry(input, identity(input)),
+        (error: unknown) =>
+          error instanceof InquiryIntakeError && error.status === 409,
+      );
+      assert.equal(
+        await prisma.inquiry.findUnique({
+          where: { submissionKey: input.requestId },
+        }),
+        null,
+      );
+    }
+    const input = submission(null);
+    for (const forged of [
+      { ...input, vehicleId: ids[0] },
+      { ...input, fields: { ...input.fields, source: "callback" } },
+      { ...input, fields: { ...input.fields, consent: false } },
+      { ...input, fields: { ...input.fields, preferredDate: "2000-01-01" } },
+    ]) {
+      await assert.rejects(
+        inquiryIntake.acceptInquiry(forged, identity(input)),
+        z.ZodError,
+      );
+    }
+    await assert.rejects(
+      inquiryIntake.acceptInquiry(
+        { ...input, privacyNoticeVersion: "stale-version" },
+        identity(input),
+      ),
+      (error: unknown) =>
+        error instanceof InquiryIntakeError && error.status === 409,
+    );
+    const failure = new Error("Synthetic inquiry database failure.");
+    databaseFailure = failure;
+    await assert.rejects(
+      inquiryIntake.acceptInquiry(input, identity(input)),
+      (error) => error === failure,
+    );
+    databaseFailure = undefined;
+    assert.equal(
+      await prisma.inquiry.findUnique({
+        where: { submissionKey: input.requestId },
+      }),
+      null,
+    );
+  });
+
+  it("accepts simultaneous retries once without spending extra submission quota", async () => {
+    const clientHash = createHash("sha256")
+      .update(`retry-${prefix}`)
+      .digest("hex");
+    inquiryClients.push(clientHash);
+    const requestId = randomUUID();
+    inquiryKeys.push(requestId);
+    const input = {
+      requestId,
+      fields: {
+        name: "Retry Visitor",
+        email: "retry@example.invalid",
+        appointmentType: "Beratung",
+        message: "Synthetic retry.",
+        consent: true,
+      },
+      vehicleSlug: null,
+      website: "",
+      privacyNoticeVersion: inquiryPrivacyNotice.version,
+    };
+    const identity = {
+      clientHash,
+      payloadHash: createHash("sha256").update(requestId).digest("hex"),
+    };
+    await Promise.all([
+      inquiryIntake.acceptInquiry(input, identity),
+      inquiryIntake.acceptInquiry(input, identity),
+      inquiryIntake.acceptInquiry(input, identity),
+    ]);
+    assert.equal(
+      await prisma.inquiry.count({ where: { submissionKey: requestId } }),
+      1,
+    );
+    assert.equal(
+      (
+        await prisma.inquiryRateLimit.findUniqueOrThrow({
+          where: { key: clientHash },
+        })
+      ).count,
+      1,
     );
   });
 

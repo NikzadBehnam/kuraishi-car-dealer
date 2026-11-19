@@ -224,7 +224,7 @@ Use the isolated non-Production app, inventory and media resources. Create and c
 3. **Dealership and contact consistency**
    - Confirm the displayed dealership name matches the vehicle's Dealer record. Compare the phone and address with the shared public contact information.
    - Test desktop and mobile call links; both should use the configured primary phone. Confirm there are no fixture star ratings or review counts.
-   - Published and Reserved contact links should carry the current URL-encoded vehicle slug. Sold links should be general and omit the vehicle query. Securely resolving this query to a trusted record remains Section 09.
+   - Published and Reserved contact links should carry the current URL-encoded vehicle slug. Sold links should be general and omit the vehicle query. Section 09 now resolves this context server-side and revalidates it at acceptance.
 4. **Similar inventory**
    - Publish another eligible vehicle with the same body type. Confirm it appears, while the current vehicle and vehicles of other body types do not.
    - Confirm Draft, Archived, Reserved and Sold candidates are excluded, result count never exceeds three, and ordering is stable.
@@ -279,33 +279,54 @@ The current implementation is on `backend/dealership-settings`. Do not deploy or
 
 Section 08.09 remains pending until isolated DB verification and the user's deferred manual retest.
 
-## 11. Section 09 — inquiry foundation only (09.01-09.04)
+## 11. Section 09 — guarded inquiry intake (09.01-09.04, 09.06-09.11)
 
-This milestone does **not** accept inquiries, send emails, confirm appointments, or wire the staff leads inbox. Public launch remains blocked by unfinished intake/abuse controls and business/legal approval of retention and deletion.
+Intake is off by default and code-blocked in Production. Isolated development/Vercel Preview may test real persistence after the database safety gate. No email, confirmed booking or real staff inbox is implemented. Section 09.05 retention/deletion approval and 09.12 DB/browser verification remain pending.
 
-1. Run `pnpm test`. Inquiry validation coverage includes all five approved types and source mappings, optional phone/date values, name/email/phone/message bounds, required consent, forged server-owned fields, invalid/leap dates, and Europe/Vienna midnight/DST.
-2. Run `pnpm typecheck` and `pnpm exec prisma validate`. These do not prove that the migration has run or that a request is stored.
-3. Only after the inventory-test credential is rotated and the isolated empty target independently confirmed, run `pnpm test:inventory-db`. Its new rollback-only case checks inquiry persistence, source/privacy/snapshot constraints, and retained vehicle-history snapshots after archive/deletion. Do not apply migrations to the normal app database or Production as part of this guide.
-4. On an already configured isolated app, open the contact page. Confirm Beratung is the default, phone/date are labelled optional, and a selected date can be cleared.
-5. Confirm an explicit online-intake-unavailable notice and disabled submit control are present. No fabricated success should appear. Use only synthetic form data, and do not expect an inbox record from this milestone.
+1. **Automated checks without database writes**
+   - Run `pnpm test`, `pnpm typecheck` and `pnpm exec prisma validate`.
+   - Source coverage includes the five service/source mappings, contact/date bounds, consent, forged fields, malformed URL context, Vienna dates, Production/off gates, trusted origin/address handling, exact 16 KiB body boundaries and failure responses.
+2. **Prepare the isolated database before enabling test intake**
+   - First rotate the previously exposed inventory-test credential and independently confirm its target is isolated, empty and not an app/Production database. Do not bypass this gate.
+   - Only then run `pnpm test:inventory-db`. It applies migrations and tests inquiry history/privacy constraints, accepted records, five-request quotas/window reset, changed-payload conflicts, unavailable/forged vehicle references, DB failures and simultaneous retries.
+   - For browser testing, use a separately verified disposable non-Production app database with the required migrations and synthetic dealership/vehicle fixtures. Do not point the running app at the DB suite's empty target while the suite runs.
+   - In its ignored server environment only, set `INQUIRY_TEST_MODE=true` and a new random `INQUIRY_HASH_SECRET` of at least 32 characters. Never reuse an auth secret or commit its value. Restart the app.
+   - Local testing uses `http://localhost:3000` and one shared development quota. Vercel Preview requires actual platform environment flags, the current deployment origin and its single trusted `x-vercel-forwarded-for` address; fabricated forwarding headers outside Vercel cannot create new quota identities.
+3. **Default-off and general inquiry**
+   - With the flag unset/false, confirm the contact page shows unavailable intake and disabled submission; direct POST returns 503. Production must remain disabled even if the flag is true.
+   - On enabled isolated intake, confirm Beratung is the default and phone/date are optional. Clear a selected date; select a Saturday/Sunday and confirm it is allowed. Invalid or past Vienna dates must be rejected.
+   - Submit only synthetic details with consent. Confirm a pending state and success only after acceptance, with request-not-booking wording. Through an authorized database inspection on the isolated target, confirm one Inquiry contains the service/source, normalized fields, current notice text/version and server acknowledgement timestamp.
+   - Repeat for each service, spacing tests into separate 15-minute windows as necessary. The admin leads page is still fixture-backed; do not use it as proof of persistence.
+4. **Vehicle and service context**
+   - Follow a Published vehicle contact link and confirm its current title/link is displayed. Submit and verify the saved ID/title/slug snapshots match that vehicle, not client-supplied values.
+   - Repeat for Reserved: context must be informational, not an available booking. Sold/private/missing slugs, repeated vehicle parameters and malformed slugs must be explicitly refused, with a link to restart general contact.
+   - Open contact for an eligible vehicle, then withdraw that vehicle before submitting. Expect an explicit error and no new Inquiry; do not silently save a general inquiry.
+   - Check service CTA preselection: trade-in/purchase -> Fahrzeugbewertung, workshop -> Werkstatt, warranty/insurance/registration assistance -> Beratung.
+5. **Failure, retries and abuse controls**
+   - Use synthetic payloads only. Reject missing consent, a nonempty hidden Website field, forged source/vehicle ID/snapshot fields, an untrusted Origin and non-JSON input.
+   - Send exactly 16,384 bytes of valid JSON plus padding and then 16,385 bytes. The latter must return 413 even with omitted or falsely low Content-Length. Invalid UTF-8/JSON must fail.
+   - In developer tools on the isolated app, capture a successful synthetic request and resend its exact JSON/requestId. Expect acceptance but only one stored row and no additional quota use. Change the message while retaining that key: expect 409. Normal edited form submissions generate a new key.
+   - Submit five new requests within 15 minutes using the same trusted address (all localhost clients share a quota). The sixth must return 429 with Retry-After; retrying an accepted unchanged request must still work. New requests are allowed after expiry.
+   - With a safe isolated failure simulation or browser request blocking, verify no false success appears, fields remain and an unchanged in-page retry retains its key. Reloading does not retain the retry key; do not claim cross-reload deduplication.
+   - Verify unexpected server errors are generic to the visitor and server logs contain no submitted contact/message data. Restore safe configuration after failure simulation.
 
-Vehicle-context resolution, durable public submission, rate limits, retries/deduplication, service CTAs and real inbox visibility remain later work. The previous database-test safety gate and deferred manual-retest status are unchanged.
+Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. No migrations, DB suites or browser checks above have been run for this milestone; use the completion record below to track the deferred results.
 
 ## 12. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
-| Area                                                                      | Result  | Notes                                           |
-| ------------------------------------------------------------------------- | ------- | ----------------------------------------------- |
-| Branch and non-Production target confirmed                                |         |                                                 |
-| TypeScript, lint, formatting and unit tests                               |         |                                                 |
-| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                 |
-| Section 03 media DB/storage suites                                        |         |                                                 |
-| Section 03 manual media workflow                                          |         |                                                 |
-| Section 04 manual admin/public/dashboard workflow                         |         |                                                 |
-| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                             |
-| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                             |
-| Section 08 dealership settings workflow                                   | Pending | Section 08.09                                   |
-| Section 09 inquiry foundation                                             | Pending | Schema/validation only; live intake unavailable |
-| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified  |
-| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                             |
+| Area                                                                      | Result  | Notes                                          |
+| ------------------------------------------------------------------------- | ------- | ---------------------------------------------- |
+| Branch and non-Production target confirmed                                |         |                                                |
+| TypeScript, lint, formatting and unit tests                               |         |                                                |
+| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                |
+| Section 03 media DB/storage suites                                        |         |                                                |
+| Section 03 manual media workflow                                          |         |                                                |
+| Section 04 manual admin/public/dashboard workflow                         |         |                                                |
+| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                            |
+| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                            |
+| Section 08 dealership settings workflow                                   | Pending | Section 08.09                                  |
+| Section 09 guarded inquiry intake                                         | Pending | Isolated DB/browser checks; Production blocked |
+| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified |
+| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                            |

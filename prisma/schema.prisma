@@ -168,11 +168,21 @@ model Inquiry {
   privacyNoticeVersion  String         @db.VarChar(64)
   privacyNoticeText     String         @db.Text
   privacyAcknowledgedAt DateTime       @db.Timestamptz(3)
+  submissionKey         String?        @unique @db.Uuid
+  submissionHash        String?        @db.VarChar(64)
   createdAt             DateTime       @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime       @default(now()) @updatedAt @db.Timestamptz(3)
 
   @@index([createdAt(sort: Desc), id])
   @@index([vehicleId])
+}
+
+model InquiryRateLimit {
+  key       String   @id @db.VarChar(64)
+  count     Int
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
 }
 
 model VehicleChange {

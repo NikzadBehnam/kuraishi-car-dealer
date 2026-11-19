@@ -5,6 +5,11 @@ import { Card } from "@/components/ui/card";
 import { publicRoutes } from "@/config/routes.config";
 import { getPublicDealershipSettings } from "@/lib/dealership-settings";
 import { createPublicMetadata } from "@/lib/metadata";
+import { getPublicVehicleForInquiry } from "@/lib/inventory-queries";
+import {
+  inquiryContactParamsSchema,
+  inquiryTestModeEnabled,
+} from "@/lib/inquiry-validation";
 
 export async function generateMetadata() {
   return createPublicMetadata(
@@ -13,8 +18,22 @@ export async function generateMetadata() {
     publicRoutes.contact,
   );
 }
-export default async function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const settings = await getPublicDealershipSettings();
+  const parsed = inquiryContactParamsSchema.safeParse(await searchParams);
+  const vehicle =
+    parsed.success && parsed.data.vehicle
+      ? await getPublicVehicleForInquiry(parsed.data.vehicle)
+      : null;
+  const contextError = !parsed.success
+    ? "Der Anfrage-Link ist ungültig. Bitte starten Sie eine allgemeine Anfrage."
+    : parsed.data.vehicle && !vehicle
+      ? "Das angefragte Fahrzeug ist nicht mehr verfügbar. Sie können stattdessen eine allgemeine Anfrage stellen."
+      : null;
   return (
     <>
       <PageHeader
@@ -26,7 +45,16 @@ export default async function ContactPage() {
         <Card className="rounded-t-[15px] rounded-b-none border-b-0 p-7 lg:rounded-l-[15px] lg:rounded-r-none lg:border-r-0 lg:border-b">
           <h2 className="section-title text-3xl">Termin anfragen</h2>
           <div className="mt-7">
-            <ContactForm />
+            <ContactForm
+              enabled={inquiryTestModeEnabled()}
+              vehicle={vehicle}
+              contextError={contextError}
+              appointmentType={
+                parsed.success
+                  ? (parsed.data.service ?? "Beratung")
+                  : "Beratung"
+              }
+            />
           </div>
         </Card>
         <Card className="bg-brand-panel text-brand-panel-foreground rounded-t-none rounded-b-[15px] border-t-0 p-7 lg:rounded-l-none lg:rounded-r-[15px] lg:border-t lg:border-l-0">

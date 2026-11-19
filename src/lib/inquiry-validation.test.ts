@@ -7,6 +7,8 @@ import {
   inquiryFieldsSchema,
   inquiryServiceMapping,
   isValidInquiryDate,
+  inquiryContactParamsSchema,
+  inquirySubmissionSchema,
 } from "./inquiry-validation.ts";
 
 const validInquiry = {
@@ -18,6 +20,47 @@ const validInquiry = {
 };
 
 describe("inquiry validation", () => {
+  it("allows calendar-valid dates in retry envelopes but rejects past dates for new intake", () => {
+    const fields = { ...validInquiry, preferredDate: "2000-01-01" };
+    const envelope = {
+      fields,
+      requestId: "e71518aa-d484-4fb9-8fad-9770520836b0",
+      vehicleSlug: null,
+      website: "",
+      privacyNoticeVersion: "previous-notice",
+    };
+    assert.equal(inquirySubmissionSchema.safeParse(envelope).success, true);
+    assert.equal(inquiryFieldsSchema.safeParse(fields).success, false);
+    assert.equal(
+      inquirySubmissionSchema.safeParse({
+        ...envelope,
+        fields: { ...fields, preferredDate: "2000-02-30" },
+      }).success,
+      false,
+    );
+  });
+  it("accepts only well-formed single vehicle/service URL contexts", () => {
+    assert.deepEqual(inquiryContactParamsSchema.parse({}), {});
+    assert.deepEqual(
+      inquiryContactParamsSchema.parse({
+        vehicle: "example-car",
+        service: "Werkstatt",
+      }),
+      { vehicle: "example-car", service: "Werkstatt" },
+    );
+    for (const context of [
+      { vehicle: ["car-a", "car-b"] },
+      { service: ["Beratung", "Werkstatt"] },
+      { vehicle: "../private" },
+      { vehicle: "" },
+      { service: "forged-service" },
+    ]) {
+      assert.equal(
+        inquiryContactParamsSchema.safeParse(context).success,
+        false,
+      );
+    }
+  });
   it("accepts every approved service with distinct, server-derived source labels", () => {
     const expected = [
       ["test_drive", "test_drive"],

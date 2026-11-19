@@ -50,6 +50,12 @@ export interface PublicInventoryVehicleDTO extends Omit<
   hasPassedInspection: boolean;
 }
 
+export interface PublicVehicleCardImageDTO {
+  id: string;
+  url: string;
+  altText: string | null;
+}
+
 export interface PublicVehicleDetailDTO extends PublicInventoryVehicleDTO {
   dealerName: string;
 }

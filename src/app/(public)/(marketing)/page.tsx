@@ -9,19 +9,27 @@ import {
   ReceiptText,
 } from "lucide-react";
 import { homePageContent } from "@/content/de/home-page";
-import { vehicles } from "@/data/vehicles";
 import { VehicleCard } from "@/components/vehicle/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { publicRoutes } from "@/config/routes.config";
 import { createPublicMetadata } from "@/lib/metadata";
+import { getFeaturedVehicles } from "@/lib/inventory-queries";
+import { listPublicVehicleCardImages } from "@/lib/media-attachments";
 
 export const metadata = createPublicMetadata(
   "Startseite",
   homePageContent.description,
   publicRoutes.home,
 );
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const featuredVehicles = await getFeaturedVehicles({ limit: 8 });
+  const imagesByVehicleId = await listPublicVehicleCardImages(
+    featuredVehicles.map(({ id }) => id),
+  );
+
   return (
     <>
       <section className="hero-shell relative isolate flex min-h-[calc(100svh-var(--header-height))] overflow-hidden">
@@ -109,11 +117,19 @@ export default function HomePage() {
             </Button>
           </div>
           <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {vehicles
-              .filter((vehicle) => vehicle.isFeatured)
-              .map((vehicle) => (
-                <VehicleCard key={vehicle.id} vehicle={vehicle} />
-              ))}
+            {featuredVehicles.length > 0 ? (
+              featuredVehicles.map((vehicle) => (
+                <VehicleCard
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  inventoryImages={imagesByVehicleId.get(vehicle.id) ?? []}
+                />
+              ))
+            ) : (
+              <p className="text-muted-foreground col-span-full py-10 text-center">
+                {homePageContent.featuredEmpty}
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -154,7 +170,6 @@ export default function HomePage() {
               })}
             </div>
           </div>
-
         </div>
       </section>
     </>

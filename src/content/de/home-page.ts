@@ -15,6 +15,8 @@ export const homePageContent = {
     "Sportwagen",
   ],
   featuredTitle: "Ausgewählte Fahrzeuge",
+  featuredEmpty:
+    "Aktuell sind keine ausgewählten Fahrzeuge verfügbar. Entdecken Sie unser gesamtes Angebot.",
   benefitsTitle: "Ein gutes Gefühl fährt mit.",
   benefits: [
     {

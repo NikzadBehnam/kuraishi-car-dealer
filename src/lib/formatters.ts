@@ -4,7 +4,13 @@ const currency = new Intl.NumberFormat("de-DE", {
   maximumFractionDigits: 0,
 });
 const integer = new Intl.NumberFormat("de-DE");
-export const formatCurrency = (value: number) => currency.format(value);
+export const formatCurrency = (value: number | string) => {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount)) {
+    throw new TypeError("Currency value must be finite.");
+  }
+  return currency.format(amount);
+};
 export const formatMileage = (value: number) => `${integer.format(value)} km`;
 export const formatPower = (kw: number, ps: number) => `${kw} kW (${ps} PS)`;
 export const formatRegistration = (value: string) => {

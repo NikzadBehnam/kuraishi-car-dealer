@@ -1507,6 +1507,21 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     );
     assert.ok(images.assets[0]?.previewUrl.startsWith("https://"));
 
+    const cardImages = await mediaAttachments.listPublicVehicleCardImages([
+      draft.vehicleId,
+      hiddenDraft.vehicleId,
+    ]);
+    assert.deepEqual(
+      cardImages.get(draft.vehicleId)?.map(({ id }) => id),
+      [publicImageId],
+    );
+    assert.ok(cardImages.get(draft.vehicleId)?.[0]?.url.startsWith("https://"));
+    assert.equal(cardImages.has(hiddenDraft.vehicleId), false);
+    assert.deepEqual(
+      await mediaAttachments.listPublicVehicleCardImages([]),
+      new Map(),
+    );
+
     assert.deepEqual(
       await queries.resolvePublicVehicleDetail(hiddenVehicle.slug),
       { kind: "ineligible" },

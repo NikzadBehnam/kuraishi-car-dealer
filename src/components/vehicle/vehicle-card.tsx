@@ -2,6 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Fuel, Gauge, Settings2, Zap } from "lucide-react";
 import type { Vehicle } from "@/types/vehicle";
+import type {
+  PublicInventoryVehicleDTO,
+  PublicVehicleCardImageDTO,
+} from "@/types/inventory";
 import {
   formatCurrency,
   formatFuelType,
@@ -17,13 +21,34 @@ import { VehicleImagePlaceholder } from "./vehicle-image-placeholder";
 import { routeBuilders } from "@/config/routes.config";
 export function VehicleCard({
   vehicle,
+  inventoryImages,
   variant = "grid",
 }: {
-  vehicle: Vehicle;
+  vehicle: Vehicle | PublicInventoryVehicleDTO;
+  inventoryImages?: PublicVehicleCardImageDTO[];
   variant?: "grid" | "list" | "compact";
 }) {
   const detailsHref = routeBuilders.vehicleDetails(vehicle.slug);
-  const primaryImage = vehicle.images.find((src) => src.trim().length > 0);
+  const inventoryImage = inventoryImages?.[0];
+  const fixtureImage =
+    inventoryImages === undefined && "images" in vehicle
+      ? vehicle.images.find((src) => src.trim().length > 0)
+      : undefined;
+  const imageSrc = inventoryImage?.url ?? fixtureImage;
+  const vehicleTitle = [vehicle.make, vehicle.model, vehicle.variant]
+    .filter(Boolean)
+    .join(" ");
+  const imageAlt = inventoryImage?.altText?.trim() || vehicleTitle;
+  const availabilityLabel =
+    "status" in vehicle
+      ? vehicle.status === "reserved"
+        ? "Reserviert"
+        : vehicle.status === "sold"
+          ? "Verkauft"
+          : "Sofort verfügbar"
+      : vehicle.isAvailable
+        ? "Sofort verfügbar"
+        : "Derzeit nicht verfügbar";
 
   return (
     <Card
@@ -38,13 +63,13 @@ export function VehicleCard({
         href={detailsHref}
         aria-label={`${vehicle.make} ${vehicle.model} Details ansehen`}
       >
-        {primaryImage ? (
+        {imageSrc ? (
           <Image
             className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            src={primaryImage}
-            alt={`${vehicle.make} ${vehicle.model} ${vehicle.variant}`}
+            src={imageSrc}
+            alt={imageAlt}
           />
         ) : (
           <VehicleImagePlaceholder />
@@ -63,39 +88,60 @@ export function VehicleCard({
             {vehicle.make} {vehicle.model}
           </h2>
           <p className="text-muted-foreground mt-0.5 truncate text-sm">
-            {vehicle.variant}
+            {vehicle.variant ?? " "}
           </p>
         </Link>
 
         <div className="mt-3 flex items-end justify-between gap-3">
           <p className="text-2xl font-black tracking-tight">
-            {formatCurrency(vehicle.price)}
+            {vehicle.price === null
+              ? "Preis auf Anfrage"
+              : formatCurrency(vehicle.price)}
           </p>
-          <span className="text-success shrink-0 text-[0.68rem] font-extrabold uppercase">
-            Sofort
+          <span
+            className={`shrink-0 text-[0.68rem] font-extrabold uppercase ${
+              vehicle.isAvailable ? "text-success" : "text-muted-foreground"
+            }`}
+          >
+            {availabilityLabel}
           </span>
         </div>
 
         <div className="text-muted-foreground mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
           <span className="flex min-w-0 items-center gap-1">
             <Gauge className="size-4" />
-            <span className="truncate">{formatMileage(vehicle.mileage)}</span>
+            <span className="truncate">
+              {vehicle.mileage === null
+                ? "Keine Angabe"
+                : formatMileage(vehicle.mileage)}
+            </span>
           </span>
           <span className="flex min-w-0 items-center gap-1">
             <Fuel className="size-4" />
-            <span className="truncate">{formatFuelType(vehicle.fuelType)}</span>
+            <span className="truncate">
+              {vehicle.fuelType === null
+                ? "Keine Angabe"
+                : formatFuelType(vehicle.fuelType)}
+            </span>
           </span>
           <span className="flex min-w-0 items-center gap-1">
             <Settings2 className="size-4" />
             <span className="truncate">
-              {formatTransmission(vehicle.transmissionType)}
+              {vehicle.transmissionType === null
+                ? "Keine Angabe"
+                : formatTransmission(vehicle.transmissionType)}
             </span>
           </span>
           <span className="flex min-w-0 items-center gap-1">
             <Zap className="size-4" />
             <span className="truncate">
-              {vehicle.powerKw} kW ·{" "}
-              {formatRegistration(vehicle.firstRegistration)}
+              {vehicle.powerKw === null
+                ? "Keine Angabe"
+                : `${vehicle.powerKw} kW`}
+              {" · "}
+              {vehicle.firstRegistration === null
+                ? "Keine Angabe"
+                : formatRegistration(vehicle.firstRegistration)}
             </span>
           </span>
         </div>

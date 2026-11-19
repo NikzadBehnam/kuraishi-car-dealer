@@ -157,6 +157,12 @@ export const updateVehicleSchema = vehicleDraftFieldsSchema
     { message: "Provide at least one vehicle change." },
   );
 
+export const vehicleLifecycleMutationSchema = z.strictObject({
+  vehicleId: inventoryIdSchema,
+  expectedVersion: z.number().int().min(1).max(2_147_483_647),
+  status: z.enum(["sold", "archived"]),
+});
+
 export const publishVehicleSchema = vehicleDraftFieldsSchema
   .extend({
     mediaAssetIds: mediaAssetIdsSchema,
@@ -729,6 +735,188 @@ export async function updateVehicle(input: unknown) {
     );
   } catch (error) {
     if (error instanceof InventoryMutationError) {
+      throw error;
+    }
+    prismaMutationError(error);
+  }
+}
+
+export async function transitionVehicleLifecycle(input: unknown) {
+  const session = await requireSession();
+  const parsed = vehicleLifecycleMutationSchema.parse(input);
+  const { vehicleId, expectedVersion, status } = parsed;
+  const snapshot = await prisma.vehicle.findUnique({
+    where: { id: vehicleId },
+    select: {
+      id: true,
+      version: true,
+      status: true,
+      inspectionStatus: true,
+      isFeatured: true,
+      soldAt: true,
+    },
+  });
+  if (!snapshot) {
+    throw new InventoryMutationError(404, "Vehicle was not found.");
+  }
+  if (snapshot.version !== expectedVersion) {
+    throw new InventoryMutationError(
+      409,
+      "The vehicle changed since it was loaded. Reload it before changing its status.",
+    );
+  }
+  if (snapshot.status === status) {
+    return {
+      vehicleId,
+      version: snapshot.version,
+      status: snapshot.status,
+      soldAt: snapshot.soldAt?.toISOString() ?? null,
+      changed: false,
+    };
+  }
+
+  if (status === "sold") {
+    const attachments = await prisma.vehicleMedia.findMany({
+      where: { vehicleId },
+      orderBy: { position: "asc" },
+      select: {
+        mediaAssetId: true,
+        mediaAsset: {
+          select: {
+            type: true,
+            bucketAccess: true,
+            publicApprovedAt: true,
+            publicApprovedById: true,
+          },
+        },
+      },
+    });
+    const approvedImageIds = attachments
+      .filter(
+        ({ mediaAsset }) =>
+          mediaAsset.type === "image" &&
+          mediaAsset.bucketAccess === "public_read" &&
+          mediaAsset.publicApprovedAt !== null &&
+          mediaAsset.publicApprovedById !== null,
+      )
+      .map(({ mediaAssetId }) => mediaAssetId);
+    if (!approvedImageIds.length) {
+      throw new InventoryMutationError(
+        422,
+        "A sold vehicle must retain at least one approved public image.",
+      );
+    }
+    await loadMediaRows(approvedImageIds, vehicleId);
+  }
+
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        const current = await tx.vehicle.findUnique({
+          where: { id: vehicleId },
+          select: {
+            id: true,
+            version: true,
+            status: true,
+            inspectionStatus: true,
+            isFeatured: true,
+            soldAt: true,
+          },
+        });
+        if (!current) {
+          throw new InventoryMutationError(404, "Vehicle was not found.");
+        }
+        if (current.version !== expectedVersion) {
+          throw new InventoryMutationError(
+            409,
+            "The vehicle changed since it was loaded. Reload it before changing its status.",
+          );
+        }
+        if (current.status === status) {
+          return {
+            vehicleId,
+            version: current.version,
+            status: current.status,
+            soldAt: current.soldAt?.toISOString() ?? null,
+            changed: false,
+          };
+        }
+
+        const attachments = await tx.vehicleMedia.findMany({
+          where: { vehicleId },
+          orderBy: { position: "asc" },
+          select: {
+            mediaAsset: {
+              select: {
+                type: true,
+                bucketAccess: true,
+                publicApprovedAt: true,
+                publicApprovedById: true,
+              },
+            },
+          },
+        });
+        const mediaAssets = attachments.map(({ mediaAsset }) => mediaAsset);
+        const lifecycle = resolveInventoryPolicyUpdate(
+          current,
+          { status },
+          mediaAssets,
+        );
+        assertPublicVehicleHasApprovedImage(lifecycle.status, mediaAssets);
+
+        const soldAt = status === "sold" ? new Date() : current.soldAt;
+        const update = await tx.vehicle.updateMany({
+          where: {
+            id: vehicleId,
+            version: expectedVersion,
+            status: current.status,
+          },
+          data: {
+            status: lifecycle.status,
+            isFeatured: lifecycle.isFeatured,
+            reservedUntil: null,
+            soldAt,
+            updatedById: session.user.id,
+            version: { increment: 1 },
+          },
+        });
+        if (update.count !== 1) {
+          throw new InventoryMutationError(
+            409,
+            "The vehicle changed since it was loaded. Reload it before changing its status.",
+          );
+        }
+
+        const version = expectedVersion + 1;
+        await tx.vehicleChange.create({
+          data: {
+            vehicleId,
+            actorId: session.user.id,
+            version,
+            previousStatus: current.status,
+            status: lifecycle.status,
+            previousInspectionStatus: current.inspectionStatus,
+            inspectionStatus: lifecycle.inspectionStatus,
+            previousSoldAt: current.soldAt,
+            soldAt,
+          },
+        });
+
+        return {
+          vehicleId,
+          version,
+          status: lifecycle.status,
+          soldAt: soldAt?.toISOString() ?? null,
+          changed: true,
+        };
+      },
+      { isolationLevel: "Serializable" },
+    );
+  } catch (error) {
+    if (
+      error instanceof InventoryMutationError ||
+      error instanceof InventoryPolicyError
+    ) {
       throw error;
     }
     prismaMutationError(error);

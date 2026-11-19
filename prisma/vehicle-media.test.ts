@@ -216,6 +216,11 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         error instanceof Error && error.name === "AuthorizationError",
     );
     await assert.rejects(
+      mutations.transitionVehicleLifecycle({ invalid: true }),
+      (error: unknown) =>
+        error instanceof Error && error.name === "AuthorizationError",
+    );
+    await assert.rejects(
       mediaAttachments.listVehicleMediaAssets("vehicle_1"),
       (error: unknown) =>
         error instanceof Error && error.name === "AuthorizationError",
@@ -558,6 +563,262 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         error.name === "InventoryMutationError" &&
         "status" in error &&
         error.status === 409,
+    );
+  });
+
+  it("marks a reserved vehicle sold, is idempotent, and archives it with history", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset({ publicRead: true });
+    const draft = await createDraft([imageId]);
+    await assert.rejects(
+      mutations.transitionVehicleLifecycle({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version,
+        status: "sold",
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryPolicyError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+    const initial = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const published = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version,
+        stockNumber: initial.stockNumber,
+        slug: initial.slug,
+        mediaAssetIds: [imageId],
+      }),
+    );
+    const reservedUntil = new Date("2026-02-01T10:00:00.000Z");
+    await prisma.vehicle.update({
+      where: { id: draft.vehicleId },
+      data: { status: "reserved", reservedUntil },
+    });
+
+    const sold = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: published.version,
+      status: "sold",
+    });
+    assert.equal(sold.changed, true);
+    assert.equal(sold.status, "sold");
+    assert.equal(sold.version, published.version + 1);
+    assert.ok(sold.soldAt);
+
+    const repeatedSale = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: sold.version,
+      status: "sold",
+    });
+    assert.equal(repeatedSale.changed, false);
+    assert.equal(repeatedSale.version, sold.version);
+    assert.equal(repeatedSale.soldAt, sold.soldAt);
+
+    const archived = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: sold.version,
+      status: "archived",
+    });
+    assert.equal(archived.changed, true);
+    assert.equal(archived.status, "archived");
+    assert.equal(archived.version, sold.version + 1);
+    assert.equal(archived.soldAt, sold.soldAt);
+
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+    });
+    assert.equal(vehicle.status, "archived");
+    assert.equal(vehicle.reservedUntil, null);
+    assert.equal(vehicle.soldAt?.toISOString(), sold.soldAt);
+    assert.equal(vehicle.isFeatured, false);
+    assert.deepEqual(
+      await prisma.vehicleChange.findMany({
+        where: {
+          vehicleId: draft.vehicleId,
+          version: { gt: published.version },
+        },
+        orderBy: { version: "asc" },
+        select: {
+          version: true,
+          previousStatus: true,
+          status: true,
+          previousSoldAt: true,
+          soldAt: true,
+        },
+      }),
+      [
+        {
+          version: sold.version,
+          previousStatus: "reserved",
+          status: "sold",
+          previousSoldAt: null,
+          soldAt: new Date(sold.soldAt!),
+        },
+        {
+          version: archived.version,
+          previousStatus: "sold",
+          status: "archived",
+          previousSoldAt: new Date(sold.soldAt!),
+          soldAt: new Date(sold.soldAt!),
+        },
+      ],
+    );
+  });
+
+  it("rejects stale lifecycle changes and requires an approved image before sale", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const draft = await createDraft();
+    await assert.rejects(
+      mutations.transitionVehicleLifecycle({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version,
+        status: "sold",
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 422,
+    );
+    await assert.rejects(
+      mutations.transitionVehicleLifecycle({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version + 1,
+        status: "archived",
+      }),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.name === "InventoryMutationError" &&
+        "status" in error &&
+        error.status === 409,
+    );
+
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+    });
+    assert.equal(vehicle.status, "draft");
+    assert.equal(vehicle.version, draft.version);
+    assert.equal(vehicle.soldAt, null);
+  });
+
+  it("clears featured when archiving a published vehicle", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset({ publicRead: true });
+    const draft = await createDraft([imageId]);
+    const initial = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const published = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version,
+        stockNumber: initial.stockNumber,
+        slug: initial.slug,
+        mediaAssetIds: [imageId],
+      }),
+    );
+    await prisma.vehicle.update({
+      where: { id: draft.vehicleId },
+      data: { isFeatured: true },
+    });
+
+    const archived = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: published.version,
+      status: "archived",
+    });
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+    });
+
+    assert.equal(archived.status, "archived");
+    assert.equal(archived.soldAt, null);
+    assert.equal(vehicle.isFeatured, false);
+    assert.equal(vehicle.soldAt, null);
+    assert.equal(vehicle.status, "archived");
+    assert.equal(vehicle.version, published.version + 1);
+  });
+
+  it("rolls back a lifecycle update when its history insert fails", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset({ publicRead: true });
+    const draft = await createDraft([imageId]);
+    const initial = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const published = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: draft.vehicleId,
+        expectedVersion: draft.version,
+        stockNumber: initial.stockNumber,
+        slug: initial.slug,
+        mediaAssetIds: [imageId],
+      }),
+    );
+    const reservedUntil = new Date("2026-03-01T10:00:00.000Z");
+    await prisma.vehicle.update({
+      where: { id: draft.vehicleId },
+      data: { status: "reserved", reservedUntil },
+    });
+    const triggerFunction = `"test_fail_vehicle_change_fn"`;
+    const triggerName = `"test_fail_vehicle_change"`;
+
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE FUNCTION ${triggerFunction}() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW."status" = 'sold' THEN
+            RAISE EXCEPTION 'intentional vehicle lifecycle test failure';
+          END IF;
+          RETURN NEW;
+        END;
+        $$;
+      `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TRIGGER ${triggerName}
+        BEFORE INSERT ON "VehicleChange"
+        FOR EACH ROW EXECUTE FUNCTION ${triggerFunction}();
+      `);
+      await assert.rejects(
+        mutations.transitionVehicleLifecycle({
+          vehicleId: draft.vehicleId,
+          expectedVersion: published.version,
+          status: "sold",
+        }),
+      );
+    } finally {
+      await prisma.$executeRawUnsafe(
+        `DROP TRIGGER IF EXISTS ${triggerName} ON "VehicleChange"`,
+      );
+      await prisma.$executeRawUnsafe(
+        `DROP FUNCTION IF EXISTS ${triggerFunction}()`,
+      );
+    }
+
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+    });
+    assert.equal(vehicle.status, "reserved");
+    assert.equal(vehicle.version, published.version);
+    assert.equal(
+      vehicle.reservedUntil?.toISOString(),
+      reservedUntil.toISOString(),
+    );
+    assert.equal(vehicle.soldAt, null);
+    assert.equal(
+      await prisma.vehicleChange.count({
+        where: { vehicleId: draft.vehicleId, version: published.version + 1 },
+      }),
+      0,
     );
   });
 

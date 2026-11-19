@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   Archive,
   ArrowDown,
@@ -34,6 +35,14 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,6 +91,15 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
   minute: "2-digit",
 });
+
+const lifecycleMutationResponseSchema = z.strictObject({
+  vehicleId: z.string().min(1),
+  version: z.number().int().positive(),
+  status: z.enum(["sold", "archived"]),
+  soldAt: z.string().datetime({ offset: true }).nullable(),
+  changed: z.boolean(),
+});
+const lifecycleMutationErrorSchema = z.strictObject({ error: z.string() });
 
 export function VehicleInventoryTable({
   vehicles,
@@ -534,49 +552,160 @@ function SortableHead({
 
 function VehicleRowActions({ vehicle }: { vehicle: StaffInventoryVehicleDTO }) {
   const title = `${vehicle.make} ${vehicle.model}`;
+  const [lifecycleAction, setLifecycleAction] = useState<
+    "sold" | "archived" | null
+  >(null);
+  const [isChangingLifecycle, setIsChangingLifecycle] = useState(false);
+  const router = useRouter();
+
+  const confirmLifecycleAction = async () => {
+    if (!lifecycleAction || isChangingLifecycle) return;
+    setIsChangingLifecycle(true);
+    try {
+      const response = await fetch(
+        `/api/admin/vehicles/${encodeURIComponent(vehicle.id)}/lifecycle`,
+        {
+          method: "POST",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expectedVersion: vehicle.version,
+            status: lifecycleAction,
+          }),
+        },
+      );
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const parsedError = lifecycleMutationErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not update the vehicle status.",
+        );
+      }
+
+      const result = lifecycleMutationResponseSchema.parse(payload);
+      if (result.status !== lifecycleAction) {
+        throw new Error("The server returned an unexpected vehicle status.");
+      }
+      setLifecycleAction(null);
+      if (result.changed) {
+        toast.success(
+          result.status === "sold"
+            ? "Vehicle marked sold."
+            : "Vehicle archived.",
+        );
+      } else {
+        toast.info(
+          result.status === "sold"
+            ? "This vehicle is already sold."
+            : "This vehicle is already archived.",
+        );
+      }
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not update the vehicle status.",
+      );
+    } finally {
+      setIsChangingLifecycle(false);
+    }
+  };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="rounded-[var(--radius-sm)]"
-          aria-label={`Open actions for ${title}`}
-        >
-          <MoreHorizontal />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuLabel>{vehicle.stockNumber}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={routeBuilders.vehicleDetails(vehicle.slug)}>
-            <Eye />
-            View public page
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`${adminRoutes.vehicles}/${vehicle.id}/edit`}>
-            <FilePenLine />
-            Edit
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => mockRowAction("Duplicate", title)}>
-          <Copy />
-          Duplicate
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => mockRowAction("Mark sold", title)}>
-          <BadgeCheck />
-          Mark sold
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => mockRowAction("Archive", title)}>
-          <Archive />
-          Archive
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="rounded-[var(--radius-sm)]"
+            aria-label={`Open actions for ${title}`}
+          >
+            <MoreHorizontal />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuLabel>{vehicle.stockNumber}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href={routeBuilders.vehicleDetails(vehicle.slug)}>
+              <Eye />
+              View public page
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`${adminRoutes.vehicles}/${vehicle.id}/edit`}>
+              <FilePenLine />
+              Edit
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => mockRowAction("Duplicate", title)}>
+            <Copy />
+            Duplicate
+          </DropdownMenuItem>
+          {["published", "reserved"].includes(vehicle.status) && (
+            <DropdownMenuItem onSelect={() => setLifecycleAction("sold")}>
+              <BadgeCheck />
+              Mark sold
+            </DropdownMenuItem>
+          )}
+          {vehicle.status !== "archived" && (
+            <DropdownMenuItem onSelect={() => setLifecycleAction("archived")}>
+              <Archive />
+              Archive
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog
+        open={lifecycleAction !== null}
+        onOpenChange={(open) => {
+          if (!open && !isChangingLifecycle) setLifecycleAction(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {lifecycleAction === "sold"
+                ? `Mark ${title} as sold?`
+                : `Archive ${title}?`}
+            </DialogTitle>
+            <DialogDescription>
+              {lifecycleAction === "sold"
+                ? "This records the completed sale, clears any reservation, removes the vehicle from active stock, and keeps its sold detail page available."
+                : "This removes the vehicle from public pages without permanently deleting it. Its history is retained; restore it to Draft before republishing."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isChangingLifecycle}
+              onClick={() => setLifecycleAction(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isChangingLifecycle}
+              onClick={() => void confirmLifecycleAction()}
+            >
+              {isChangingLifecycle
+                ? "Saving…"
+                : lifecycleAction === "sold"
+                  ? "Mark sold"
+                  : "Archive vehicle"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

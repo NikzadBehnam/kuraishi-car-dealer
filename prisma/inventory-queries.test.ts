@@ -985,6 +985,18 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         }
       }
     }
+    assert.deepEqual(
+      (await queries.getPublicComparisonVehicles([ids[3], ids[0], ids[4]])).map(
+        ({ id }) => id,
+      ),
+      [ids[3], ids[0]],
+    );
+    assert.deepEqual(
+      (
+        await queries.getPublicComparisonVehicles([ids[0], `missing-${prefix}`])
+      ).map(({ id }) => id),
+      [ids[0]],
+    );
     const pages = [];
     for (let page = 1; page <= 4; page++) {
       const result = await queries.listPublicVehicleSitemapEntries({
@@ -1323,6 +1335,9 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       () => queries.getPublicVehicle("car?private=true"),
       () => queries.getPublicVehicle(null),
       () => queries.getPublicComparisonVehicle("../private"),
+      () => queries.getPublicComparisonVehicles([ids[0], ids[0]]),
+      () =>
+        queries.getPublicComparisonVehicles([ids[0], ids[1], ids[2], ids[3]]),
       () => queries.getPublicVehicleMetadata("car?private=true"),
       () => queries.getPublicVehicleForInquiry(null),
       () => queries.listPublicVehicleSitemapEntries({ pageSize: 101 }),
@@ -1402,6 +1417,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         () => queries.listPublicVehicles({ search: "Example" }),
         () => queries.getRelatedVehicles({ id: ids[0] }),
         () => queries.getPublicComparisonVehicle(ids[0]),
+        () => queries.getPublicComparisonVehicles([ids[0]]),
         () => queries.getPublicVehicleMetadata(slug(0)),
         () => queries.getPublicVehicleForInquiry(slug(0)),
         () => queries.listPublicVehicleSitemapEntries(),

@@ -2,8 +2,7 @@ export const homePageContent = {
   eyebrow: "Mobilität mit Haltung",
   title: "Finden Sie das Fahrzeug, das zu Ihrem Leben passt.",
   description:
-    "Geprüfte Fahrzeuge, transparente Angebote und persönliche Beratung aus einer Hand.",
-  trust: ["120-Punkte-Check", "12 Monate Garantie", "4,9 / 5 Kundenbewertung"],
+    "Entdecken Sie veröffentlichte Fahrzeugangebote und senden Sie uns Ihre Anfrage.",
   categories: [
     "SUV",
     "Kleinwagen",
@@ -17,15 +16,15 @@ export const homePageContent = {
   featuredTitle: "Ausgewählte Fahrzeuge",
   featuredEmpty:
     "Aktuell sind keine ausgewählten Fahrzeuge verfügbar. Entdecken Sie unser gesamtes Angebot.",
-  benefitsTitle: "Ein gutes Gefühl fährt mit.",
+  benefitsTitle: "Fahrzeuge entdecken und direkt anfragen.",
   benefits: [
     {
-      title: "Geprüfte Qualität",
-      text: "Jedes Fahrzeug durchläuft unseren 120-Punkte-Check.",
+      title: "Fahrzeuge im Bestand",
+      text: "Entdecken Sie die aktuell veröffentlichten Fahrzeugangebote.",
     },
     {
-      title: "Transparente Preise",
-      text: "Klare Historie und nachvollziehbare Kosten.",
+      title: "Fragen direkt stellen",
+      text: "Senden Sie uns Ihre Frage über das Kontaktformular.",
     },
   ],
 };

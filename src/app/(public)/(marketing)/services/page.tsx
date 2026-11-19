@@ -34,14 +34,14 @@ export default function ServicesPage() {
             <p className="eyebrow">0{index + 1}</p>
             <h2 className="mt-3 text-xl font-extrabold">{service.title}</h2>
             <p className="text-muted-foreground mt-3">
-              Verlässlich organisiert, transparent erklärt und individuell auf
-              Ihre Bedürfnisse abgestimmt.
+              Senden Sie eine Anfrage zu diesem Thema. Dadurch wird kein Termin
+              bestätigt.
             </p>
             <Link
               className="text-accent mt-5 inline-flex items-center gap-2 font-bold"
               href={`${publicRoutes.contact}?service=${encodeURIComponent(service.appointmentType)}`}
             >
-              Mehr erfahren <ArrowRight className="size-4" />
+              Anfrage senden <ArrowRight className="size-4" />
             </Link>
           </Card>
         ))}

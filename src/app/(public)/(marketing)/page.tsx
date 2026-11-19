@@ -3,7 +3,6 @@ import {
   ArrowRight,
   BadgeCheck,
   CarFront,
-  Check,
   MapPin,
   MessageCircle,
   ReceiptText,
@@ -69,8 +68,8 @@ export default async function HomePage() {
               <span className="text-accent block">Ihrem Leben passt.</span>
             </h1>
             <p className="hero-description mt-6 max-w-2xl text-base leading-7 sm:text-lg">
-              Entdecken Sie sorgfältig ausgewählte Gebrauchtwagen mit klarer
-              Historie, fairen Konditionen und persönlicher Beratung in Wien.
+              Durchsuchen Sie die veröffentlichten Fahrzeugangebote und senden
+              Sie uns bei Fragen eine Anfrage.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Button asChild variant="accent">
@@ -89,16 +88,6 @@ export default async function HomePage() {
                   Persönlich beraten lassen
                 </Link>
               </Button>
-            </div>
-            <div className="hero-trust mt-8 flex flex-wrap gap-x-6 gap-y-3 border-t pt-5 text-xs font-semibold sm:text-sm">
-              {homePageContent.trust.map((item) => (
-                <span className="flex items-center gap-2" key={item}>
-                  <span className="hero-check grid size-5 place-items-center rounded-[var(--radius-sm)]">
-                    <Check className="size-3" aria-hidden="true" />
-                  </span>
-                  {item}
-                </span>
-              ))}
             </div>
           </div>
         </div>

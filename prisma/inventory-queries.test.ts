@@ -182,6 +182,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     });
     sessionMock = mock.module("../src/lib/session.ts", {
       namedExports: {
+        AuthorizationError,
         requireSession: async () => assertAuthenticatedSession(session),
       },
     });

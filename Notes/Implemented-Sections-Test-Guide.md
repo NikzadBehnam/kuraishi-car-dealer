@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers implemented work on `backend/public-vehicle-detail`, based on `backend/public-vehicle-catalog` and including the integrated Section 04 branch:
+This guide covers implemented work on `feature/live-vehicle-comparison`, based on `backend/public-vehicle-detail` and including the integrated Sections 04-05 work:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -8,19 +8,20 @@ This guide covers implemented work on `backend/public-vehicle-detail`, based on 
 - Section 04.01-04.17: staff inventory, vehicle mutations, lifecycle, authorization, public detail and live dashboard counts.
 - Section 05.01-05.06 and 05.08-05.09: live homepage/catalog inventory, bounded search, URL navigation, pagination and public eligibility.
 - Section 06.01-06.09: live public detail lookup, approved gallery media, dealership contact, similar inventory and record-derived metadata.
+- Section 07.01-07.04: anonymous live comparison selection and rendering against current eligible inventory.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-05 work. The user deferred the combined manual retest until later. Section 06.10 still needs the isolated inventory-query suite after the test credential is rotated, and the manual page checks below are also pending. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented. Comparison selection is still stored in the browser, but resolving those IDs to live inventory belongs to Section 07.
+Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-06 work. The user deferred the combined manual retest until later. Sections 06.10 and 07.05 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
-1. Use the Section 06 branch, not `master`:
+1. Use the Section 07 branch, not `master`:
 
    ```powershell
    git branch --show-current
    git status --short --branch
    ```
 
-   The branch should be `backend/public-vehicle-detail`. It includes the integrated Sections 04-05 work so all three sections can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
+   The branch should be `feature/live-vehicle-comparison`. It includes the integrated Sections 04-06 work so they can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
 2. Use Node 25.8.0, or a Node version that supports the test-runner flags in the package scripts. The machine PATH previously selected Node 14, which cannot run these scripts; Node 22.21.1 also lacked `--test-isolation=none`.
 
@@ -203,7 +204,7 @@ Use the isolated non-Production app/database and test media bucket. Create or ed
 6. **Cross-section propagation**
    - Publish, feature, reserve/release, sell and archive test vehicles through the admin workflow. Reload homepage and catalog after each change.
    - Verify eligible published/featured stock appears, Reserved listing cards show their status, Sold/Archived/Draft stock is excluded from discovery, and no redeploy is needed.
-   - Comparison controls retain their existing browser behavior, but a full live comparison table is not expected until Section 07.
+   - Verify the live comparison table as described in Section 9 below.
 
 ## 8. Section 06 — public vehicle detail (06.01-06.10)
 
@@ -234,7 +235,27 @@ Use the isolated non-Production app, inventory and media resources. Create and c
    - The isolated media suite checks approved ordered images/alt text, missing media, public detail dealer/owner data, lifecycle status and updated prices. Run `pnpm test:vehicle-media` as listed in Section 2.
    - The inventory query suite covers bounded same-body recommendations and exclusions. Run `pnpm test:inventory-db` only after rotating its previously exposed test credential and independently confirming the target is isolated and empty.
 
-## 9. Completion record
+## 9. Section 07 — comparison with live inventory (07.01-07.05)
+
+Use the isolated non-Production app and inventory database. The selected IDs are an anonymous browser preference stored under `kuraishi-comparison`; no account or database record is created for the comparison selection.
+
+1. **Selection and persistence**
+   - From the homepage or catalog, add one eligible Published vehicle and one inspection-passed Reserved vehicle. Confirm both appear in the comparison page; Reserved must be marked Reserved, not immediately available.
+   - Add a third eligible vehicle. Attempt to add a fourth and confirm the selection stays at three with a clear limit message.
+   - Refresh the page and navigate between the catalog, detail and comparison page. Confirm each card/detail control reflects the same selected state and the comparison persists.
+   - Remove one vehicle from its card and from the comparison page; confirm the other selections remain. Use **Alle entfernen** and confirm the table becomes empty.
+2. **Live values and approved images**
+   - Compare displayed price, mileage, first registration, fuel, transmission, power and availability against the current admin records. Missing optional fields should display as unavailable, not fixture data.
+   - Confirm each comparison image is an approved public vehicle image and uses its approved alt text; when there is no approved image, the placeholder should render.
+   - Edit a selected vehicle's price/specifications or approved image through the admin flow, then return to comparison and reload. The current record values and image should appear without a redeploy.
+3. **Corrupt, legacy and stale selections**
+   - In browser developer tools on the isolated app origin, set `localStorage["kuraishi-comparison"]` to malformed JSON, a non-array value, or an array containing duplicates, invalid IDs and more than three entries. Reload and confirm the UI recovers, keeps only valid unique IDs up to three, and reports cleanup.
+   - Select an eligible vehicle, then make it no longer comparison-eligible through the admin workflow (for example, move it to Sold or Archived). Reopen comparison after a successful query; the stale selection should be pruned and explained. Reserved vehicles that pass inspection remain eligible.
+4. **Query failure and automated coverage**
+   - In a safe isolated development environment only, verify a comparison query failure shows an error and retry control without clearing saved IDs. Do not simulate failures against Production.
+   - Run `pnpm test` for local-storage validation/recovery coverage. Run `pnpm test:inventory-db` only after rotating the previously exposed test credential and independently confirming the target is isolated and empty; it covers bounded unique selection, current eligibility, selection ordering and database error propagation.
+
+## 10. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
@@ -247,5 +268,6 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Section 03 manual media workflow                                          |         |                                                |
 | Section 04 manual admin/public/dashboard workflow                         |         |                                                |
 | Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                            |
+| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                            |
 | Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified |
 | Homepage/list database propagation                                        | Pending | Section 05.01-05.02                            |

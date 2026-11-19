@@ -9,12 +9,13 @@ export function VehicleActions({
   vehicleId: string;
   compact?: boolean;
 }) {
-  const { comparison, toggleComparison } = useVehicleState();
+  const { comparison, ready, toggleComparison } = useVehicleState();
   return (
     <div className="flex gap-2">
       <Button
         variant={comparison.has(vehicleId) ? "accent" : "outline"}
         size={compact ? "icon" : "default"}
+        disabled={!ready}
         aria-label={
           comparison.has(vehicleId)
             ? "Aus Vergleich entfernen"

@@ -40,6 +40,7 @@ import {
   inventoryIdSchema,
   inventoryPaginationInputSchema,
   inventoryPaginationSchema,
+  MAX_PUBLIC_COMPARISON_SELECTION_SIZE,
   inventorySlugSchema,
   publicInventorySearchSchema,
   staffInventoryFiltersSchema,
@@ -71,6 +72,12 @@ const relatedInputSchema = z.strictObject({
   id: inventoryIdSchema,
   limit: limitSchema.default(3),
 });
+const comparisonIdsSchema = z
+  .array(inventoryIdSchema)
+  .max(MAX_PUBLIC_COMPARISON_SELECTION_SIZE)
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: "Comparison vehicle IDs must be unique.",
+  });
 
 function searchLabel(
   column: Prisma.Sql,
@@ -345,6 +352,29 @@ export async function getPublicComparisonVehicle(
     select: publicVehicleSelect,
   });
   return row ? serializePublicVehicle(row) : null;
+}
+
+export async function getPublicComparisonVehicles(
+  input: unknown,
+): Promise<PublicInventoryVehicleDTO[]> {
+  const ids = comparisonIdsSchema.parse(input);
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const rows = await prisma.vehicle.findMany({
+    where: {
+      AND: [getPublicVehicleWhere("comparison"), { id: { in: ids } }],
+    },
+    select: publicVehicleSelect,
+  });
+  const rowsById = new Map(
+    rows.map((row): [string, typeof row] => [row.id, row]),
+  );
+  return ids.flatMap((id) => {
+    const row = rowsById.get(id);
+    return row ? [serializePublicVehicle(row)] : [];
+  });
 }
 
 export async function getPublicVehicleMetadata(

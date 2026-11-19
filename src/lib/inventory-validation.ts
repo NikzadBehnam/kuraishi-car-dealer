@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const DEFAULT_INVENTORY_PAGE_SIZE = 8;
 export const MAX_INVENTORY_SELECTION_SIZE = 100;
+export const MAX_PUBLIC_COMPARISON_SELECTION_SIZE = 3;
 export const PUBLIC_CATALOG_PAGE_SIZE = 12;
 export const MAX_PUBLIC_CATALOG_SEARCH_LENGTH = 100;
 

@@ -388,7 +388,7 @@ The user approved alert-only content, not visitor contact details or message for
    - Vehicle text is escaped in HTML and preserved literally in plain text. Subject is constant and marked `[TEST]`, not assembled from submitted text. Missing optional data does not become the text `null`.
    - Invalid stored values and inconsistent service/source combinations throw explicit errors rather than producing a misleading notification.
 3. Automated link tests bind the existing `/admin/leads` route to localhost or the current validated Preview origin, rejecting arbitrary/Production URLs. The alert contains no auth token, customer identifier or unsupported inquiry-detail query parameter in its link.
-4. When performing the deferred browser retest on an isolated app, confirm an anonymous visit to `/admin/leads` requires sign-in. The page now reads real inquiries; it does not add note persistence, lead statuses, assignment or an automated response flow.
+4. When performing the deferred browser retest on an isolated app, confirm an anonymous visit to `/admin/leads` requires sign-in. The page now reads real inquiries and supports the separate append-only internal notes flow from 11.05-11.06; it does not add lead statuses, assignment or an automated response flow.
 5. No provider acceptance, actual send, real inbox rendering or database-backed retry behavior has been tested by these source checks. These remain 10.07; 10.01 is still partial until real staff recipient configuration and provider verification are completed.
 
 ## 14. Section 10.04-10.05 — durable outbox and bounded delivery retries
@@ -414,24 +414,25 @@ The outbox and worker are implemented, but no database migration or provider cal
 
 ## 15. Section 11.01-11.04 — database-backed staff inquiry inbox
 
-The inbox now uses the authenticated inquiry records and notification outbox. Internal note persistence is deliberately not included; wait for the Section 11.05 storage decision before testing any note behavior.
+The inbox now uses authenticated inquiry records and the notification outbox. Append-only internal notes are implemented in 11.05-11.06; their database and browser verification remain deferred.
 
 ### Source and isolated-database checks
 
-1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`. Source tests cover strict/repeated URL values, bounded search/page values, field-to-search mapping, DTO projection, historical snapshots, and safe failed-delivery messages.
+1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`. Source tests cover strict/repeated URL values, bounded search/page values, field-to-search mapping, DTO projection, historical snapshots, safe failed-delivery messages, and strict note validation/serialization.
 2. The protected query calls `requireSession`; verify signed-out requests are redirected by the admin layout and a direct selected inquiry ID cannot bypass authentication.
 3. Before any database test, rotate the previously exposed inventory-test credential and independently confirm `.env.inventory-test.local` targets an isolated, empty database. Then run `pnpm test:inventory-db`, which applies migrations; otherwise skip it.
-4. The gated DB case creates synthetic inquiries, checks multi-term search, bounded results, selected detail, failed notification status, allowlisted error code serialization, absence of privacy evidence, and anonymous query denial. It must clean its inquiry/rate-limit rows.
+4. The gated DB case creates synthetic inquiries, checks multi-term search, bounded results, selected detail, failed notification status, allowlisted error code serialization, absence of privacy evidence, and anonymous query denial. It also checks authorized note creation/readback, session-derived authorship, accurate counts, concurrent note additions, invalid/unknown inputs, and unauthorized writes. It must clean its inquiry/rate-limit rows.
 
 ### Deferred browser checks (isolated non-Production app only)
 
-1. Sign in as an ordinary authenticated staff user and open `/admin/leads`. Confirm newest inquiries appear first, with no fixture records or invented notes counts. Confirm a fresh/empty database shows an honest empty state.
+1. Sign in as an ordinary authenticated staff user and open `/admin/leads`. Confirm newest inquiries appear first, with no fixture records, and database-backed note counts. Confirm a fresh/empty database shows an honest empty state.
 2. Search using a unique synthetic value in each supported field: name, email, phone, message, and linked vehicle make/model. Combine multiple terms and confirm every term must match. Open a second page and verify stable ordering and that the search remains in the URL.
 3. Open an inquiry and compare its source/service, preferred business date, current linked vehicle (if any), historical vehicle snapshot when the relation is absent, message, and created/updated timestamps. Ensure the preferred date is not presented as a confirmed appointment.
 4. Verify phone and email actions use the provided `tel:` and `mailto:` values. If no phone exists, no nonfunctional call link should be shown.
 5. Confirm delivery state appears in the list and detail. A failed state shows only the fixed sanitized explanation; a provider-accepted state explicitly does not claim delivery to the mailbox. Older/untracked records are not presented as sent.
-6. Try an unknown inquiry ID, malformed/repeated query values, overlong search, and an out-of-range page. Expect a safe not-found/invalid-filter state or bounded redirect, with no protected data in the URL.
-7. Confirm no note Save action, lead status, assignment, or visitor-reply control is presented as functional. These are outside 11.01-11.04.
+6. Add a synthetic internal note. Verify it is trimmed, attributed to the signed-in staff account, appears with its timestamp after refresh, and increments the count. Confirm notes are append-only and cannot be edited from this UI. Try blank/overlong text and verify a visible validation error; do not use real customer details in test notes.
+7. Try an unknown inquiry ID, malformed/repeated query values, overlong search, and an out-of-range page. Expect a safe not-found/invalid-filter state or bounded redirect, with no protected data in the URL. Confirm signed-out direct note actions are rejected.
+8. Confirm no lead status, assignment, closure, delete, or visitor-reply control is presented as functional. These remain outside the approved scope.
 
 ## 16. Completion record
 
@@ -451,8 +452,9 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Section 09 guarded inquiry intake                                         | Pending | Isolated DB/browser checks; Production blocked                                          |
 | Section 10.01 Resend setup                                                | Partial | Domain/key scope/quotas and template ready; real recipients/provider acceptance pending |
 | Section 10.02 privacy-minimal staff content                               | Passed  | Source tests only; no provider send or browser retest                                   |
-| Section 10.04-10.05 outbox/retry core                                    | Partial | Source tests pass; DB migration and schedule remain pending                             |
-| Section 10.07 provider verification                                      | Pending | No real provider call/email; isolated DB and simulator verification not run             |
+| Section 10.04-10.05 outbox/retry core                                     | Partial | Source tests pass; DB migration and schedule remain pending                             |
+| Section 10.07 provider verification                                       | Pending | No real provider call/email; isolated DB and simulator verification not run             |
 | Section 11.01-11.04 real protected inbox                                  | Partial | Source tests pass; DB suite and deferred browser retest remain pending                  |
+| Section 11.05-11.06 append-only staff notes                               | Partial | Source tests pass; migration, gated DB suite, and browser retest remain pending         |
 | Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified                                          |
 | Homepage/list database propagation                                        | Pending | Section 05.01-05.02                                                                     |

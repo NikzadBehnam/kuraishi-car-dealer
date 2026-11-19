@@ -5,8 +5,29 @@ import { inventoryIdSchema } from "./inventory-validation.ts";
 
 export const ADMIN_INQUIRY_PAGE_SIZE = 25;
 export const MAX_ADMIN_INQUIRY_SEARCH_LENGTH = 100;
+export const MAX_ADMIN_INQUIRY_NOTE_LENGTH = 2000;
 
 const maximumOffset = 2_147_483_647;
+
+export const addAdminInquiryNoteSchema = z.strictObject({
+  inquiryId: z
+    .string()
+    .min(1, "Inquiry ID is required.")
+    .max(128, "Inquiry ID is too long.")
+    .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "Invalid inquiry ID."),
+  content: z
+    .string()
+    .trim()
+    .min(1, "Enter a note before saving.")
+    .max(
+      MAX_ADMIN_INQUIRY_NOTE_LENGTH,
+      `Notes must be ${MAX_ADMIN_INQUIRY_NOTE_LENGTH} characters or fewer.`,
+    )
+    .refine(
+      (value) => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value),
+      "The note contains unsupported control characters.",
+    ),
+});
 
 export const adminInquirySearchParamsSchema = z.strictObject({
   q: z

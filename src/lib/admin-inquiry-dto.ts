@@ -8,6 +8,7 @@ import type {
 import type {
   AdminInquiryDetail,
   AdminInquiryListItem,
+  AdminInquiryNote,
   AdminInquiryVehicle,
   AdminLeadSource,
 } from "../types/admin.ts";
@@ -61,6 +62,14 @@ export interface AdminInquiryQueryRow {
   createdAt: Date;
   vehicle: AdminInquiryVehicle | null;
   notification: AdminInquiryNotificationListRow | null;
+  _count: { notes: number };
+}
+
+export interface AdminInquiryNoteQueryRow {
+  id: string;
+  content: string;
+  createdAt: Date;
+  author: { name: string };
 }
 
 export interface AdminInquiryDetailQueryRow extends Omit<
@@ -70,6 +79,7 @@ export interface AdminInquiryDetailQueryRow extends Omit<
   message: string;
   preferredDate: Date | null;
   updatedAt: Date;
+  notes: AdminInquiryNoteQueryRow[];
   notification: AdminInquiryNotificationDetailRow | null;
 }
 
@@ -116,6 +126,18 @@ export function serializeAdminInquiryListItem(
     vehicle: serializeVehicle(row.vehicle),
     createdAt: row.createdAt.toISOString(),
     deliveryStatus: row.notification?.status ?? "untracked",
+    notesCount: row._count.notes,
+  };
+}
+
+function serializeAdminInquiryNote(
+  row: AdminInquiryNoteQueryRow,
+): AdminInquiryNote {
+  return {
+    id: row.id,
+    authorName: row.author.name,
+    content: row.content,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 
@@ -128,6 +150,7 @@ export function serializeAdminInquiryDetail(
     message: row.message,
     preferredDate: row.preferredDate?.toISOString().slice(0, 10) ?? null,
     updatedAt: row.updatedAt.toISOString(),
+    notes: row.notes.map(serializeAdminInquiryNote),
     delivery: row.notification
       ? {
           status: row.notification.status,

@@ -73,12 +73,21 @@ export interface AdminInquiryListItem {
   vehicle: AdminInquiryVehicle | null;
   createdAt: string;
   deliveryStatus: AdminInquiryDeliveryStatus;
+  notesCount: number;
+}
+
+export interface AdminInquiryNote {
+  id: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface AdminInquiryDetail extends AdminInquiryListItem {
   message: string;
   preferredDate: string | null;
   updatedAt: string;
+  notes: AdminInquiryNote[];
   delivery: {
     status: Exclude<AdminInquiryDeliveryStatus, "untracked">;
     attemptCount: number;

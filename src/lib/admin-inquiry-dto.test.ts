@@ -25,6 +25,15 @@ const inquiry: AdminInquiryDetailQueryRow = {
   message: "Synthetic inquiry message.",
   preferredDate: new Date("2026-11-20T00:00:00.000Z"),
   vehicle: null,
+  _count: { notes: 1 },
+  notes: [
+    {
+      id: "note1",
+      content: "Call back tomorrow.",
+      createdAt: new Date("2026-11-19T10:06:00.000Z"),
+      author: { name: "Synthetic Staff" },
+    },
+  ],
   notification: {
     status: "failed",
     attemptCount: 5,
@@ -43,6 +52,8 @@ describe("admin inquiry DTOs", () => {
     assert.equal(result.vehicleTitleSnapshot, "Example Model Snapshot");
     assert.equal(result.vehicleSlugSnapshot, "example-model");
     assert.equal(result.deliveryStatus, "failed");
+    assert.equal(result.notesCount, 1);
+    assert.equal("notes" in result, false);
     assert.equal("message" in result, false);
   });
 
@@ -52,6 +63,15 @@ describe("admin inquiry DTOs", () => {
     assert.equal(result.delivery?.lastErrorCode, "provider_unavailable");
     assert.equal(result.delivery?.attemptCount, 5);
     assert.equal(result.message, inquiry.message);
+    assert.equal(result.notesCount, 1);
+    assert.deepEqual(result.notes, [
+      {
+        id: "note1",
+        authorName: "Synthetic Staff",
+        content: "Call back tomorrow.",
+        createdAt: "2026-11-19T10:06:00.000Z",
+      },
+    ]);
   });
 
   it("treats pre-outbox inquiries as untracked and rejects invalid stored error codes", () => {

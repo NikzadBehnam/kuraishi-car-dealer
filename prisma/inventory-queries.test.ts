@@ -59,7 +59,10 @@ const importedTestRows = {
 };
 const slug = (index: number) =>
   index === 7 ? `query-\u0161koda-${ids[index]}` : `query-${ids[index]}`;
-let session: AuthSession | null = null;
+type InventoryTestSession = AuthSession & {
+  user: AuthSession["user"] & { id?: string };
+};
+let session: InventoryTestSession | null = null;
 let databaseFailure: Error | undefined;
 const queryClient = prisma.$extends({
   query: {
@@ -75,6 +78,7 @@ let queries: typeof import("../src/lib/inventory-queries.ts");
 let dealershipSettings: typeof import("../src/lib/dealership-settings.ts");
 let inquiryIntake: typeof import("../src/lib/inquiry-intake.ts");
 let adminInquiryQueries: typeof import("../src/lib/admin-inquiry-queries.ts");
+let adminInquiryNotes: typeof import("../src/lib/admin-inquiry-notes.ts");
 const inquiryKeys: string[] = [];
 const inquiryClients: string[] = [];
 let dbMock: ReturnType<typeof mock.module> | undefined;
@@ -191,6 +195,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     dealershipSettings = await import("../src/lib/dealership-settings.ts");
     inquiryIntake = await import("../src/lib/inquiry-intake.ts");
     adminInquiryQueries = await import("../src/lib/admin-inquiry-queries.ts");
+    adminInquiryNotes = await import("../src/lib/admin-inquiry-notes.ts");
   });
 
   beforeEach(() => {
@@ -1557,7 +1562,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       dealershipDate(now),
     );
     assert.equal(first.vehicleId, null);
-    session = { user: { role: "user" } };
+    session = { user: { role: "user", id: actorId } };
     await prisma.inquiryNotification.update({
       where: { inquiryId: first.id },
       data: {
@@ -1584,7 +1589,74 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       "provider_unavailable",
     );
     assert.equal("privacyNoticeText" in (inbox.selectedInquiry ?? {}), false);
+
+    const savedNote = await adminInquiryNotes.addAdminInquiryNote({
+      inquiryId: first.id,
+      content: "  Synthetic staff follow-up.\nCheck availability.  ",
+    });
+    assert.deepEqual(savedNote, { ok: true });
+    assert.equal(revalidatedPath, "/admin/leads");
+
+    const concurrentNotes = await Promise.all([
+      adminInquiryNotes.addAdminInquiryNote({
+        inquiryId: first.id,
+        content: "First concurrent note.",
+      }),
+      adminInquiryNotes.addAdminInquiryNote({
+        inquiryId: first.id,
+        content: "Second concurrent note.",
+      }),
+    ]);
+    assert.deepEqual(concurrentNotes, [{ ok: true }, { ok: true }]);
+
+    const updatedInbox = await adminInquiryQueries.getAdminInquiryPage({
+      q: "Synthetic test inquiry",
+      page: "1",
+      lead: first.id,
+    });
+    assert.equal(
+      updatedInbox.items.find(({ id }) => id === first.id)?.notesCount,
+      3,
+    );
+    assert.equal(updatedInbox.selectedInquiry?.notes.length, 3);
+    assert.equal(
+      updatedInbox.selectedInquiry?.notes[0]?.authorName,
+      "Inventory query test",
+    );
+    assert.deepEqual(
+      new Set(
+        updatedInbox.selectedInquiry?.notes.map(({ content }) => content),
+      ),
+      new Set([
+        "Synthetic staff follow-up.\nCheck availability.",
+        "First concurrent note.",
+        "Second concurrent note.",
+      ]),
+    );
+
+    const invalidNote = await adminInquiryNotes.addAdminInquiryNote({
+      inquiryId: first.id,
+      content: " ",
+    });
+    assert.equal(invalidNote.ok, false);
+    if (!invalidNote.ok) assert.equal(invalidNote.kind, "invalid");
+
+    const unknownNote = await adminInquiryNotes.addAdminInquiryNote({
+      inquiryId: `missing-${prefix}`,
+      content: "Should not be stored.",
+    });
+    assert.equal(unknownNote.ok, false);
+    if (!unknownNote.ok) assert.equal(unknownNote.kind, "not_found");
+
     session = null;
+    const unauthorizedNote = await adminInquiryNotes.addAdminInquiryNote({
+      inquiryId: first.id,
+      content: "Unauthorized note.",
+    });
+    assert.equal(unauthorizedNote.ok, false);
+    if (!unauthorizedNote.ok) {
+      assert.equal(unauthorizedNote.kind, "unauthorized");
+    }
     await assert.rejects(
       adminInquiryQueries.getAdminInquiryPage({ q: "", page: "1" }),
       AuthorizationError,

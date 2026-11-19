@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition, type FormEvent } from "react";
 import { Inbox, Mail, Phone, Search } from "lucide-react";
 
 import type {
   AdminInquiryDeliveryStatus,
   AdminInquiryDetail,
   AdminInquiryListItem,
+  AdminInquiryNote,
 } from "@/types/admin";
 import type { InquiryNotificationErrorCode } from "@/lib/inquiry-notification-retry";
+import { addAdminInquiryNoteAction } from "../actions";
 import { adminRoutes } from "@/config/admin-routes.config";
 import { formatMileage } from "@/lib/formatters";
 import { buildAdminInquiriesHref } from "@/lib/admin-inquiry-validation";
@@ -20,6 +23,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -170,6 +174,7 @@ export function LeadsInbox({
                     <TableHead className="px-3">Customer</TableHead>
                     <TableHead className="px-3">Vehicle interest</TableHead>
                     <TableHead className="px-3">Email delivery</TableHead>
+                    <TableHead className="px-3">Notes</TableHead>
                     <TableHead className="px-3 text-right">Created</TableHead>
                     <TableHead className="w-24 px-3 text-right">
                       Action
@@ -248,6 +253,7 @@ export function LeadsInbox({
         </div>
       )}
       <LeadDetailSheet
+        key={selectedInquiry?.id}
         lead={selectedInquiry}
         open={Boolean(requestedLeadId && selectedInquiry)}
         onOpenChange={(open) => {
@@ -282,6 +288,9 @@ function LeadTableRow({
       </TableCell>
       <TableCell className="px-3">
         <DeliveryBadge status={lead.deliveryStatus} />
+      </TableCell>
+      <TableCell className="px-3 text-sm">
+        {lead.notesCount} {lead.notesCount === 1 ? "note" : "notes"}
       </TableCell>
       <TableCell className="text-muted-foreground px-3 text-right text-xs font-bold whitespace-nowrap">
         {formatDateTime(lead.createdAt)}
@@ -322,6 +331,10 @@ function LeadCard({
         )}
       </div>
       <LeadVehicleInterest lead={lead} />
+      <p className="text-muted-foreground text-xs">
+        {lead.notesCount}{" "}
+        {lead.notesCount === 1 ? "internal note" : "internal notes"}
+      </p>
       <div className="flex items-center justify-between gap-3">
         <span className="text-muted-foreground text-xs font-bold">
           {formatDateTime(lead.createdAt)}
@@ -444,10 +457,123 @@ function LeadDetailSheet({
             </DetailSection>
 
             <NotificationDeliverySection lead={lead} />
+            <InquiryNotesSection lead={lead} />
           </div>
         </ScrollArea>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function InquiryNotesSection({ lead }: { lead: AdminInquiryDetail }) {
+  const router = useRouter();
+  const [content, setContent] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function saveNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setFeedback(null);
+    startTransition(async () => {
+      try {
+        const result = await addAdminInquiryNoteAction({
+          inquiryId: lead.id,
+          content,
+        });
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+        setContent("");
+        setFeedback("Note saved.");
+        router.refresh();
+      } catch {
+        setError(
+          "The save could not be confirmed. Refresh the inbox before retrying.",
+        );
+      }
+    });
+  }
+
+  return (
+    <DetailSection title={`Internal notes (${lead.notesCount})`}>
+      <div className="grid gap-4">
+        <p className="text-muted-foreground text-sm">
+          Saved notes are kept as an authored history and cannot be edited here.
+        </p>
+        {lead.notes.length ? (
+          <ol className="grid gap-3">
+            {lead.notes.map((note) => (
+              <li key={note.id}>
+                <InquiryNoteEntry note={note} />
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            No internal notes yet.
+          </p>
+        )}
+        <form onSubmit={saveNote} className="grid gap-3">
+          <label htmlFor={`lead-note-${lead.id}`} className="text-sm font-bold">
+            Add an internal note
+          </label>
+          <Textarea
+            id={`lead-note-${lead.id}`}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            maxLength={2000}
+            rows={4}
+            disabled={isPending}
+            aria-describedby={`lead-note-help-${lead.id}`}
+          />
+          <p
+            id={`lead-note-help-${lead.id}`}
+            className="text-muted-foreground text-xs"
+          >
+            Up to 2,000 characters. Visible only to signed-in staff.
+          </p>
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          )}
+          {feedback && (
+            <p role="status" className="text-sm">
+              {feedback}
+            </p>
+          )}
+          <Button
+            type="submit"
+            disabled={isPending || !content.trim()}
+            className="w-full rounded-[var(--radius-sm)] sm:w-fit"
+          >
+            {isPending ? "Saving..." : "Add note"}
+          </Button>
+        </form>
+      </div>
+    </DetailSection>
+  );
+}
+
+function InquiryNoteEntry({ note }: { note: AdminInquiryNote }) {
+  return (
+    <article className="bg-muted/40 grid gap-2 rounded-[var(--radius-sm)] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-bold">{note.authorName}</p>
+        <time
+          className="text-muted-foreground text-xs"
+          dateTime={note.createdAt}
+        >
+          {formatDateTime(note.createdAt)}
+        </time>
+      </div>
+      <p className="text-sm leading-6 break-words whitespace-pre-wrap">
+        {note.content}
+      </p>
+    </article>
   );
 }
 

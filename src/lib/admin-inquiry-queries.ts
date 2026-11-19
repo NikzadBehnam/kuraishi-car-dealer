@@ -49,6 +49,7 @@ const inquiryListSelect = {
   createdAt: true,
   vehicle: { select: vehicleInterestSelect },
   notification: { select: notificationListSelect },
+  _count: { select: { notes: true } },
 } satisfies Prisma.InquirySelect;
 
 const inquiryDetailSelect = {
@@ -57,6 +58,15 @@ const inquiryDetailSelect = {
   preferredDate: true,
   updatedAt: true,
   notification: { select: notificationDetailSelect },
+  notes: {
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      author: { select: { name: true } },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  },
 } satisfies Prisma.InquirySelect;
 
 type AdminInquiryClient = Pick<PrismaClient, "$transaction">;

@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { VehicleActions } from "@/components/vehicle/vehicle-actions";
@@ -27,6 +28,22 @@ import type { PublicVehicleDetailDTO } from "@/types/inventory";
 
 import { VehicleImageGallery } from "./vehicle-image-gallery";
 
+const conditionLabels = {
+  used: "Gebrauchtwagen",
+  demonstrator: "Vorführwagen",
+  annual: "Jahreswagen",
+} satisfies Record<NonNullable<PublicVehicleDetailDTO["condition"]>, string>;
+const consumptionFormatter = new Intl.NumberFormat("de-DE", {
+  maximumFractionDigits: 2,
+});
+const consumptionUnitLabels = {
+  l_per_100_km: "l/100 km",
+  kwh_per_100_km: "kWh/100 km",
+} satisfies Record<
+  NonNullable<PublicVehicleDetailDTO["consumptionUnit"]>,
+  string
+>;
+
 export function InventoryVehicleDetail({
   vehicle,
   images,
@@ -36,7 +53,7 @@ export function InventoryVehicleDetail({
 }) {
   const title = `${vehicle.make} ${vehicle.model}`;
   const contactHref =
-    vehicle.status === "published"
+    vehicle.status !== "sold"
       ? `${publicRoutes.contact}?vehicle=${encodeURIComponent(vehicle.slug)}`
       : publicRoutes.contact;
   const contactLabel =
@@ -45,6 +62,10 @@ export function InventoryVehicleDetail({
       : vehicle.status === "reserved"
         ? "Kontakt für Statusinformationen"
         : "Händler kontaktieren";
+  const consumption =
+    vehicle.consumption !== null && vehicle.consumptionUnit !== null
+      ? `${consumptionFormatter.format(vehicle.consumption)} ${consumptionUnitLabels[vehicle.consumptionUnit]}`
+      : "—";
   const statusLabel =
     vehicle.status === "published"
       ? "Sofort verfügbar"
@@ -73,6 +94,14 @@ export function InventoryVehicleDetail({
     ["Fahrzeugtyp", vehicle.bodyType ? formatBodyType(vehicle.bodyType) : "—"],
     ["Farbe", vehicle.exteriorColor ?? "—"],
     ["Vorbesitzer", vehicle.ownerCount?.toString() ?? "—"],
+    ["Zustand", vehicle.condition ? conditionLabels[vehicle.condition] : "—"],
+    ["Verbrauch", consumption],
+    [
+      "CO₂-Emissionen",
+      vehicle.co2Emission === null
+        ? "—"
+        : `${consumptionFormatter.format(vehicle.co2Emission)} g/km`,
+    ],
   ] as const;
 
   return (
@@ -198,6 +227,13 @@ export function InventoryVehicleDetail({
               {vehicle.variant && (
                 <p className="text-muted-foreground mt-2">{vehicle.variant}</p>
               )}
+              {vehicle.labels.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {vehicle.labels.map((label, index) => (
+                    <Badge key={`${label}-${index}`}>{label}</Badge>
+                  ))}
+                </div>
+              )}
               {vehicle.hasPassedInspection && (
                 <p className="text-muted-foreground mt-3 flex items-center gap-2 text-sm">
                   <ShieldCheck
@@ -225,7 +261,7 @@ export function InventoryVehicleDetail({
               </Button>
             </div>
             <div className="p-6">
-              {vehicle.status !== "sold" && (
+              {vehicle.status === "published" && (
                 <VehicleActions vehicleId={vehicle.id} />
               )}
               <hr className="my-6" />

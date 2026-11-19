@@ -8,6 +8,8 @@ This is a source-based implementation plan for making the existing admin and pub
 
 The public website is called the "client side" in this document. This does **not** imply a new customer account system, payments, reservations, or a customer portal.
 
+For an integrated retest of implemented work, use the [full test guide](./Implemented-Sections-Test-Guide.md). It distinguishes completed checks from the credential-rotation gate and still-pending checklist items.
+
 ### What already works
 
 - Better Auth email/password login, database sessions, sign-out, protected dashboard access, and master-admin-only account creation have been implemented. Preserve this work rather than rebuilding authentication.

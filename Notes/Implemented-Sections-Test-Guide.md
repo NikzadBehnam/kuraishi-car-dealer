@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers the integrated work currently on `feature/public-content-and-consent`, based on `feature/admin-workspace-search` and `backend/dashboard-metrics`, including Sections 04-14.05:
+This guide covers the integrated work currently on `backend/seo-and-cache-consistency`, based on `feature/public-content-and-consent`, `feature/admin-workspace-search`, and `backend/dashboard-metrics`, including Sections 04-15.04:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -22,8 +22,9 @@ This guide covers the integrated work currently on `feature/public-content-and-c
 - Section 13.05: Create account is restricted to master admins, while ordinary staff operations remain available to authenticated staff.
 - Section 13.06: backend/auth documentation was corrected; direct access and browser checks in 13.07 remain deferred.
 - Section 14.01-14.05 (in progress): unverified homepage/About claims were removed; static content and the current database-managed business settings are used; the user confirmed the service list. Service CTAs submit inquiries without confirming appointments. Legal copy and consent/media decisions remain deferred to counsel; combined browser retesting is also pending.
+- Section 15.02-15.04: public detail metadata uses eligible live records and approved media; localized URL mapping preserves dotted vehicle slugs and query context; sitemap output uses paged eligible records and persisted timestamps. The 15.01 canonical-origin decision, isolated database checks, and browser verification remain pending.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; current development continues on `feature/public-content-and-consent`. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
+Section 04 is complete but was not merged to `master` before Section 05 began; the user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 

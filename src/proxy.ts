@@ -1,50 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  internalRoutes,
-  localizedRouteMappings,
-  publicRoutes,
-} from "@/config/routes.config";
+import { getLocalizedRouteChange } from "@/lib/localized-route";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const routeChange = getLocalizedRouteChange(request.nextUrl);
 
-  if (pathname.startsWith(`${publicRoutes.vehicles}/`)) {
-    const slug = pathname.slice(publicRoutes.vehicles.length + 1);
-    const rewriteUrl = request.nextUrl.clone();
-    rewriteUrl.pathname = `${internalRoutes.vehicles}/${slug}`;
-    return NextResponse.rewrite(rewriteUrl);
+  if (routeChange?.kind === "rewrite") {
+    return NextResponse.rewrite(routeChange.url);
   }
-
-  if (pathname.startsWith(`${internalRoutes.vehicles}/`)) {
-    const slug = pathname.slice(internalRoutes.vehicles.length + 1);
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = `${publicRoutes.vehicles}/${slug}`;
-    return NextResponse.redirect(redirectUrl, 308);
-  }
-
-  const publicMapping = localizedRouteMappings.find(
-    (mapping) => mapping.publicPath === pathname,
-  );
-  if (
-    publicMapping &&
-    publicMapping.publicPath !== publicMapping.internalPath
-  ) {
-    const rewriteUrl = request.nextUrl.clone();
-    rewriteUrl.pathname = publicMapping.internalPath;
-    return NextResponse.rewrite(rewriteUrl);
-  }
-
-  const internalMapping = localizedRouteMappings.find(
-    (mapping) => mapping.internalPath === pathname,
-  );
-  if (
-    internalMapping &&
-    internalMapping.publicPath !== internalMapping.internalPath
-  ) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = internalMapping.publicPath;
-    return NextResponse.redirect(redirectUrl, 308);
+  if (routeChange?.kind === "redirect") {
+    return NextResponse.redirect(routeChange.url, 308);
   }
 
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {

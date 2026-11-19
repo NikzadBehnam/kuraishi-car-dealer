@@ -1,25 +1,26 @@
 # Full test guide for implemented checklist sections
 
-This guide covers implemented work on `backend/public-vehicle-catalog`, which includes the integrated Section 04 branch:
+This guide covers implemented work on `backend/public-vehicle-detail`, based on `backend/public-vehicle-catalog` and including the integrated Section 04 branch:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
 - Section 03.01-03.13: media storage, upload, approval, relationships, library, downloads and deletion.
 - Section 04.01-04.17: staff inventory, vehicle mutations, lifecycle, authorization, public detail and live dashboard counts.
 - Section 05.01-05.06 and 05.08-05.09: live homepage/catalog inventory, bounded search, URL navigation, pagination and public eligibility.
+- Section 06.01-06.09: live public detail lookup, approved gallery media, dealership contact, similar inventory and record-derived metadata.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; this Section 05 branch retains the Section 04 commits for the combined retest. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented. Sections 06 and later are not covered here. Comparison selection is still stored in the browser, but resolving those IDs to live inventory belongs to Section 07.
+Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-05 work. The user deferred the combined manual retest until later. Section 06.10 still needs the isolated inventory-query suite after the test credential is rotated, and the manual page checks below are also pending. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented. Comparison selection is still stored in the browser, but resolving those IDs to live inventory belongs to Section 07.
 
 ## 1. Safety and prerequisites
 
-1. Use the Section 05 branch, not `master`:
+1. Use the Section 06 branch, not `master`:
 
    ```powershell
    git branch --show-current
    git status --short --branch
    ```
 
-   The branch should be `backend/public-vehicle-catalog`. It includes the Section 04 integration so both sections can be tested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
+   The branch should be `backend/public-vehicle-detail`. It includes the integrated Sections 04-05 work so all three sections can be retested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
 2. Use Node 25.8.0, or a Node version that supports the test-runner flags in the package scripts. The machine PATH previously selected Node 14, which cannot run these scripts; Node 22.21.1 also lacked `--test-isolation=none`.
 
@@ -204,7 +205,36 @@ Use the isolated non-Production app/database and test media bucket. Create or ed
    - Verify eligible published/featured stock appears, Reserved listing cards show their status, Sold/Archived/Draft stock is excluded from discovery, and no redeploy is needed.
    - Comparison controls retain their existing browser behavior, but a full live comparison table is not expected until Section 07.
 
-## 8. Completion record
+## 8. Section 06 — public vehicle detail (06.01-06.10)
+
+Use the isolated non-Production app, inventory and media resources. Create and change vehicles only through the admin workflow; do not edit production records to exercise a page.
+
+1. **Database-backed detail and truthful stored data**
+   - Open a published, inspection-passed vehicle and compare its detail page with the saved admin record: make/model/variant, price, location, registration, mileage, fuel, transmission, power, body type, color, condition, owners, consumption, CO₂, features, labels and description.
+   - Check missing optional values: they must remain blank/unavailable, not show fixture values, invented owners, or zeroes. Confirm no hard-coded preparation or 120-point inspection claims appear.
+   - Open a Reserved vehicle that passed inspection. It should show Reserved, not immediately available, and should not offer comparison actions. Open a Sold vehicle; it may have a detail page, but must show Sold and unavailable with a general contact action.
+   - Try guessed URLs for Draft, Archived, and inspection-ineligible Published/Reserved vehicles. They should return the same not-found view; page metadata should be noindex.
+2. **Approved gallery media and accessible text**
+   - Attach multiple images in a known order, including a private or unapproved image. Confirm only approved public images appear, in attachment order, and the first is used for social preview metadata.
+   - Open each gallery image in the preview slider; verify saved alt text is used and the fallback describes the vehicle view without claiming an unsupported angle.
+   - Test an eligible legacy record with no approved images. The detail page should show the placeholder and remain usable.
+3. **Dealership and contact consistency**
+   - Confirm the displayed dealership name matches the vehicle's Dealer record. Compare the phone and address with the shared public contact information.
+   - Test desktop and mobile call links; both should use the configured primary phone. Confirm there are no fixture star ratings or review counts.
+   - Published and Reserved contact links should carry the current URL-encoded vehicle slug. Sold links should be general and omit the vehicle query. Securely resolving this query to a trusted record remains Section 09.
+4. **Similar inventory**
+   - Publish another eligible vehicle with the same body type. Confirm it appears, while the current vehicle and vehicles of other body types do not.
+   - Confirm Draft, Archived, Reserved and Sold candidates are excluded, result count never exceeds three, and ordering is stable.
+   - With no eligible same-body candidates, confirm the entire similar-vehicle section is hidden rather than showing fixture cards or an empty heading.
+5. **Metadata, slugs and refresh**
+   - Check the record-derived title/description, canonical path and OpenGraph URL. When approved media exists, the first ordered approved image should be the OpenGraph image.
+   - Change a Draft slug before publishing; the new path should work and the old path should not resolve to that vehicle. Confirm an already published slug cannot be changed through the admin form.
+   - Edit a vehicle's price, description, images and status through admin, then reload its detail page. Confirm current values appear without a redeploy or stale fixture data.
+6. **Automated query coverage**
+   - The isolated media suite checks approved ordered images/alt text, missing media, public detail dealer/owner data, lifecycle status and updated prices. Run `pnpm test:vehicle-media` as listed in Section 2.
+   - The inventory query suite covers bounded same-body recommendations and exclusions. Run `pnpm test:inventory-db` only after rotating its previously exposed test credential and independently confirming the target is isolated and empty.
+
+## 9. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
@@ -216,5 +246,6 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Section 03 media DB/storage suites                                        |         |                                                |
 | Section 03 manual media workflow                                          |         |                                                |
 | Section 04 manual admin/public/dashboard workflow                         |         |                                                |
+| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                            |
 | Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified |
 | Homepage/list database propagation                                        | Pending | Section 05.01-05.02                            |

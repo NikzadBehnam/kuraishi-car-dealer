@@ -68,10 +68,12 @@ async function createImageAsset({
   type = "image",
   putObject = true,
   publicRead = false,
+  altText = null,
 }: {
   type?: "image" | "document";
   putObject?: boolean;
   publicRead?: boolean;
+  altText?: string | null;
 } = {}) {
   const id = randomUUID();
   const objectKey = `assets/test-${id}.png`;
@@ -95,6 +97,7 @@ async function createImageAsset({
       type,
       title: "Test image",
       originalFilename: "test.png",
+      altText,
       verifiedMimeType: type === "image" ? "image/png" : "application/pdf",
       sizeBytes: BigInt(imageBytes.length),
       uploadedById: actorId,
@@ -1466,9 +1469,15 @@ describe("vehicle media persistence on isolated Neon resources", () => {
 
   it("resolves public detail pages without a session and exposes only approved public images", async () => {
     session = { user: { id: actorId, role: "user" } };
-    const publicImageId = await createImageAsset({ publicRead: true });
+    const publicImageId = await createImageAsset({
+      publicRead: true,
+      altText: "Front three-quarter view",
+    });
     const privateImageId = await createImageAsset();
-    const secondPublicImageId = await createImageAsset({ publicRead: true });
+    const secondPublicImageId = await createImageAsset({
+      publicRead: true,
+      altText: "Rear view",
+    });
     const draft = await createDraft([
       publicImageId,
       privateImageId,
@@ -1479,6 +1488,7 @@ describe("vehicle media persistence on isolated Neon resources", () => {
       data: {
         status: "published",
         inspectionStatus: "passed",
+        ownerCount: 2,
         publishedAt: new Date(),
       },
     });
@@ -1492,6 +1502,19 @@ describe("vehicle media persistence on isolated Neon resources", () => {
       where: { id: hiddenDraft.vehicleId },
       select: { slug: true },
     });
+    const noMediaDraft = await createDraft();
+    await prisma.vehicle.update({
+      where: { id: noMediaDraft.vehicleId },
+      data: {
+        status: "published",
+        inspectionStatus: "passed",
+        publishedAt: new Date(),
+      },
+    });
+    const noMediaVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: noMediaDraft.vehicleId },
+      select: { slug: true },
+    });
 
     session = null;
     const detail = await queries.resolvePublicVehicleDetail(
@@ -1502,15 +1525,29 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     }
     assert.equal(detail.vehicle.id, draft.vehicleId);
     assert.equal(detail.vehicle.dealerName, "Vehicle media test dealership");
+    assert.equal(detail.vehicle.ownerCount, 2);
 
     const images = await mediaAttachments.listPublicVehicleMediaAssets(
       draft.vehicleId,
     );
     assert.deepEqual(
-      images.assets.map(({ id }) => id),
-      [publicImageId, secondPublicImageId],
+      images.assets.map(({ id, altText }) => ({ id, altText })),
+      [
+        { id: publicImageId, altText: "Front three-quarter view" },
+        { id: secondPublicImageId, altText: "Rear view" },
+      ],
     );
     assert.ok(images.assets[0]?.previewUrl.startsWith("https://"));
+    assert.deepEqual(
+      await mediaAttachments.listPublicVehicleMediaAssets(
+        noMediaDraft.vehicleId,
+      ),
+      { assets: [] },
+    );
+    assert.equal(
+      (await queries.resolvePublicVehicleDetail(noMediaVehicle.slug)).kind,
+      "visible",
+    );
 
     const cardImages = await mediaAttachments.listPublicVehicleCardImages([
       draft.vehicleId,
@@ -2083,6 +2120,7 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         stockNumber: storedDraft.stockNumber,
         slug: storedDraft.slug,
         make: "Propagation Skoda",
+        price: "28750.50",
         mediaAssetIds: [imageId],
       }),
     );
@@ -2100,6 +2138,7 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     if (detail.kind === "visible") {
       assert.equal(detail.vehicle.status, "published");
       assert.equal(detail.vehicle.make, "Propagation Skoda");
+      assert.equal(detail.vehicle.price, "28750.50");
     }
 
     await assert.rejects(

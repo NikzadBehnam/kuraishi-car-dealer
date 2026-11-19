@@ -635,7 +635,7 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 **Branch:** `backend/public-vehicle-details`.
 
-**Evidence:** [detail route](<../src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx>), [gallery](<../src/app/(public)/(marketplace)/vehicles/[slug]/_components/vehicle-image-gallery.tsx>), [dealer fixture](../src/data/dealers.ts).
+**Evidence:** [detail route](<../src/app/(public)/(marketplace)/vehicles/[slug]/page.tsx>), [detail view](<../src/app/(public)/(marketplace)/vehicles/[slug]/_components/inventory-vehicle-detail.tsx>), [gallery](<../src/app/(public)/(marketplace)/vehicles/[slug]/_components/vehicle-image-gallery.tsx>), [vehicle-media tests](../prisma/vehicle-media.test.ts), [inventory query tests](../prisma/inventory-queries.test.ts).
 
 **Commit 1: `feat: serve canonical public vehicle detail records`**
 
@@ -654,7 +654,7 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 **Commit 3: `test: verify live detail and lifecycle rendering`**
 
-- [ ] **06.10** Test unknown/nonpublic slugs, missing media, edited slugs, correct dealer/owner data, sold/unavailable claims, similar-vehicle exclusions, and updates to images/price/status without stale output.
+- [ ] **06.10** Test unknown/nonpublic slugs, missing media, edited slugs, correct dealer/owner data, sold/unavailable claims, similar-vehicle exclusions, and updates to images/price/status without stale output. _Added assertions for unknown/ineligible slugs, missing media, ordered approved alt text, Dealer/owner values, and updated prices; existing suites cover slug immutability, sold availability and bounded related-vehicle exclusions. The isolated media suite passes (30/30); `pnpm test:inventory-db` and the manual page checks remain pending until the test credential is rotated and the user retests._
 
 **Done when:** the public detail view is a truthful projection of the same vehicle edited in the dashboard.
 
@@ -955,6 +955,6 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 ## Current step and next action
 
-- **Current:** Section **02 / 02.01-02.13** is merged to `master` (`f4ab9b1`) with user retest confirmed. Section **03 / 03.01-03.13** is implemented; 03.14 still awaits public-image-refresh verification in 15.09. Section **04 / 04.01-04.17** is complete on `backend/admin-vehicle-workflows`, not merged or manually retested. Section **05 / 05.01-05.06 and 05.08-05.09** is implemented on `backend/public-vehicle-catalog`; its manual retest is deferred at the user request. Section **06 / 06.01-06.09** is implemented on `backend/public-vehicle-detail`: live eligible detail records, stored specs and truthful status, approved ordered media, dealership contact, similar inventory, and record-derived metadata. TypeScript, 73 unit tests, focused ESLint/Prettier, and whitespace checks passed; the isolated media integration suite is running. The inventory DB suite remains unrun pending test-credential rotation. Section 05.07 is unapproved.
-- **Next:** Complete Section 06.10 automated coverage and update the combined Sections 04-06 test guide, then continue to Section 07 on its own branch. The combined manual retest remains deferred at the user request. Rotate `.env.inventory-test.local` credentials before any inventory DB test; verify public-image refresh in 15.09 before marking Section 03 complete.
+- **Current:** Section **02 / 02.01-02.13** is merged to `master` (`f4ab9b1`) with user retest confirmed. Section **03 / 03.01-03.13** is implemented; 03.14 still awaits public-image-refresh verification in 15.09. Section **04 / 04.01-04.17** is complete on `backend/admin-vehicle-workflows`, not merged or manually retested. Section **05 / 05.01-05.06 and 05.08-05.09** is implemented on `backend/public-vehicle-catalog`; its manual retest is deferred at the user request. Section **06 / 06.01-06.09** is implemented on `backend/public-vehicle-detail`: live eligible detail records, stored specs and truthful status, approved ordered media, dealership contact, similar inventory, and record-derived metadata. TypeScript, 73 unit tests, targeted ESLint/Prettier, whitespace checks, and all 30 isolated vehicle-media tests passed. Section 06.10 inventory-query DB execution and the combined manual retest remain pending; rotate `.env.inventory-test.local` credentials first. Section 05.07 is unapproved.
+- **Next:** Continue with Section 07 on its dedicated branch; the combined Sections 04-06 manual retest remains deferred at the user request. Complete Section 06.10 inventory-query verification after rotating its test credential and confirming an isolated empty target. Verify public-image refresh in 15.09 before marking Section 03 complete.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

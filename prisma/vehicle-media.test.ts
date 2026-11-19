@@ -21,6 +21,7 @@ const s3 = getMediaStorageClient();
 const bucket = getPrivateMediaBucket();
 const publicBucket = getPublicMediaBucket();
 const actorId = randomUUID();
+const masterAdminId = randomUUID();
 const dealerId = randomUUID();
 const imageBytes = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -142,6 +143,15 @@ function publishInput(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function isAnonymousAuthorizationFailure(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.name === "AuthorizationError" &&
+    "status" in error &&
+    error.status === 401
+  );
+}
+
 describe("vehicle media persistence on isolated Neon resources", () => {
   before(async () => {
     runPrisma(["migrate", "deploy"]);
@@ -159,6 +169,15 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         id: actorId,
         name: "Vehicle media test",
         email: `${actorId}@example.invalid`,
+        role: "user",
+      },
+    });
+    await prisma.user.create({
+      data: {
+        id: masterAdminId,
+        name: "Vehicle media test admin",
+        email: `${masterAdminId}@example.invalid`,
+        role: "admin",
       },
     });
     await prisma.dealer.create({
@@ -189,15 +208,19 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         );
       }
       await prisma.vehicleChange.deleteMany({
-        where: { vehicle: { createdById: actorId } },
+        where: { vehicle: { createdById: { in: [actorId, masterAdminId] } } },
       });
-      await prisma.vehicle.deleteMany({ where: { createdById: actorId } });
+      await prisma.vehicle.deleteMany({
+        where: { createdById: { in: [actorId, masterAdminId] } },
+      });
       await prisma.mediaUploadIntent.deleteMany({
         where: { uploadedById: actorId },
       });
       await prisma.mediaAsset.deleteMany({ where: { uploadedById: actorId } });
       await prisma.dealer.deleteMany({ where: { id: dealerId } });
-      await prisma.user.deleteMany({ where: { id: actorId } });
+      await prisma.user.deleteMany({
+        where: { id: { in: [actorId, masterAdminId] } },
+      });
       for (const object of objectKeys) {
         await s3.send(new DeleteObjectCommand(object));
       }
@@ -209,41 +232,126 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     }
   });
 
-  it("requires a fresh staff session before validating or writing", async () => {
+  it("rejects anonymous direct calls to inventory mutations before validating or writing", async () => {
     await assert.rejects(
       mutations.createDraftVehicle({ invalid: true }),
-      (error: unknown) =>
-        error instanceof Error && error.name === "AuthorizationError",
+      isAnonymousAuthorizationFailure,
+    );
+    await assert.rejects(
+      mutations.updateVehicle({ invalid: true }),
+      isAnonymousAuthorizationFailure,
+    );
+    await assert.rejects(
+      mutations.publishVehicle({ invalid: true }),
+      isAnonymousAuthorizationFailure,
     );
     await assert.rejects(
       mutations.transitionVehicleLifecycle({ invalid: true }),
-      (error: unknown) =>
-        error instanceof Error && error.name === "AuthorizationError",
+      isAnonymousAuthorizationFailure,
     );
     await assert.rejects(
       mutations.duplicateVehicle({ invalid: true }),
-      (error: unknown) =>
-        error instanceof Error && error.name === "AuthorizationError",
+      isAnonymousAuthorizationFailure,
     );
     await assert.rejects(
       mutations.deleteDraftVehicle({ invalid: true }),
-      (error: unknown) =>
-        error instanceof Error && error.name === "AuthorizationError",
+      isAnonymousAuthorizationFailure,
     );
     await assert.rejects(
       mutations.bulkTransitionVehicles({ invalid: true }),
-      (error: unknown) =>
-        error instanceof Error && error.name === "AuthorizationError",
+      isAnonymousAuthorizationFailure,
     );
     await assert.rejects(
       mediaAttachments.listVehicleMediaAssets("vehicle_1"),
-      (error: unknown) =>
-        error instanceof Error && error.name === "AuthorizationError",
+      isAnonymousAuthorizationFailure,
     );
     assert.equal(
-      await prisma.vehicle.count({ where: { createdById: actorId } }),
+      await prisma.vehicle.count({
+        where: { createdById: { in: [actorId, masterAdminId] } },
+      }),
       0,
     );
+  });
+
+  it("allows ordinary staff and master admins to invoke inventory mutations directly", async () => {
+    const publicImageId = await createImageAsset({ publicRead: true });
+
+    session = { user: { id: actorId, role: "user" } };
+    const staffDraft = await createDraft([publicImageId]);
+    const staffEdit = await mutations.updateVehicle({
+      vehicleId: staffDraft.vehicleId,
+      expectedVersion: staffDraft.version,
+      make: "Staff-edited Skoda",
+    });
+    const staffVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: staffDraft.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const staffPublished = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: staffDraft.vehicleId,
+        expectedVersion: staffEdit.version,
+        stockNumber: staffVehicle.stockNumber,
+        slug: staffVehicle.slug,
+        mediaAssetIds: [publicImageId],
+      }),
+    );
+    const staffReserved = await mutations.transitionVehicleLifecycle({
+      vehicleId: staffDraft.vehicleId,
+      expectedVersion: staffPublished.version,
+      status: "reserved",
+    });
+    assert.equal(staffReserved.status, "reserved");
+    assert.equal(
+      (
+        await prisma.vehicle.findUniqueOrThrow({
+          where: { id: staffDraft.vehicleId },
+          select: { status: true },
+        })
+      ).status,
+      "reserved",
+    );
+
+    session = { user: { id: masterAdminId, role: "admin" } };
+    const adminDraft = await createDraft();
+    assert.equal(
+      (
+        await prisma.vehicle.findUniqueOrThrow({
+          where: { id: adminDraft.vehicleId },
+          select: { createdById: true },
+        })
+      ).createdById,
+      masterAdminId,
+    );
+    const adminEdit = await mutations.updateVehicle({
+      vehicleId: adminDraft.vehicleId,
+      expectedVersion: adminDraft.version,
+      make: "Admin-edited Skoda",
+    });
+    const adminDuplicate = await mutations.duplicateVehicle({
+      vehicleId: adminDraft.vehicleId,
+      expectedVersion: adminEdit.version,
+    });
+    const deleted = await mutations.deleteDraftVehicle({
+      vehicleId: adminDuplicate.vehicleId,
+      expectedVersion: adminDuplicate.version,
+      confirmPermanently: true,
+    });
+    assert.equal(deleted.vehicleId, adminDuplicate.vehicleId);
+    assert.equal(
+      await prisma.vehicle.findUnique({
+        where: { id: adminDuplicate.vehicleId },
+        select: { id: true },
+      }),
+      null,
+    );
+    const testVehicleIds = [staffDraft.vehicleId, adminDraft.vehicleId];
+    await prisma.vehicleChange.deleteMany({
+      where: { vehicleId: { in: testVehicleIds } },
+    });
+    await prisma.vehicle.deleteMany({
+      where: { id: { in: testVehicleIds } },
+    });
   });
 
   it("fails explicitly until exactly one dealership is configured", async () => {

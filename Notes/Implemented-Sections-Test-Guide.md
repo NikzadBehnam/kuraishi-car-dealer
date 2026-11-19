@@ -12,6 +12,7 @@ This guide covers implemented work on `backend/lead-notifications`, based on `ba
 - Section 08.01-08.08: persisted dealership settings, validated admin editing, shared public business data and the approved initial-data migration.
 - Section 09.01-09.04 and 09.06-09.11: inquiry persistence, shared validation, guarded isolated-test intake, retries and vehicle/service context; Production remains disabled.
 - Section 10.01 (partial): Resend staff-only provider selection, disabled/default and isolated simulator-only configuration preparation; no email transport yet.
+- Section 10.02: privacy-minimal HTML/plain-text staff alert content with escaped snapshots and a protected inbox link; still no email transport.
 
 Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-08 work. The user deferred the combined manual retest until later. Sections 06.10, 07.05 and 08.09 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
@@ -315,7 +316,7 @@ Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. No migrati
 
 ## 12. Section 10.01 — Resend account and DNS setup (partial implementation)
 
-The selected scope is **email notifications to staff only**, not automated visitor replies. This milestone prepares configuration; it does not send anything, validate credentials against Resend, or connect email to inquiry acceptance. Guided setup on 2026-11-19 confirmed the corrected domain as Verified, the development key's restricted scope, and current quotas. The user reports saving the key privately; its value/API validity was not checked. Templates, real recipients and provider acceptance testing remain pending, so Section 10.01 stays open. Do not purchase a paid plan or change Production settings just to follow this guide.
+The selected scope is **email notifications to staff only**, not automated visitor replies. This milestone prepares configuration and privacy-minimal content; it does not send anything, validate credentials against Resend, or connect email to inquiry acceptance. Guided setup on 2026-11-19 confirmed the corrected domain as Verified, the development key's restricted scope, and current quotas. The user reports saving the key privately; its value/API validity was not checked. Real recipients and provider acceptance testing remain pending, so Section 10.01 stays open. Do not purchase a paid plan or change Production settings just to follow this guide.
 
 ### A. Create the account and sending domain
 
@@ -370,26 +371,41 @@ The selected scope is **email notifications to staff only**, not automated visit
 1. Run `pnpm test` and `pnpm typecheck`. Configuration tests use synthetic values and make no network calls; they do not prove your account/key/domain are working.
 2. Confirm Resend shows the sending subdomain as verified, and the restricted key is privately configured. Do not manually send real customer content or point setup tests at the contact form expecting email yet.
 3. Report only: **domain Verified / pending**, **private test key configured / pending**, and the non-secret plan limits. No key, login, private recipient address, customer data or connection string is needed in chat.
-4. Next development is the safe staff notification template (10.02), then durable delivery status and bounded retries (10.04-10.05), followed by synthetic provider verification (10.07). Staff-visible inbox data remains Section 11. No mail should be sent directly inside inquiry acceptance as a substitute for durable delivery state.
+4. The safe staff notification template (10.02) is implemented and covered below. Next is durable delivery status and bounded retries (10.04-10.05), followed by synthetic provider verification (10.07). Staff-visible inbox data remains Section 11. No mail should be sent directly inside inquiry acceptance as a substitute for durable delivery state.
 
 Official references: [verify a domain](https://resend.com/docs/add-a-domain), [restricted API keys](https://resend.com/docs/dashboard/api-keys/introduction), [test addresses](https://resend.com/docs/dashboard/emails/send-test-emails), [sending regions and data residency](https://resend.com/docs/dashboard/domains/regions), and [API/idempotency limits](https://resend.com/docs/api-reference/emails/send-email).
 
-## 13. Completion record
+## 13. Section 10.02 — privacy-minimal staff notification content
+
+The user approved alert-only content, not visitor contact details or message forwarding. The renderer is not connected to a send endpoint, worker or inquiry acceptance. Keep `INQUIRY_EMAIL_MODE="disabled"` in actual environments; source tests supply synthetic isolated configuration themselves.
+
+1. Run `pnpm test` and `pnpm typecheck`. The notification content tests check all five service/source combinations, HTML/plain-text output and request-not-booking wording.
+2. Verify the allowlist contract in [inquiry-notification.ts](../src/lib/inquiry-notification.ts):
+   - Output includes only an inquiry reference, source/service, optional historical vehicle title/slug and requested calendar date, with a sign-in-protected inbox link.
+   - Customer name/email/phone/message, privacy acknowledgement data, hashes and unknown future fields are excluded even when present on an input object. No Reply-To, recipient or credential is returned in rendered content.
+   - Vehicle text is escaped in HTML and preserved literally in plain text. Subject is constant and marked `[TEST]`, not assembled from submitted text. Missing optional data does not become the text `null`.
+   - Invalid stored values and inconsistent service/source combinations throw explicit errors rather than producing a misleading notification.
+3. Automated link tests bind the existing `/admin/leads` route to localhost or the current validated Preview origin, rejecting arbitrary/Production URLs. The alert contains no auth token, customer identifier or unsupported inquiry-detail query parameter in its link.
+4. When performing the deferred browser retest on an isolated app, confirm an anonymous visit to `/admin/leads` requires sign-in. This is the existing protected list, not a new deep-link implementation. The inbox remains fixture-backed until Section 11; do not treat visiting it as proof of real inquiry visibility.
+5. No provider acceptance, actual send, real inbox rendering or retry behavior has been tested by these source checks. Those remain 10.04-10.07; 10.01 is still partial until real staff recipient configuration and provider verification are completed.
+
+## 14. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
-| Area                                                                      | Result  | Notes                                                                                         |
-| ------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------- |
-| Branch and non-Production target confirmed                                |         |                                                                                               |
-| TypeScript, lint, formatting and unit tests                               |         |                                                                                               |
-| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                                                               |
-| Section 03 media DB/storage suites                                        |         |                                                                                               |
-| Section 03 manual media workflow                                          |         |                                                                                               |
-| Section 04 manual admin/public/dashboard workflow                         |         |                                                                                               |
-| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                                                                           |
-| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                                                                           |
-| Section 08 dealership settings workflow                                   | Pending | Section 08.09                                                                                 |
-| Section 09 guarded inquiry intake                                         | Pending | Isolated DB/browser checks; Production blocked                                                |
-| Section 10.01 Resend setup                                                | Partial | Domain/key scope/quotas confirmed; templates, real recipients and provider acceptance pending |
-| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified                                                |
-| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                                                                           |
+| Area                                                                      | Result  | Notes                                                                                   |
+| ------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------- |
+| Branch and non-Production target confirmed                                |         |                                                                                         |
+| TypeScript, lint, formatting and unit tests                               |         |                                                                                         |
+| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                                                         |
+| Section 03 media DB/storage suites                                        |         |                                                                                         |
+| Section 03 manual media workflow                                          |         |                                                                                         |
+| Section 04 manual admin/public/dashboard workflow                         |         |                                                                                         |
+| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                                                                     |
+| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                                                                     |
+| Section 08 dealership settings workflow                                   | Pending | Section 08.09                                                                           |
+| Section 09 guarded inquiry intake                                         | Pending | Isolated DB/browser checks; Production blocked                                          |
+| Section 10.01 Resend setup                                                | Partial | Domain/key scope/quotas and template ready; real recipients/provider acceptance pending |
+| Section 10.02 privacy-minimal staff content                               | Passed  | Source tests only; no provider send or browser retest                                   |
+| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified                                          |
+| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                                                                     |

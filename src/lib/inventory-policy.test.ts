@@ -44,8 +44,6 @@ const vehicle: AdminVehicle = {
   lastUpdatedAt: "2026-11-02T10:00:00.000Z",
   vinLastSix: "123456",
   ownerCount: 1,
-  views: 10,
-  inquiries: 2,
   marginEstimate: 2000,
 };
 
@@ -63,8 +61,6 @@ describe("public inventory boundary", () => {
       "vinLastSix",
       "inspectionStatus",
       "acquisitionDate",
-      "views",
-      "inquiries",
       "internalNotes",
       "customerEmail",
     ]) {

@@ -99,6 +99,12 @@ function serializeVehicle(
     : null;
 }
 
+export function serializeAdminInquirySource(
+  source: InquirySource,
+): AdminLeadSource {
+  return sourceLabels[source];
+}
+
 function serializeErrorCode(
   value: string | null,
 ): InquiryNotificationErrorCode | null {
@@ -115,7 +121,7 @@ export function serializeAdminInquiryListItem(
 ): AdminInquiryListItem {
   return {
     id: row.id,
-    source: sourceLabels[row.source],
+    source: serializeAdminInquirySource(row.source),
     requestedService: serviceLabels[row.requestedService],
     customerName: row.customerName,
     customerEmail: row.customerEmail,

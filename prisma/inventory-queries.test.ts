@@ -79,6 +79,7 @@ let dealershipSettings: typeof import("../src/lib/dealership-settings.ts");
 let inquiryIntake: typeof import("../src/lib/inquiry-intake.ts");
 let adminInquiryQueries: typeof import("../src/lib/admin-inquiry-queries.ts");
 let adminInquiryNotes: typeof import("../src/lib/admin-inquiry-notes.ts");
+let adminDashboardQueries: typeof import("../src/lib/admin-dashboard-queries.ts");
 const inquiryKeys: string[] = [];
 const inquiryClients: string[] = [];
 let dbMock: ReturnType<typeof mock.module> | undefined;
@@ -196,6 +197,8 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     inquiryIntake = await import("../src/lib/inquiry-intake.ts");
     adminInquiryQueries = await import("../src/lib/admin-inquiry-queries.ts");
     adminInquiryNotes = await import("../src/lib/admin-inquiry-notes.ts");
+    adminDashboardQueries =
+      await import("../src/lib/admin-dashboard-queries.ts");
   });
 
   beforeEach(() => {
@@ -1547,6 +1550,13 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         .update(JSON.stringify(submission))
         .digest("hex"),
     });
+    session = { user: { role: "user", id: actorId } };
+    const dashboardBefore =
+      await adminDashboardQueries.getAdminDashboardMetrics();
+    await prisma.vehicle.update({
+      where: { id: ids[6] },
+      data: { soldAt: new Date("2025-12-15T10:00:00.000Z") },
+    });
     for (const submission of submissions) {
       await inquiryIntake.acceptInquiry(submission, identity(submission), now);
     }
@@ -1562,7 +1572,13 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       dealershipDate(now),
     );
     assert.equal(first.vehicleId, null);
-    session = { user: { role: "user", id: actorId } };
+    await prisma.inquiry.update({
+      where: { id: first.id },
+      data: {
+        vehicleTitleSnapshot: "Historical Example Model",
+        vehicleSlugSnapshot: "historical-example-model",
+      },
+    });
     await prisma.inquiryNotification.update({
       where: { inquiryId: first.id },
       data: {
@@ -1589,6 +1605,36 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       "provider_unavailable",
     );
     assert.equal("privacyNoticeText" in (inbox.selectedInquiry ?? {}), false);
+
+    const dashboardAfterIntake =
+      await adminDashboardQueries.getAdminDashboardMetrics();
+    assert.equal(dashboardAfterIntake.leadCount, dashboardBefore.leadCount + 5);
+    assert.equal(
+      dashboardAfterIntake.vehicleInquiryCount,
+      dashboardBefore.vehicleInquiryCount + 1,
+    );
+    assert.equal(dashboardAfterIntake.soldCount, dashboardBefore.soldCount + 1);
+    assert.equal(dashboardAfterIntake.recentInquiries.length, 5);
+    assert.equal(
+      dashboardAfterIntake.recentInquiries.find(({ id }) => id === first.id)
+        ?.vehicleInterest,
+      "Historical Example Model",
+    );
+    assert.equal(
+      dashboardAfterIntake.inventoryTotal,
+      await prisma.vehicle.count(),
+    );
+    assert.equal(
+      Object.values(dashboardAfterIntake.statusCounts).reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
+      dashboardAfterIntake.inventoryTotal,
+    );
+    assert.equal(
+      dashboardAfterIntake.soldCount,
+      await prisma.vehicle.count({ where: { soldAt: { not: null } } }),
+    );
 
     const savedNote = await adminInquiryNotes.addAdminInquiryNote({
       inquiryId: first.id,
@@ -1649,6 +1695,10 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     if (!unknownNote.ok) assert.equal(unknownNote.kind, "not_found");
 
     session = null;
+    await assert.rejects(
+      adminDashboardQueries.getAdminDashboardMetrics(),
+      AuthorizationError,
+    );
     const unauthorizedNote = await adminInquiryNotes.addAdminInquiryNote({
       inquiryId: first.id,
       content: "Unauthorized note.",

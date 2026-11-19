@@ -1,7 +1,7 @@
 import { DashboardOverview } from "./_components/dashboard-overview";
-import { getInventoryDashboardSummary } from "@/lib/inventory-queries";
+import { getAdminDashboardMetrics } from "@/lib/admin-dashboard-queries";
 
 export default async function AdminDashboardPage() {
-  const inventorySummary = await getInventoryDashboardSummary();
-  return <DashboardOverview inventorySummary={inventorySummary} />;
+  const metrics = await getAdminDashboardMetrics();
+  return <DashboardOverview metrics={metrics} />;
 }

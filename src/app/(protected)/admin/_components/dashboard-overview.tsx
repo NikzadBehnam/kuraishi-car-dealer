@@ -1,10 +1,20 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, CarFront, Inbox } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  CarFront,
+  Inbox,
+  MessageCircle,
+} from "lucide-react";
 
-import { adminLeads } from "@/data/admin";
-import type { AdminLead, AdminVehicleStatus } from "@/types/admin";
-import type { InventoryDashboardSummaryDTO } from "@/types/inventory";
+import type {
+  AdminDashboardInquiry,
+  AdminDashboardMetrics,
+  AdminLeadSource,
+  AdminVehicleStatus,
+} from "@/types/admin";
 import { adminRoutes } from "@/config/admin-routes.config";
+import { buildAdminInquiryDetailHref } from "@/lib/admin-inquiry-validation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,42 +53,51 @@ const vehicleStatuses: AdminVehicleStatus[] = [
   "archived",
 ];
 
+const sourceLabels: Record<AdminLeadSource, string> = {
+  contact: "Contact",
+  "test-drive": "Test drive",
+  callback: "Callback",
+};
+
 export function DashboardOverview({
-  inventorySummary,
+  metrics,
 }: {
-  inventorySummary: InventoryDashboardSummaryDTO;
+  metrics: AdminDashboardMetrics;
 }) {
   const stats = [
     {
       label: "Inventory",
-      value: integer.format(inventorySummary.total),
-      helper: "Vehicles tracked in admin",
+      value: integer.format(metrics.inventoryTotal),
+      helper: "All tracked vehicles across statuses",
       Icon: CarFront,
       tone: "primary",
     },
     {
       label: "Leads",
-      value: integer.format(adminLeads.length),
-      helper: "Contact and vehicle inquiries",
+      value: integer.format(metrics.leadCount),
+      helper: "Accepted inquiries, all time",
       Icon: Inbox,
       tone: "accent",
     },
     {
       label: "Sold vehicles",
-      value: integer.format(inventorySummary.statusCounts.sold),
-      helper: "Closed inventory records",
+      value: integer.format(metrics.soldCount),
+      helper: "Vehicles with a recorded sold date, all time",
       Icon: BadgeCheck,
       tone: "warning",
     },
+    {
+      label: "Vehicle inquiries",
+      value: integer.format(metrics.vehicleInquiryCount),
+      helper: "Accepted inquiries with vehicle context, all time",
+      Icon: MessageCircle,
+      tone: "accent",
+    },
   ] as const;
-
-  const recentLeads = [...adminLeads]
-    .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 5);
 
   return (
     <div className="grid min-w-0 gap-5">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map(({ label, value, helper, Icon, tone }) => (
           <Card
             key={label}
@@ -110,71 +129,99 @@ export function DashboardOverview({
       </section>
 
       <section>
-        <RecentLeads leads={recentLeads} />
+        <RecentLeads leads={metrics.recentInquiries} />
       </section>
 
-      <InventorySummary inventorySummary={inventorySummary} />
+      <InventorySummary
+        statusCounts={metrics.statusCounts}
+        total={metrics.inventoryTotal}
+      />
     </div>
   );
 }
 
-function RecentLeads({ leads }: { leads: AdminLead[] }) {
+function RecentLeads({ leads }: { leads: AdminDashboardInquiry[] }) {
   return (
     <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
       <SectionHeading
         title="Recent leads"
-        description="Newest inquiries from the UI-only intake mock."
+        description="Latest accepted inquiries from the staff inbox."
         href={adminRoutes.leads}
       />
-      <div className="mt-4 min-w-0 overflow-hidden rounded-[var(--radius-sm)] border">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="bg-surface px-3">Customer</TableHead>
-              <TableHead className="bg-surface px-3">Source</TableHead>
-              <TableHead className="bg-surface px-3 text-right">
-                Created
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leads.map((lead) => (
-              <TableRow key={lead.id}>
-                <TableCell className="px-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-bold">{lead.customerName}</p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {lead.customerEmail}
-                    </p>
-                  </div>
-                </TableCell>
-                <TableCell className="px-3">
-                  <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
-                    {lead.source}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground px-3 text-right text-xs font-bold">
-                  {formatDateTime(lead.createdAt)}
-                </TableCell>
+      {leads.length ? (
+        <div className="mt-4 min-w-0 overflow-hidden rounded-[var(--radius-sm)] border">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="bg-surface px-3">Customer</TableHead>
+                <TableHead className="bg-surface px-3">Source</TableHead>
+                <TableHead className="bg-surface px-3">
+                  Vehicle interest
+                </TableHead>
+                <TableHead className="bg-surface px-3 text-right">
+                  Created
+                </TableHead>
+                <TableHead className="bg-surface px-3 text-right">
+                  Action
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {leads.map((lead) => (
+                <TableRow key={lead.id}>
+                  <TableCell className="px-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-bold">{lead.customerName}</p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {lead.customerEmail}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-3">
+                    <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
+                      {sourceLabels[lead.source]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-3 text-sm">
+                    {lead.vehicleInterest ?? "General inquiry"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground px-3 text-right text-xs font-bold">
+                    {formatDateTime(lead.createdAt)}
+                  </TableCell>
+                  <TableCell className="px-3 text-right">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={buildAdminInquiryDetailHref(lead.id)}>
+                        Open
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="bg-background mt-4 grid min-h-32 place-items-center rounded-[var(--radius-sm)] border p-6 text-center">
+          <p className="text-muted-foreground text-sm">
+            No accepted inquiries yet.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }
 
 function InventorySummary({
-  inventorySummary,
+  statusCounts: counts,
+  total,
 }: {
-  inventorySummary: InventoryDashboardSummaryDTO;
+  statusCounts: AdminDashboardMetrics["statusCounts"];
+  total: number;
 }) {
   const statusCounts = vehicleStatuses.map((status) => ({
     status,
-    count: inventorySummary.statusCounts[status],
+    count: counts[status],
   }));
-  const total = inventorySummary.total;
 
   return (
     <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">

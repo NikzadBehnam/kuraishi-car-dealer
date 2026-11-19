@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers implemented work on `backend/admin-leads`, based on `backend/lead-notifications` and including the integrated Sections 04-10 work:
+This guide covers the integrated work currently on `backend/dashboard-metrics`, including Sections 04-12:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -15,8 +15,10 @@ This guide covers implemented work on `backend/admin-leads`, based on `backend/l
 - Section 10.02: privacy-minimal HTML/plain-text staff alert content with escaped snapshots and a protected inbox link.
 - Section 10.04-10.05: durable outbox, bounded retries, Resend simulator adapter and test-only worker endpoint; no automatic schedule or Production delivery.
 - Section 11.01-11.04: protected database-backed inquiry inbox, server-side search and pagination, selected detail, historical vehicle context, contact links, and per-inquiry notification status/failure display.
+- Section 11.05-11.06: append-only authored inquiry notes; database and browser verification remain deferred.
+- Section 12.01-12.07: database-backed dashboard aggregates and latest-five inquiries; unsupported view counters are hidden by decision. Section 12.08 database/browser verification remains pending.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains the integrated Sections 04-08 work. The user deferred the combined manual retest until later. Sections 06.10, 07.05 and 08.09 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
+Section 04 is complete but was not merged to `master` before Section 05 began; this branch retains integrated work through Section 12. The user deferred the combined manual retest until later. Sections 06.10, 07.05, 08.09, and 12.08 still need the isolated inventory-query suite after the test credential is rotated; the manual page checks below are also pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
@@ -434,7 +436,25 @@ The inbox now uses authenticated inquiry records and the notification outbox. Ap
 7. Try an unknown inquiry ID, malformed/repeated query values, overlong search, and an out-of-range page. Expect a safe not-found/invalid-filter state or bounded redirect, with no protected data in the URL. Confirm signed-out direct note actions are rejected.
 8. Confirm no lead status, assignment, closure, delete, or visitor-reply control is presented as functional. These remain outside the approved scope.
 
-## 16. Completion record
+## 16. Section 12 — dashboard metrics and recent inquiries (12.01-12.08)
+
+The dashboard uses authenticated database aggregates and recent inquiry rows; it does not display fixture leads or unsupported view counts. KPI decisions are lifetime-based: current persisted vehicles across all statuses, all accepted inquiries, all vehicle-linked inquiries including historical snapshots, and all vehicles with `soldAt` including those later archived.
+
+### Source and gated database checks
+
+1. Run `pnpm typecheck`, `pnpm test`, targeted ESLint/Prettier, and `git diff --check`. The source suite covers dashboard inquiry DTO mapping, historical vehicle context, protected link construction, and shared authorization behavior.
+2. Before running `pnpm test:inventory-db`, rotate the previously exposed inventory-test credential and independently confirm `.env.inventory-test.local` targets an isolated, empty database. The suite applies migrations; otherwise skip it.
+3. The gated query case checks aggregate inventory/status counts, `soldAt` on an archived vehicle, all-time inquiry totals, historical vehicle-inquiry snapshots, the recent-five limit, and anonymous access denial. These assertions are added but have not been executed.
+
+### Deferred dashboard browser checks (isolated non-Production app only)
+
+1. Sign in as ordinary staff and open `/admin`. Confirm inventory and status counts agree with the staff inventory list; all persisted statuses are included.
+2. Compare Leads and Vehicle inquiries to accepted inquiry records. General inquiries count as leads but not vehicle inquiries; deleted vehicle relations retain vehicle context through stored snapshots.
+3. Confirm Sold vehicles counts every record with `soldAt`, including a vehicle subsequently archived. Confirm the dashboard does not show view counts or mock leads.
+4. Confirm the newest five inquiries appear with current/historical vehicle context and each Open link selects the correct inquiry in the protected inbox. A new database should show the explicit no-inquiries state and zero inventory percentages without NaN.
+5. Confirm an anonymous visit cannot read dashboard metrics. Do not use real customer data or Production. This browser retest remains deferred at the user's request.
+
+## 17. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 

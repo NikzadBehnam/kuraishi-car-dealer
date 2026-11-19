@@ -71,3 +71,8 @@ export function buildAdminInquiriesHref(search: string, page: number): string {
   const query = params.toString();
   return query ? `${adminRoutes.leads}?${query}` : adminRoutes.leads;
 }
+
+export function buildAdminInquiryDetailHref(inquiryId: string): string {
+  const params = new URLSearchParams({ lead: inquiryId });
+  return `${adminRoutes.leads}?${params.toString()}`;
+}

@@ -1,9 +1,5 @@
 import { vehicles } from "@/data/vehicles";
-import type {
-  AdminLead,
-  AdminVehicle,
-  AdminVehicleStatus,
-} from "@/types/admin";
+import type { AdminVehicle, AdminVehicleStatus } from "@/types/admin";
 
 const statusCycle: AdminVehicleStatus[] = [
   "published",
@@ -39,62 +35,6 @@ export const adminVehicles: AdminVehicle[] = vehicles.map((vehicle, index) => {
     lastUpdatedAt: `2026-08-${String((index % 4) + 1).padStart(2, "0")}T1${index % 10}:15:00.000Z`,
     vinLastSix: String(730000 + index * 137).slice(-6),
     ownerCount: (index % 3) + 1,
-    views: 240 + index * 37,
-    inquiries: index % 6,
     marginEstimate: 1800 + index * 145,
   };
 });
-
-export const adminLeads: AdminLead[] = [
-  {
-    id: "lead-1",
-    source: "test-drive",
-    customerName: "Daniel Berger",
-    customerEmail: "daniel.berger@example.com",
-    customerPhone: "+43 699 100 44 11",
-    vehicleId: "1",
-    createdAt: "2026-08-04T07:55:00.000Z",
-    updatedAt: "2026-08-04T07:55:00.000Z",
-    preferredDate: "2026-08-06T10:00:00.000Z",
-    message: "Interested in a test drive and financing options.",
-    notesCount: 0,
-  },
-  {
-    id: "lead-3",
-    source: "contact",
-    customerName: "Elena Fischer",
-    customerEmail: "elena.fischer@example.com",
-    customerPhone: "+43 699 100 55 22",
-    vehicleId: "3",
-    createdAt: "2026-08-02T17:05:00.000Z",
-    updatedAt: "2026-08-03T09:48:00.000Z",
-    appointmentType: "Beratung",
-    preferredDate: "2026-08-07T13:30:00.000Z",
-    message: "Needs a family SUV with warranty and winter tires.",
-    notesCount: 3,
-  },
-  {
-    id: "lead-4",
-    source: "callback",
-    customerName: "Lukas Steiner",
-    customerEmail: "lukas.steiner@example.com",
-    customerPhone: "+43 699 100 77 44",
-    vehicleId: "8",
-    createdAt: "2026-07-31T08:25:00.000Z",
-    updatedAt: "2026-08-01T12:12:00.000Z",
-    message: "Callback completed. Customer will visit showroom next month.",
-    notesCount: 1,
-  },
-  {
-    id: "lead-5",
-    source: "contact",
-    customerName: "Martin Hoffmann",
-    customerEmail: "martin.hoffmann@example.com",
-    customerPhone: "+43 699 100 66 33",
-    vehicleId: "5",
-    createdAt: "2026-07-28T10:18:00.000Z",
-    updatedAt: "2026-07-29T16:30:00.000Z",
-    message: "Customer selected another dealer due to delivery timing.",
-    notesCount: 2,
-  },
-];

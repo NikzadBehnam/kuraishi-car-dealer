@@ -19,26 +19,27 @@ export interface AdminVehicle extends Vehicle {
   lastUpdatedAt: string;
   vinLastSix: string;
   ownerCount: number;
-  views: number;
-  inquiries: number;
   marginEstimate: number;
 }
 
 export type AdminLeadSource = "contact" | "test-drive" | "callback";
 
-export interface AdminLead {
+export interface AdminDashboardInquiry {
   id: string;
   source: AdminLeadSource;
   customerName: string;
   customerEmail: string;
-  customerPhone?: string;
-  vehicleId?: string;
   createdAt: string;
-  updatedAt: string;
-  appointmentType?: string;
-  preferredDate?: string;
-  message: string;
-  notesCount: number;
+  vehicleInterest: string | null;
+}
+
+export interface AdminDashboardMetrics {
+  inventoryTotal: number;
+  statusCounts: Record<AdminVehicleStatus, number>;
+  leadCount: number;
+  soldCount: number;
+  vehicleInquiryCount: number;
+  recentInquiries: AdminDashboardInquiry[];
 }
 
 export type AdminInquiryDeliveryStatus =

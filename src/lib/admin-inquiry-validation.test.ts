@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   adminInquirySearchParamsSchema,
+  buildAdminInquiryDetailHref,
   buildAdminInquiriesHref,
   getAdminInquirySearchTerms,
 } from "./admin-inquiry-validation.ts";
@@ -54,6 +55,10 @@ describe("admin inquiry search parameters", () => {
       "mustermann",
     ]);
     assert.equal(buildAdminInquiriesHref("", 1), "/admin/leads");
+    assert.equal(
+      buildAdminInquiryDetailHref("cm123safe"),
+      "/admin/leads?lead=cm123safe",
+    );
     assert.equal(
       buildAdminInquiriesHref("Müller & Sohn", 3),
       "/admin/leads?q=M%C3%BCller+%26+Sohn&page=3",

@@ -30,7 +30,10 @@ import {
   formatFuelType,
   formatMileage,
 } from "@/lib/formatters";
-import { inventorySelectionSchema } from "@/lib/inventory-validation";
+import {
+  inventorySelectionSchema,
+  MAX_INVENTORY_SELECTION_SIZE,
+} from "@/lib/inventory-validation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,6 +109,21 @@ const duplicateMutationResponseSchema = z.strictObject({
   stockNumber: z.string().min(1),
   slug: z.string().min(1),
 });
+const bulkLifecycleResponseSchema = z.strictObject({
+  status: z.enum(["sold", "archived"]),
+  succeeded: z.array(
+    z.strictObject({
+      vehicleId: z.string().min(1),
+      changed: z.boolean(),
+    }),
+  ),
+  failed: z.array(
+    z.strictObject({
+      vehicleId: z.string().min(1),
+      error: z.string(),
+    }),
+  ),
+});
 
 export function VehicleInventoryTable({
   vehicles,
@@ -124,6 +142,13 @@ export function VehicleInventoryTable({
 }) {
   const [query, setQuery] = useState(filters.search);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<"sold" | "archived" | null>(
+    null,
+  );
+  const [bulkActionPending, setBulkActionPending] = useState(false);
+  const [bulkResult, setBulkResult] = useState<z.infer<
+    typeof bulkLifecycleResponseSchema
+  > | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -141,6 +166,10 @@ export function VehicleInventoryTable({
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
 
   const selectedCount = selectedIds.size;
+  const bulkChangedCount =
+    bulkResult?.succeeded.filter(({ changed }) => changed).length ?? 0;
+  const bulkUnchangedCount =
+    (bulkResult?.succeeded.length ?? 0) - bulkChangedCount;
 
   useEffect(() => {
     if (query === filters.search) return;
@@ -201,37 +230,116 @@ export function VehicleInventoryTable({
     updateSearchParams({ page: nextPage === 1 ? null : String(nextPage) });
   };
 
-  const submitBulkAction = (action: string) => {
+  const openBulkAction = (action: "sold" | "archived") => {
     const selection = inventorySelectionSchema.safeParse({
       ids: [...selectedIds],
     });
     if (!selection.success) {
       toast.error(
-        "The selected vehicle IDs are invalid. Clear the selection and try again.",
+        selection.error.issues[0]?.message ??
+          "The selected vehicle IDs are invalid. Clear the selection and try again.",
       );
       return;
     }
-    mockBulkAction(action, selection.data.ids);
+    setBulkResult(null);
+    setBulkAction(action);
+  };
+
+  const closeBulkAction = () => {
+    setBulkAction(null);
+    setBulkResult(null);
+  };
+
+  const confirmBulkAction = async () => {
+    if (!bulkAction || bulkActionPending) return;
+    const selection = inventorySelectionSchema.safeParse({
+      ids: [...selectedIds],
+    });
+    if (!selection.success) {
+      toast.error(
+        selection.error.issues[0]?.message ??
+          "The selected vehicle IDs are invalid. Clear the selection and try again.",
+      );
+      return;
+    }
+
+    setBulkActionPending(true);
+    try {
+      const response = await fetch("/api/admin/vehicles/bulk-lifecycle", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: selection.data.ids,
+          status: bulkAction,
+        }),
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const parsedError = lifecycleMutationErrorSchema.safeParse(payload);
+        throw new Error(
+          parsedError.success
+            ? parsedError.data.error
+            : "Could not update the selected vehicles.",
+        );
+      }
+
+      const result = bulkLifecycleResponseSchema.parse(payload);
+      if (result.status !== bulkAction) {
+        throw new Error("The server returned an unexpected lifecycle result.");
+      }
+      const succeededIds = new Set(
+        result.succeeded.map(({ vehicleId }) => vehicleId),
+      );
+      setSelectedIds((current) => {
+        const remaining = new Set(current);
+        succeededIds.forEach((id) => remaining.delete(id));
+        return remaining;
+      });
+      setBulkResult(result);
+      if (succeededIds.size > 0) router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not update the selected vehicles.",
+      );
+    } finally {
+      setBulkActionPending(false);
+    }
   };
 
   const toggleVehicle = (id: string, checked: boolean) => {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
+    if (checked && !selectedIds.has(id)) {
+      if (selectedIds.size >= MAX_INVENTORY_SELECTION_SIZE) {
+        toast.error(
+          `Select no more than ${MAX_INVENTORY_SELECTION_SIZE} vehicles at a time.`,
+        );
+        return;
+      }
+      setSelectedIds(new Set(selectedIds).add(id));
+      return;
+    }
+    const next = new Set(selectedIds);
+    next.delete(id);
+    setSelectedIds(next);
   };
 
   const toggleVisible = (checked: boolean) => {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      visibleIds.forEach((id) => {
-        if (checked) next.add(id);
-        else next.delete(id);
-      });
-      return next;
-    });
+    const next = new Set(selectedIds);
+    if (checked) {
+      const additions = visibleIds.filter((id) => !next.has(id));
+      if (next.size + additions.length > MAX_INVENTORY_SELECTION_SIZE) {
+        toast.error(
+          `Select no more than ${MAX_INVENTORY_SELECTION_SIZE} vehicles at a time.`,
+        );
+        return;
+      }
+      additions.forEach((id) => next.add(id));
+    } else {
+      visibleIds.forEach((id) => next.delete(id));
+    }
+    setSelectedIds(next);
   };
 
   return (
@@ -303,7 +411,7 @@ export function VehicleInventoryTable({
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => submitBulkAction("Archive")}
+              onClick={() => openBulkAction("archived")}
             >
               <Archive />
               Archive
@@ -312,7 +420,7 @@ export function VehicleInventoryTable({
               type="button"
               variant="outline"
               className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-              onClick={() => submitBulkAction("Mark sold")}
+              onClick={() => openBulkAction("sold")}
             >
               <BadgeCheck />
               Mark sold
@@ -515,6 +623,77 @@ export function VehicleInventoryTable({
           </div>
         </div>
       </section>
+
+      <Dialog
+        open={bulkAction !== null}
+        onOpenChange={(open) => {
+          if (!open && !bulkActionPending) closeBulkAction();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkResult
+                ? "Bulk lifecycle results"
+                : bulkAction === "sold"
+                  ? `Mark ${selectedCount} vehicles sold?`
+                  : `Archive ${selectedCount} vehicles?`}
+            </DialogTitle>
+            <DialogDescription>
+              {bulkResult
+                ? `${bulkChangedCount} updated, ${bulkUnchangedCount} already in the requested status, and ${bulkResult.failed.length} failed. Successful IDs were removed from the selection; failed IDs remain selected.`
+                : `Each vehicle is processed independently. A failed or stale vehicle will not block other updates. You can select up to ${MAX_INVENTORY_SELECTION_SIZE} vehicles.`}
+            </DialogDescription>
+          </DialogHeader>
+          {bulkResult && (
+            <ul className="max-h-64 space-y-2 overflow-y-auto rounded-[var(--radius-sm)] border p-3 text-sm">
+              {bulkResult.succeeded.map(({ vehicleId, changed }) => (
+                <li key={vehicleId}>
+                  <span className="font-semibold">{vehicleId}</span>
+                  {changed
+                    ? ` — ${bulkResult.status === "sold" ? "marked sold" : "archived"}`
+                    : ` — already ${bulkResult.status}`}
+                </li>
+              ))}
+              {bulkResult.failed.map(({ vehicleId, error }) => (
+                <li key={vehicleId} className="text-destructive">
+                  <span className="font-semibold">{vehicleId}</span> — {error}
+                </li>
+              ))}
+            </ul>
+          )}
+          <DialogFooter>
+            {bulkResult ? (
+              <Button type="button" onClick={closeBulkAction}>
+                Close
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={bulkActionPending}
+                  onClick={closeBulkAction}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={bulkActionPending}
+                  onClick={() => void confirmBulkAction()}
+                >
+                  {bulkActionPending
+                    ? "Processing…"
+                    : bulkAction === "sold"
+                      ? "Mark sold"
+                      : "Archive vehicles"}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -814,10 +993,4 @@ function StatusBadge({ status }: { status: AdminVehicleStatus }) {
 
 function formatDateTime(value: string) {
   return dateTime.format(new Date(value));
-}
-
-function mockBulkAction(action: string, ids: readonly string[]) {
-  toast.info(
-    `${action} is UI-only for ${ids.length} explicitly selected vehicles.`,
-  );
 }

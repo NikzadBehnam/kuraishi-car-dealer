@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const DEFAULT_INVENTORY_PAGE_SIZE = 8;
+export const MAX_INVENTORY_SELECTION_SIZE = 100;
 
 const maximumInventoryOffset = 2_147_483_647;
 
@@ -101,6 +102,10 @@ export const inventorySelectionSchema = z.strictObject({
   ids: z
     .array(inventoryIdSchema)
     .min(1, "Select at least one vehicle.")
+    .max(
+      MAX_INVENTORY_SELECTION_SIZE,
+      `Select no more than ${MAX_INVENTORY_SELECTION_SIZE} vehicles at a time.`,
+    )
     .refine((ids) => new Set(ids).size === ids.length, {
       message: "Selected vehicle IDs must be unique.",
     }),

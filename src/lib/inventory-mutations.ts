@@ -15,6 +15,7 @@ import {
   firstRegistrationMonthSchema,
   inventoryIdSchema,
   inventorySlugSchema,
+  inventorySelectionSchema,
 } from "./inventory-validation.ts";
 import {
   InventoryPolicyError,
@@ -163,6 +164,13 @@ export const vehicleLifecycleMutationSchema = z.strictObject({
   expectedVersion: z.number().int().min(1).max(2_147_483_647),
   status: z.enum(["sold", "archived"]),
 });
+
+export const bulkVehicleLifecycleMutationSchema =
+  inventorySelectionSchema.extend({
+    status: z.enum(["sold", "archived"]),
+  });
+
+const MAX_BULK_LIFECYCLE_CONCURRENCY = 5;
 
 export const duplicateVehicleMutationSchema = z.strictObject({
   vehicleId: inventoryIdSchema,
@@ -876,6 +884,13 @@ export async function updateVehicle(input: unknown) {
 export async function transitionVehicleLifecycle(input: unknown) {
   const session = await requireSession();
   const parsed = vehicleLifecycleMutationSchema.parse(input);
+  return transitionVehicleLifecycleForSession(session, parsed);
+}
+
+async function transitionVehicleLifecycleForSession(
+  session: Awaited<ReturnType<typeof requireSession>>,
+  parsed: z.infer<typeof vehicleLifecycleMutationSchema>,
+) {
   const { vehicleId, expectedVersion, status } = parsed;
   const snapshot = await prisma.vehicle.findUnique({
     where: { id: vehicleId },
@@ -1053,6 +1068,75 @@ export async function transitionVehicleLifecycle(input: unknown) {
     }
     prismaMutationError(error);
   }
+}
+
+export async function bulkTransitionVehicles(input: unknown) {
+  const session = await requireSession();
+  const { ids, status } = bulkVehicleLifecycleMutationSchema.parse(input);
+  const outcomes = new Array<
+    | { vehicleId: string; changed: boolean }
+    | { vehicleId: string; error: string }
+  >(ids.length);
+  let nextIndex = 0;
+
+  const processNext = async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= ids.length) {
+        return;
+      }
+
+      const vehicleId = ids[index];
+      try {
+        const snapshot = await prisma.vehicle.findUnique({
+          where: { id: vehicleId },
+          select: { version: true },
+        });
+        if (!snapshot) {
+          throw new InventoryMutationError(404, "Vehicle was not found.");
+        }
+
+        const result = await transitionVehicleLifecycleForSession(session, {
+          vehicleId,
+          expectedVersion: snapshot.version,
+          status,
+        });
+        outcomes[index] = { vehicleId, changed: result.changed };
+      } catch (error) {
+        if (
+          error instanceof InventoryMutationError ||
+          error instanceof InventoryPolicyError
+        ) {
+          outcomes[index] = { vehicleId, error: error.message };
+          continue;
+        }
+
+        console.error("Bulk vehicle lifecycle item failed.", {
+          vehicleId,
+          errorType: error instanceof Error ? error.name : "UnknownError",
+        });
+        outcomes[index] = {
+          vehicleId,
+          error: "Could not update this vehicle.",
+        };
+      }
+    }
+  };
+
+  const workerCount = Math.min(MAX_BULK_LIFECYCLE_CONCURRENCY, ids.length);
+  await Promise.all(Array.from({ length: workerCount }, () => processNext()));
+
+  return {
+    status,
+    succeeded: outcomes.filter(
+      (outcome): outcome is { vehicleId: string; changed: boolean } =>
+        "changed" in outcome,
+    ),
+    failed: outcomes.filter(
+      (outcome): outcome is { vehicleId: string; error: string } =>
+        "error" in outcome,
+    ),
+  };
 }
 
 export async function publishVehicle(input: unknown) {

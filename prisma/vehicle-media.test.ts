@@ -226,6 +226,11 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         error instanceof Error && error.name === "AuthorizationError",
     );
     await assert.rejects(
+      mutations.bulkTransitionVehicles({ invalid: true }),
+      (error: unknown) =>
+        error instanceof Error && error.name === "AuthorizationError",
+    );
+    await assert.rejects(
       mediaAttachments.listVehicleMediaAssets("vehicle_1"),
       (error: unknown) =>
         error instanceof Error && error.name === "AuthorizationError",
@@ -879,6 +884,72 @@ describe("vehicle media persistence on isolated Neon resources", () => {
           soldAt: new Date(sold.soldAt!),
         },
       ],
+    );
+  });
+
+  it("reports partial bulk lifecycle outcomes and treats successful retries as unchanged", async () => {
+    session = { user: { id: actorId, role: "user" } };
+    const imageId = await createImageAsset({ publicRead: true });
+    const publishable = await createDraft([imageId]);
+    const publishableDetails = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: publishable.vehicleId },
+      select: { stockNumber: true, slug: true },
+    });
+    const published = await mutations.publishVehicle(
+      publishInput({
+        vehicleId: publishable.vehicleId,
+        expectedVersion: publishable.version,
+        stockNumber: publishableDetails.stockNumber,
+        slug: publishableDetails.slug,
+        mediaAssetIds: [imageId],
+      }),
+    );
+    const draft = await createDraft();
+    const missingVehicleId = `missing-${randomUUID()}`;
+
+    const result = await mutations.bulkTransitionVehicles({
+      ids: [publishable.vehicleId, draft.vehicleId, missingVehicleId],
+      status: "sold",
+    });
+    assert.equal(result.status, "sold");
+    assert.deepEqual(result.succeeded, [
+      { vehicleId: publishable.vehicleId, changed: true },
+    ]);
+    assert.deepEqual(
+      result.failed.map(({ vehicleId }) => vehicleId),
+      [draft.vehicleId, missingVehicleId],
+    );
+    assert.match(result.failed[0].error, /approved public image/i);
+    assert.match(result.failed[1].error, /not found/i);
+    const soldVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: publishable.vehicleId },
+    });
+    const unchangedDraft = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+    });
+    assert.equal(soldVehicle.status, "sold");
+    assert.ok(soldVehicle.soldAt);
+    assert.equal(unchangedDraft.status, "draft");
+    assert.equal(unchangedDraft.version, draft.version);
+
+    const retry = await mutations.bulkTransitionVehicles({
+      ids: [publishable.vehicleId],
+      status: "sold",
+    });
+    assert.deepEqual(retry.succeeded, [
+      { vehicleId: publishable.vehicleId, changed: false },
+    ]);
+    assert.deepEqual(retry.failed, []);
+    assert.equal(retry.succeeded[0].changed, false);
+    assert.equal(
+      await prisma.vehicleChange.count({
+        where: {
+          vehicleId: publishable.vehicleId,
+          status: "sold",
+          version: { gt: published.version },
+        },
+      }),
+      1,
     );
   });
 

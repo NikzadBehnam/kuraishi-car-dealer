@@ -14,6 +14,7 @@ import {
   inventoryPaginationSchema,
   inventoryPolicyUpdateSchema,
   inventorySelectionSchema,
+  MAX_INVENTORY_SELECTION_SIZE,
   staffInventorySearchParamsSchema,
 } from "./inventory-validation.ts";
 
@@ -87,6 +88,24 @@ describe("inventory input and lifecycle boundary", () => {
     assert.deepEqual(
       inventorySelectionSchema.parse({ ids: ["vehicle-1", "vehicle-2"] }),
       { ids: ["vehicle-1", "vehicle-2"] },
+    );
+    assert.equal(
+      inventorySelectionSchema.safeParse({
+        ids: Array.from(
+          { length: MAX_INVENTORY_SELECTION_SIZE },
+          (_, index) => `vehicle-${index}`,
+        ),
+      }).success,
+      true,
+    );
+    assert.equal(
+      inventorySelectionSchema.safeParse({
+        ids: Array.from(
+          { length: MAX_INVENTORY_SELECTION_SIZE + 1 },
+          (_, index) => `vehicle-${index}`,
+        ),
+      }).success,
+      false,
     );
     for (const input of [
       {},

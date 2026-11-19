@@ -1,6 +1,6 @@
 export const siteConfig = {
   brandName: "Kuraishi",
-  canonicalOrigin: "https://www.kuraishi-autohandel.at",
+  canonicalOrigin: "https://www.kuraishicars.com",
   contact: {
     additionalPhones: ["+90 536 677 12 63", "+43 676 660 1985"],
   },

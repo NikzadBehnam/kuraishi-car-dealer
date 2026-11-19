@@ -1,4 +1,6 @@
-const productionOrigin = "https://www.kuraishicars.com";
+import { siteConfig } from "../config/site.config.ts";
+
+const productionOrigin = siteConfig.canonicalOrigin;
 
 export function getTrustedOrigins(
   isProduction = process.env.NODE_ENV === "production",

@@ -41,6 +41,7 @@ import {
   inventoryPaginationInputSchema,
   inventoryPaginationSchema,
   inventorySlugSchema,
+  publicInventorySearchSchema,
   staffInventoryFiltersSchema,
 } from "./inventory-validation.ts";
 import type { StaffInventoryFilters } from "./inventory-validation.ts";
@@ -61,7 +62,7 @@ const staffListSchema = inventoryPaginationInputSchema.extend({
   ...staffInventoryFiltersSchema.shape,
 });
 const publicListSchema = inventoryPaginationInputSchema.extend({
-  search: z.string().default(""),
+  search: publicInventorySearchSchema,
 });
 
 const limitSchema = inventoryPaginationInputSchema.shape.pageSize.unwrap();

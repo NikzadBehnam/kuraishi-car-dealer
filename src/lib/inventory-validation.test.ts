@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { firstRegistrationMonthSchema } from "./inventory-validation.ts";
+import {
+  firstRegistrationMonthSchema,
+  publicCatalogSearchParamsSchema,
+} from "./inventory-validation.ts";
 
 function currentMonthInVienna() {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -37,6 +40,35 @@ describe("first registration validation", () => {
     ]) {
       assert.equal(
         firstRegistrationMonthSchema.safeParse(month).success,
+        false,
+      );
+    }
+  });
+});
+
+describe("public catalog URL parameters", () => {
+  it("defaults to the first page and trims bounded search terms", () => {
+    assert.deepEqual(publicCatalogSearchParamsSchema.parse({}), {
+      q: "",
+      page: 1,
+    });
+    assert.deepEqual(
+      publicCatalogSearchParamsSchema.parse({ q: "  BMW X5  ", page: "2" }),
+      { q: "BMW X5", page: 2 },
+    );
+  });
+
+  it("rejects repeated, oversized, malformed, and unsafe URL values", () => {
+    for (const input of [
+      { q: ["BMW"] },
+      { q: "x".repeat(101) },
+      { page: ["2"] },
+      { page: "0" },
+      { page: "1.5" },
+      { page: "999999999999999999999" },
+    ]) {
+      assert.equal(
+        publicCatalogSearchParamsSchema.safeParse(input).success,
         false,
       );
     }

@@ -87,9 +87,11 @@ export function VehicleCard({
           <h2 className="font-heading truncate text-lg font-extrabold tracking-tight">
             {vehicle.make} {vehicle.model}
           </h2>
-          <p className="text-muted-foreground mt-0.5 truncate text-sm">
-            {vehicle.variant ?? " "}
-          </p>
+          {vehicle.variant && (
+            <p className="text-muted-foreground mt-0.5 truncate text-sm">
+              {vehicle.variant}
+            </p>
+          )}
         </Link>
 
         <div className="mt-3 flex items-end justify-between gap-3">

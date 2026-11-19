@@ -614,20 +614,20 @@ If anything fails, report only the check name, expected/actual result and a reda
 **Commit 1: `feat: render public vehicle lists from database queries`**
 
 - [x] **05.01** Replace homepage/demo selection with a bounded featured-public-vehicle query. Define deterministic ordering and what to show when there are fewer featured cars or none. _The dynamic homepage now loads at most 8 explicitly featured, inspection-passed public vehicles, ordered by most recently updated then ID. It shows fewer when fewer qualify and a clear empty message when none do; it never falls back to fixtures. Approved public card images are loaded in one bounded batch query, in attachment order, and private/unapproved images are excluded. Verified with TypeScript, all 68 unit tests, the 30-test isolated vehicle-media suite, focused ESLint/Prettier, and whitespace checks. The inventory DB suite was not run because its test credential still requires rotation._
-- [ ] **05.02** Replace listing fixture imports with eligible public records. Preserve card price, registration, mileage, fuel, transmission, cover image, display labels, comparison control, and canonical details link.
-- [ ] **05.03** Render accurate result counts, empty catalog/no-results states, loading feedback, and explicit unavailable-service errors; never substitute demo cars when a database query fails.
+- [x] **05.02** Replace listing fixture imports with eligible public records. Preserve card price, registration, mileage, fuel, transmission, cover image, display labels, comparison control, and canonical details link. _The listing now calls the public inventory query and hydrates ordered approved public images in one bounded batch. Cards render live DTO values, preserve comparison controls and canonical links, and show unavailable/missing values truthfully._
+- [x] **05.03** Render accurate result counts, empty catalog/no-results states, loading feedback, and explicit unavailable-service errors; never substitute demo cars when a database query fails. _The page shows exact matching totals, separate empty-catalog/no-results/beyond-last-page states, a 12-card loading skeleton and the existing explicit retry error boundary. Database/storage errors propagate; no demo fallback remains._
 
 **Commit 2: `feat: connect catalog search and bounded result navigation`**
 
-- [ ] **05.04** Make `q` a shareable source of truth in the URL rather than only initial local state. Preserve query state across navigation, back/forward, direct links, and clearing the search.
-- [ ] **05.05** Execute the approved keyword semantics through the database query layer; test make/model/variant, German body/fuel/transmission labels, color, location, registration, equipment, and labels.
-- [ ] **05.06** Agree on bounded delivery as stock grows: a deliberately small server-loaded catalog or server pagination/load-more. Public filter controls, user-selectable sorting, pagination, and load-more are **not currently implemented**; do not pretend existing controls need wiring.
-- [ ] **05.07** If approved, add make/model, price, registration, mileage, fuel, transmission, and body filters plus sort controls as a separate milestone. Define facets/counts, ranges, stable tie-breakers, reset behavior, and query validation before exposing them.
+- [x] **05.04** Make `q` a shareable source of truth in the URL rather than only initial local state. Preserve query state across navigation, back/forward, direct links, and clearing the search. _The search input keeps the existing live-search interaction, debounces server queries, replaces the URL's `q` value, restores from URL navigation, removes pagination on query changes, and provides a reset control; page links preserve the query._
+- [x] **05.05** Execute the approved keyword semantics through the database query layer; test make/model/variant, German body/fuel/transmission labels, color, location, registration, equipment, and labels. _Catalog requests now use the existing server-side `listPublicVehicles` keyword query, including the approved German normalization/search fields. Requests are bounded to 100 characters; no client-side fixture filter remains._
+- [x] **05.06** Agree on bounded delivery as stock grows: a deliberately small server-loaded catalog or server pagination/load-more. Do not invent filter or sorting controls beyond the approved search and pagination behavior. _User selected server pagination at 12 records per page. Previous/next links preserve `q`, direct page URLs are supported, and beyond-last pages provide a recovery link._
+- [ ] **05.07** If approved, add make/model, price, registration, mileage, fuel, transmission, and body filters plus sort controls as a separate milestone. Define facets/counts, ranges, stable tie-breakers, reset behavior, and query validation before exposing them. _Not approved; intentionally not implemented._
 
 **Commit 3: `test: verify public eligibility and search behavior`**
 
-- [ ] **05.08** Verify draft/archived records never appear; reserved/sold records follow the approved policy; feature changes and new publications update homepage and listing without a redeploy.
-- [ ] **05.09** Test empty and populated catalogs, text normalization, multi-term search, invalid/oversized query values, result limits, URL navigation, and query failure UI.
+- [x] **05.08** Verify draft/archived records never appear; reserved/sold records follow the approved policy; feature changes and new publications update homepage and listing without a redeploy. _Both dynamic pages use the shared public eligibility predicates; homepage has a Featured-only query and catalog uses catalog eligibility. Explicit `force-dynamic` rendering avoids build-time snapshots. The combined manual propagation check is deferred until the user's Section 04-05 retest._
+- [x] **05.09** Test empty and populated catalogs, text normalization, multi-term search, invalid/oversized query values, result limits, URL navigation, and query failure UI. _Added bounded/repeated/malformed URL parameter tests and pagination URL tests; the existing query suite covers search semantics, eligibility, pagination and DB error propagation. Combined page/UI checks are deferred to the user's retest; the inventory DB suite remains blocked pending test-credential rotation._
 
 **Done when:** a staff-created eligible car is visible and searchable on the real public site, while nonpublic data is excluded at the query layer.
 
@@ -917,44 +917,44 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 ## Coverage register: every existing feature has an owner
 
-| Existing surface/control                                         | Current behavior                                  | Roadmap owner                                        |
-| ---------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------- |
-| Login, remember-device, safe return path, sign-out               | Real Better Auth/session flow                     | Preserve baseline; 13, 16 regression checks          |
-| Account creation and admin-only account UI                       | Real protected account action                     | Preserve baseline; 13, 16 direct permission checks   |
-| Dashboard KPI cards, status chart, recent leads, views/inquiries | Demo aggregates                                   | 12                                                   |
-| Admin vehicles list, search/status/sort/pages/selection          | Fixture queries/local state                       | 02, 04                                               |
-| New/edit vehicle, every form tab                                 | Fake save/draft/preview; media outside schema     | 02, 03, 04                                           |
-| Duplicate/sold/archive and bulk actions                          | Toast only                                        | 04                                                   |
-| Delete car requested for the dynamic project                     | No existing control                               | 01 decision, 04 explicit addition                    |
-| Media search/type/usage filters, detail dialog                   | Fixture data/local state                          | 03                                                   |
-| Upload/reorder/remove/copy/download/delete, including bulk       | Toast only                                        | 03                                                   |
-| Leads search/detail/contact links/notes                          | Fixtures; contact links work; notes do not save   | 09, 11                                               |
-| Dealership and Contact settings tabs                             | Uncontrolled config defaults; fake save           | 08                                                   |
-| Workspace search and mocked-identity copy                        | Search inert; some labels stale                   | 13                                                   |
-| Home featured vehicles and vehicle cards                         | Static vehicle fixtures                           | 02, 05                                               |
-| Public catalog keyword search                                    | Local fixture filtering                           | 02, 05                                               |
-| Vehicle detail/specs/gallery/dealer/related cars                 | Fixtures with some hard-coded claims              | 03, 06, 08                                           |
-| Comparison toggles/table/three-car limit                         | Browser-local IDs, fixture resolution             | 07                                                   |
-| Contact form/service preferences/date/consent                    | Validated UI, no actual submission                | 09                                                   |
-| Vehicle-specific contact links                                   | Vehicle query passed but ignored                  | 06, 09                                               |
-| Staff/customer notifications                                     | No delivery integration                           | 10 decision/integration                              |
-| Contact address/phone/email/map, footer/social/hours             | Static config/dealer sources                      | 08; static links need no separate backend            |
-| About/services/home marketing                                    | Static text, claims and images                    | 14; CMS optional                                     |
-| Imprint/privacy/terms/cookie settings                            | Generic legal placeholders; no preference UI      | 14                                                   |
-| Navigation/mobile menu, theme, gallery/image preview             | Real browser/presentation behavior                | Retain; regression checks, no persistence API needed |
-| Canonical routes, metadata, sitemap, robots                      | Real routing, but domain conflict and fixture SEO | 15                                                   |
-| Error/loading/not-found/empty states                             | UI boundaries exist; real failures need wiring    | Each domain plus 16                                  |
+| Existing surface/control                                         | Current behavior                                       | Roadmap owner                                        |
+| ---------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------- |
+| Login, remember-device, safe return path, sign-out               | Real Better Auth/session flow                          | Preserve baseline; 13, 16 regression checks          |
+| Account creation and admin-only account UI                       | Real protected account action                          | Preserve baseline; 13, 16 direct permission checks   |
+| Dashboard KPI cards, status chart, recent leads, views/inquiries | Inventory totals/statuses live; lead metrics demo      | 04; remaining leads/views in 12                      |
+| Admin vehicles list, search/status/sort/pages/selection          | Database-backed queries and actions                    | 02, 04                                               |
+| New/edit vehicle, every form tab                                 | Persisted versioned records, preview and publish       | 02, 03, 04                                           |
+| Duplicate/sold/archive and bulk actions                          | Persisted lifecycle, partial-result bulk actions       | 04                                                   |
+| Delete car requested for the dynamic project                     | Confirmed hard-delete for never-published Drafts       | 01 decision, 04 explicit addition                    |
+| Media search/type/usage filters, detail dialog                   | Database-backed media library                          | 03                                                   |
+| Upload/reorder/remove/copy/download/delete, including bulk       | Persisted storage, approval and attachment flows       | 03                                                   |
+| Leads search/detail/contact links/notes                          | Fixtures; contact links work; notes do not save        | 09, 11                                               |
+| Dealership and Contact settings tabs                             | Uncontrolled config defaults; fake save                | 08                                                   |
+| Workspace search and mocked-identity copy                        | Search inert; some labels stale                        | 13                                                   |
+| Home featured vehicles and vehicle cards                         | Live eligible Featured inventory and approved media    | 05                                                   |
+| Public catalog keyword search                                    | Database search, URL query and 12/page pagination      | 02, 05                                               |
+| Vehicle detail/specs/gallery/dealer/related cars                 | Database detail/media with remaining fixture fallbacks | 03, 04, 06, 08                                       |
+| Comparison toggles/table/three-car limit                         | Browser-local IDs, fixture resolution                  | 07                                                   |
+| Contact form/service preferences/date/consent                    | Validated UI, no actual submission                     | 09                                                   |
+| Vehicle-specific contact links                                   | Vehicle query passed but ignored                       | 06, 09                                               |
+| Staff/customer notifications                                     | No delivery integration                                | 10 decision/integration                              |
+| Contact address/phone/email/map, footer/social/hours             | Static config/dealer sources                           | 08; static links need no separate backend            |
+| About/services/home marketing                                    | Static text, claims and images                         | 14; CMS optional                                     |
+| Imprint/privacy/terms/cookie settings                            | Generic legal placeholders; no preference UI           | 14                                                   |
+| Navigation/mobile menu, theme, gallery/image preview             | Real browser/presentation behavior                     | Retain; regression checks, no persistence API needed |
+| Canonical routes, metadata, sitemap, robots                      | Real routing, but domain conflict and fixture SEO      | 15                                                   |
+| Error/loading/not-found/empty states                             | Catalog states/errors wired; other domains vary        | Each domain plus 16                                  |
 
 ## Explicit scope limits and unresolved choices
 
 - The public site currently has no favorites, customer portal, newsletter, financing calculator, share/print/download vehicle actions, payment flow, dedicated trade-in form, or true booking/reservation system. Do not label these as implemented UI awaiting a backend.
-- Public filters, user-selectable sorting, and pagination/load-more are proposed catalog improvements, not existing controls. The roadmap requires a conscious capacity/UX decision, not automatic scope expansion.
+- Server pagination at 12 vehicles per page is implemented in Section 05.06. Additional public filters, user-selectable sorting, and load-more remain optional and unapproved.
 - Phone links, email links, social links, navigation, theme, and image viewers do not each need their own database/API.
 - CRM pipelines, lead assignment/statuses, appointment slot capacity, multi-dealer tenancy, automated reservation expiry, customer account sync, CMS editing, analytics, and delivery providers require approval before being added beyond the existing interfaces.
 - The list is complete against the reviewed source snapshot, not against unknown business requirements. Confirm open decisions with the user section by section; never treat an unchecked planning item as authorization to change Production or purchase a service.
 
 ## Current step and next action
 
-- **Current:** Section **02 / 02.01-02.13** is merged to `master` (`f4ab9b1`) with user retest confirmed. Section **03 / 03.01-03.13** is implemented; 03.14 still awaits public-image-refresh verification in 15.09. Sections **04 / 04.01-04.17** are complete on `backend/admin-vehicle-workflows`, and **05 / 05.01** is now implemented on `backend/public-vehicle-catalog`, branched from the integrated Section 04 branch so its dependency is present. Section 04 has not been merged or manually retested. Per explicit user direction, combine its manual retest with Section 05's retest after Section 05 is implemented. Homepage featured vehicles now come from live eligible inventory, with approved ordered media and no fixture fallback. Lead metrics remain UI-only. The `.env.inventory-test.local` credential still requires rotation before any test loads that file.
-- **Next:** Continue with **05.02-05.06** and **05.08-05.09**. Do not implement the optional 05.07 filters/sort controls without separate approval. After Section 05 is complete, update the retest guide for Sections 04-05 and provide the combined test procedure; wait for the user's retest/merge decision before Section 06. Verify public-image refresh in 15.09 before marking Section 03 complete.
+- **Current:** Section **02 / 02.01-02.13** is merged to `master` (`f4ab9b1`) with user retest confirmed. Section **03 / 03.01-03.13** is implemented; 03.14 still awaits public-image-refresh verification in 15.09. Section **04 / 04.01-04.17** is complete on `backend/admin-vehicle-workflows` but has not been merged or manually retested. Section **05 / 05.01-05.06 and 05.08-05.09** is implemented on `backend/public-vehicle-catalog`, branched from the integrated Section 04 branch per the user's direction to combine retesting. Section 05 added dynamic homepage featured cards and a live, searchable, paginated catalog with approved ordered images, query validation, honest empty/error states, and no fixture fallback. Validation: TypeScript, all 73 unit tests, repository ESLint, focused Prettier, whitespace checks, and all 30 isolated vehicle-media tests passed. The inventory DB suite was not run; rotate `.env.inventory-test.local` credentials before any test loads it. Section 05.07's optional filters/sort controls remain unapproved. Lead metrics remain UI-only; live comparison resolution remains Section 07.
+- **Next:** The user will run the combined Sections 04-05 retest on `backend/public-vehicle-catalog` using the updated guide. Do not merge or start Section 06 until the user completes that retest and confirms the merge decision. Verify public-image refresh in 15.09 before marking Section 03 complete.
 - **Progress convention:** after each implementation milestone, update the corresponding numbered items in this file and report the current section/milestone, verification results, and next action.

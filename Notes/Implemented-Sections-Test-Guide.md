@@ -1,24 +1,25 @@
 # Full test guide for implemented checklist sections
 
-This guide covers the work integrated on `backend/admin-vehicle-workflows`:
+This guide covers implemented work on `backend/public-vehicle-catalog`, which includes the integrated Section 04 branch:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
 - Section 03.01-03.13: media storage, upload, approval, relationships, library, downloads and deletion.
 - Section 04.01-04.17: staff inventory, vehicle mutations, lifecycle, authorization, public detail and live dashboard counts.
+- Section 05.01-05.06 and 05.08-05.09: live homepage/catalog inventory, bounded search, URL navigation, pagination and public eligibility.
 
-Section 04 is complete on this branch but is not merged to `master`. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Sections 05 and later are not covered here. In particular, the public homepage and catalog are still fixture-backed; their database integration is Section 05.01-05.02.
+Section 04 is complete but was not merged to `master` before Section 05 began; this Section 05 branch retains the Section 04 commits for the combined retest. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented. Sections 06 and later are not covered here. Comparison selection is still stored in the browser, but resolving those IDs to live inventory belongs to Section 07.
 
 ## 1. Safety and prerequisites
 
-1. Use the integrated branch, not `master`:
+1. Use the Section 05 branch, not `master`:
 
    ```powershell
    git branch --show-current
    git status --short --branch
    ```
 
-   The branch should be `backend/admin-vehicle-workflows`. Preserve any unrelated local work; do not switch branches over uncommitted changes.
+   The branch should be `backend/public-vehicle-catalog`. It includes the Section 04 integration so both sections can be tested together. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
 2. Use Node 25.8.0, or a Node version that supports the test-runner flags in the package scripts. The machine PATH previously selected Node 14, which cannot run these scripts; Node 22.21.1 also lacked `--test-isolation=none`.
 
@@ -168,19 +169,52 @@ Use only a safe non-Production app environment and existing test accounts. The d
 7. **Public detail and dashboard propagation**
    - After each create/edit/publish/lifecycle/duplicate/delete and bulk action, revisit the admin dashboard and verify total and status counts.
    - Public detail should reflect Published, Reserved and Sold records immediately when loaded; Draft and Archived records should be hidden. A failed stale write must leave persisted state/counts unchanged and show error feedback only.
-   - The homepage and vehicle listing are still fixture-backed. Do not treat their current content as a failure of Section 04; database-backed homepage/list behavior is Section 05.01-05.02. Lead metrics remain UI-only.
+   - Verify homepage/catalog propagation in Section 05 below. Lead metrics remain UI-only, and resolving comparison IDs to live inventory remains Section 07.
 
-## 7. Completion record
+## 7. Section 05 — live homepage and public catalog (05.01-05.06, 05.08-05.09)
+
+Use the isolated non-Production app/database and test media bucket. Create or edit vehicles only through the admin flow. The public homepage and catalog are dynamic; they must never fall back to demo vehicles when a query fails.
+
+1. **Homepage featured vehicles**
+   - Publish and inspect a vehicle, mark it Featured, and confirm it appears on the homepage with its first approved public image as the cover.
+   - Confirm ordering is deterministic (most recently updated first, then stable ID order), and only eligible, inspection-passed Featured inventory is shown.
+   - Unfeature/archive a test vehicle and refresh the homepage; it must disappear without a redeploy.
+   - With fewer than 8 qualifying Featured vehicles, confirm the page shows only those vehicles. With none, confirm the honest empty message and the all-vehicles link, not fixture/demo cards.
+   - Attach a private or unapproved image and confirm it is not shown publicly. Reorder approved images and confirm the first ordered image is used.
+2. **Live catalog and card data**
+   - Confirm the catalog shows database vehicles, including Published and Reserved eligible stock. Draft, Archived, and inspection-ineligible records must not appear; Sold records follow the approved policy and are not catalog results.
+   - Check card price, registration, mileage, fuel, transmission, power, labels, comparison control and canonical detail link. Missing optional data should display as missing, not invented zeros or fixture values.
+   - Confirm Reserved is labeled unavailable/reserved rather than immediately available. Check the first approved ordered image and the no-image placeholder.
+3. **Result counts, loading, empty and query errors**
+   - Verify result counts match the total matching database records, not just the current page.
+   - With an empty catalog, check the separate empty-catalog message. Search for a nonmatching term and check the no-results state plus clear-search action.
+   - Check the loading skeleton while requests are pending. Simulate an unavailable database/storage dependency only in a safe test environment; expect the explicit retry/error boundary and no fixture fallback.
+4. **Shareable search URL and database search**
+   - Type a search and confirm the debounced server search updates `q` in the URL. Open that URL in a new tab; the same results and input value should appear.
+   - Use browser Back/Forward after navigating away and across page links; the input and results must follow the URL. Clear the query and confirm `q` and `page` are removed and the unfiltered catalog returns.
+   - Test multi-term make/model/variant, German body/fuel/transmission labels, color, location, registration, equipment and labels; verify each term must match. Include uppercase/accented terms and a term with no match.
+   - The query is bounded to 100 characters. Try a longer value, repeated `q` parameters and malformed page values such as `page=0`; expect the invalid-query state and a working reset link.
+5. **Bounded pagination**
+   - Confirm 12 results per page and accurate page/total indicators.
+   - Navigate forward/back; links must retain `q`, and a fresh search must return to page 1.
+   - Open a page link directly and verify the same results. Try a valid but beyond-last page and use the provided link back to page 1.
+   - No public filter or user-selected sort controls should appear; those remain the unapproved optional 05.07 scope.
+6. **Cross-section propagation**
+   - Publish, feature, reserve/release, sell and archive test vehicles through the admin workflow. Reload homepage and catalog after each change.
+   - Verify eligible published/featured stock appears, Reserved listing cards show their status, Sold/Archived/Draft stock is excluded from discovery, and no redeploy is needed.
+   - Comparison controls retain their existing browser behavior, but a full live comparison table is not expected until Section 07.
+
+## 8. Completion record
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
-| Area | Result | Notes |
-| --- | --- | --- |
-| Branch and non-Production target confirmed |  |  |
-| TypeScript, lint, formatting and unit tests |  |  |
-| Section 02 inventory migration/query DB suite (after credential rotation) |  |  |
-| Section 03 media DB/storage suites |  |  |
-| Section 03 manual media workflow |  |  |
-| Section 04 manual admin/public/dashboard workflow |  |  |
-| Section 03.14 / Section 15.09 public-image refresh | Pending | Do not mark Section 03 complete until verified |
-| Homepage/list database propagation | Pending | Section 05.01-05.02 |
+| Area                                                                      | Result  | Notes                                          |
+| ------------------------------------------------------------------------- | ------- | ---------------------------------------------- |
+| Branch and non-Production target confirmed                                |         |                                                |
+| TypeScript, lint, formatting and unit tests                               |         |                                                |
+| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                |
+| Section 03 media DB/storage suites                                        |         |                                                |
+| Section 03 manual media workflow                                          |         |                                                |
+| Section 04 manual admin/public/dashboard workflow                         |         |                                                |
+| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified |
+| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                            |

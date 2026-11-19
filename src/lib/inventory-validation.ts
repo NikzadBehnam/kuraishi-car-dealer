@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const DEFAULT_INVENTORY_PAGE_SIZE = 8;
 export const MAX_INVENTORY_SELECTION_SIZE = 100;
+export const PUBLIC_CATALOG_PAGE_SIZE = 12;
+export const MAX_PUBLIC_CATALOG_SEARCH_LENGTH = 100;
 
 const maximumInventoryOffset = 2_147_483_647;
 
@@ -131,6 +133,33 @@ export const inventoryPaginationInputSchema = z.strictObject({
     .min(1)
     .max(100)
     .default(DEFAULT_INVENTORY_PAGE_SIZE),
+});
+
+export const publicInventorySearchSchema = z
+  .string()
+  .max(MAX_PUBLIC_CATALOG_SEARCH_LENGTH)
+  .transform((value) => value.trim())
+  .default("");
+
+export const publicCatalogSearchParamsSchema = z.strictObject({
+  q: publicInventorySearchSchema,
+  page: z
+    .string()
+    .regex(/^[1-9]\d*$/)
+    .default("1")
+    .transform(Number)
+    .pipe(
+      z
+        .number()
+        .int()
+        .positive()
+        .refine(Number.isSafeInteger)
+        .refine(
+          (page) =>
+            Number.isSafeInteger((page - 1) * PUBLIC_CATALOG_PAGE_SIZE) &&
+            (page - 1) * PUBLIC_CATALOG_PAGE_SIZE <= maximumInventoryOffset,
+        ),
+    ),
 });
 
 export const inventoryPaginationSchema = inventoryPaginationInputSchema

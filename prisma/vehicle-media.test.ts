@@ -1468,7 +1468,12 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     session = { user: { id: actorId, role: "user" } };
     const publicImageId = await createImageAsset({ publicRead: true });
     const privateImageId = await createImageAsset();
-    const draft = await createDraft([publicImageId, privateImageId]);
+    const secondPublicImageId = await createImageAsset({ publicRead: true });
+    const draft = await createDraft([
+      publicImageId,
+      privateImageId,
+      secondPublicImageId,
+    ]);
     await prisma.vehicle.update({
       where: { id: draft.vehicleId },
       data: {
@@ -1503,7 +1508,7 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     );
     assert.deepEqual(
       images.assets.map(({ id }) => id),
-      [publicImageId],
+      [publicImageId, secondPublicImageId],
     );
     assert.ok(images.assets[0]?.previewUrl.startsWith("https://"));
 
@@ -1513,7 +1518,7 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     ]);
     assert.deepEqual(
       cardImages.get(draft.vehicleId)?.map(({ id }) => id),
-      [publicImageId],
+      [publicImageId, secondPublicImageId],
     );
     assert.ok(cardImages.get(draft.vehicleId)?.[0]?.url.startsWith("https://"));
     assert.equal(cardImages.has(hiddenDraft.vehicleId), false);

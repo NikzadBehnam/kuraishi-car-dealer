@@ -162,7 +162,7 @@ export const updateVehicleSchema = vehicleDraftFieldsSchema
 export const vehicleLifecycleMutationSchema = z.strictObject({
   vehicleId: inventoryIdSchema,
   expectedVersion: z.number().int().min(1).max(2_147_483_647),
-  status: z.enum(["sold", "archived"]),
+  status: z.enum(["published", "reserved", "sold", "archived"]),
 });
 
 export const bulkVehicleLifecycleMutationSchema =

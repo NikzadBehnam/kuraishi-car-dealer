@@ -787,7 +787,7 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     );
   });
 
-  it("marks a reserved vehicle sold, is idempotent, and archives it with history", async () => {
+  it("persists create, edit, publish, reserve, release, sale, and archive with history", async () => {
     session = { user: { id: actorId, role: "user" } };
     const imageId = await createImageAsset({ publicRead: true });
     const draft = await createDraft([imageId]);
@@ -805,31 +805,104 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     );
     const initial = await prisma.vehicle.findUniqueOrThrow({
       where: { id: draft.vehicleId },
-      select: { stockNumber: true, slug: true },
+      select: { stockNumber: true, slug: true, status: true, version: true },
     });
+    assert.equal(initial.status, "draft");
+    assert.equal(initial.version, draft.version);
+    assert.deepEqual(
+      await prisma.vehicleMedia.findMany({
+        where: { vehicleId: draft.vehicleId },
+        orderBy: { position: "asc" },
+        select: { mediaAssetId: true, position: true },
+      }),
+      [{ mediaAssetId: imageId, position: 0 }],
+    );
+
+    const edited = await mutations.updateVehicle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: draft.version,
+      make: "Edited Skoda",
+      mediaAssetIds: [imageId],
+    });
+    const refreshedDraft = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+      select: { make: true, version: true, status: true },
+    });
+    assert.equal(refreshedDraft.make, "Edited Skoda");
+    assert.equal(refreshedDraft.status, "draft");
+    assert.equal(refreshedDraft.version, edited.version);
+
     const published = await mutations.publishVehicle(
       publishInput({
         vehicleId: draft.vehicleId,
-        expectedVersion: draft.version,
+        expectedVersion: edited.version,
         stockNumber: initial.stockNumber,
         slug: initial.slug,
+        make: "Workflow Skoda",
         mediaAssetIds: [imageId],
       }),
     );
-    const reservedUntil = new Date("2026-02-01T10:00:00.000Z");
-    await prisma.vehicle.update({
+    const refreshedPublished = await prisma.vehicle.findUniqueOrThrow({
       where: { id: draft.vehicleId },
-      data: { status: "reserved", reservedUntil },
+      select: { status: true, version: true, publishedAt: true },
     });
+    assert.equal(refreshedPublished.status, "published");
+    assert.equal(refreshedPublished.version, published.version);
+    assert.ok(refreshedPublished.publishedAt);
+
+    const reserved = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: published.version,
+      status: "reserved",
+    });
+    assert.equal(reserved.changed, true);
+    assert.equal(reserved.status, "reserved");
+    assert.equal(reserved.version, published.version + 1);
+    const refreshedReserved = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+      select: {
+        status: true,
+        version: true,
+        reservedUntil: true,
+        soldAt: true,
+        publishedAt: true,
+      },
+    });
+    assert.equal(refreshedReserved.status, "reserved");
+    assert.equal(refreshedReserved.version, reserved.version);
+    assert.equal(refreshedReserved.reservedUntil, null);
+    assert.equal(refreshedReserved.soldAt, null);
+    assert.equal(
+      refreshedReserved.publishedAt?.toISOString(),
+      refreshedPublished.publishedAt?.toISOString(),
+    );
+
+    const released = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: reserved.version,
+      status: "published",
+    });
+    assert.equal(released.changed, true);
+    assert.equal(released.status, "published");
+    assert.equal(released.version, reserved.version + 1);
+
+    const reservedAgain = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: released.version,
+      status: "reserved",
+    });
+    assert.equal(reservedAgain.changed, true);
+    assert.equal(reservedAgain.status, "reserved");
+    assert.equal(reservedAgain.version, released.version + 1);
 
     const sold = await mutations.transitionVehicleLifecycle({
       vehicleId: draft.vehicleId,
-      expectedVersion: published.version,
+      expectedVersion: reservedAgain.version,
       status: "sold",
     });
     assert.equal(sold.changed, true);
     assert.equal(sold.status, "sold");
-    assert.equal(sold.version, published.version + 1);
+    assert.equal(sold.version, reservedAgain.version + 1);
     assert.ok(sold.soldAt);
 
     const repeatedSale = await mutations.transitionVehicleLifecycle({
@@ -858,11 +931,23 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     assert.equal(vehicle.reservedUntil, null);
     assert.equal(vehicle.soldAt?.toISOString(), sold.soldAt);
     assert.equal(vehicle.isFeatured, false);
+    assert.equal(
+      vehicle.publishedAt?.toISOString(),
+      refreshedPublished.publishedAt?.toISOString(),
+    );
+    assert.deepEqual(
+      await prisma.vehicleMedia.findMany({
+        where: { vehicleId: draft.vehicleId },
+        orderBy: { position: "asc" },
+        select: { mediaAssetId: true, position: true },
+      }),
+      [{ mediaAssetId: imageId, position: 0 }],
+    );
     assert.deepEqual(
       await prisma.vehicleChange.findMany({
         where: {
           vehicleId: draft.vehicleId,
-          version: { gt: published.version },
+          version: { gt: draft.version },
         },
         orderBy: { version: "asc" },
         select: {
@@ -874,6 +959,41 @@ describe("vehicle media persistence on isolated Neon resources", () => {
         },
       }),
       [
+        {
+          version: edited.version,
+          previousStatus: "draft",
+          status: "draft",
+          previousSoldAt: null,
+          soldAt: null,
+        },
+        {
+          version: published.version,
+          previousStatus: "draft",
+          status: "published",
+          previousSoldAt: null,
+          soldAt: null,
+        },
+        {
+          version: reserved.version,
+          previousStatus: "published",
+          status: "reserved",
+          previousSoldAt: null,
+          soldAt: null,
+        },
+        {
+          version: released.version,
+          previousStatus: "reserved",
+          status: "published",
+          previousSoldAt: null,
+          soldAt: null,
+        },
+        {
+          version: reservedAgain.version,
+          previousStatus: "published",
+          status: "reserved",
+          previousSoldAt: null,
+          soldAt: null,
+        },
         {
           version: sold.version,
           previousStatus: "reserved",

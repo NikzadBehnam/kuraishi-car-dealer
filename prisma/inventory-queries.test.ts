@@ -360,6 +360,115 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     }
   });
 
+  it("safely maps malformed, conflicted, stale, unknown, and unavailable route writes", async () => {
+    session = { user: { role: "user", id: actorId } };
+    const input = {
+      stockNumber: `FAILURE-${prefix.slice(0, 8).toUpperCase()}`,
+      slug: `failure-${prefix}`,
+      make: "Example",
+      model: "Failure integration",
+      mediaAssetIds: [],
+    };
+    const vehicleRequest = (method: "POST" | "PATCH", body: string) =>
+      new Request("http://localhost:3000/api/admin/vehicles", {
+        method,
+        headers: {
+          origin: "http://localhost:3000",
+          "content-type": "application/json",
+        },
+        body,
+      });
+    const logger = mock.method(console, "error", () => {});
+    let vehicleId: string | undefined;
+
+    try {
+      const malformed = await adminVehicleRoutes.POST(
+        vehicleRequest("POST", "{"),
+      );
+      assert.equal(malformed.status, 400);
+      assert.equal(revalidatedPath, undefined);
+
+      const created = await adminVehicleRoutes.POST(
+        vehicleRequest("POST", JSON.stringify(input)),
+      );
+      assert.equal(created.status, 201);
+      const saved: { vehicleId: string; version: number } =
+        await created.json();
+      vehicleId = saved.vehicleId;
+
+      revalidatedPath = undefined;
+      const stale = await adminVehicleRoutes.PATCH(
+        vehicleRequest(
+          "PATCH",
+          JSON.stringify({
+            vehicleId,
+            expectedVersion: saved.version + 1,
+            price: "19999.99",
+          }),
+        ),
+      );
+      assert.equal(stale.status, 409);
+      assert.equal(revalidatedPath, undefined);
+      assert.equal(
+        (
+          await prisma.vehicle.findUniqueOrThrow({
+            where: { id: vehicleId },
+            select: { version: true, price: true },
+          })
+        ).version,
+        saved.version,
+      );
+
+      const unknown = await adminVehicleRoutes.PATCH(
+        vehicleRequest(
+          "PATCH",
+          JSON.stringify({
+            vehicleId: `missing-${prefix}`,
+            expectedVersion: 1,
+            price: "19999.99",
+          }),
+        ),
+      );
+      assert.equal(unknown.status, 404);
+
+      const conflict = await adminVehicleRoutes.POST(
+        vehicleRequest("POST", JSON.stringify(input)),
+      );
+      assert.equal(conflict.status, 409);
+
+      revalidatedPath = undefined;
+      databaseFailure = new Error("Synthetic private database failure.");
+      const unavailable = await adminVehicleRoutes.POST(
+        vehicleRequest(
+          "POST",
+          JSON.stringify({
+            ...input,
+            stockNumber: `${input.stockNumber}-DB`,
+            slug: `${input.slug}-db`,
+          }),
+        ),
+      );
+      assert.equal(unavailable.status, 500);
+      assert.deepEqual(await unavailable.json(), {
+        error: "Could not save the vehicle draft.",
+      });
+      assert.equal(revalidatedPath, undefined);
+      assert.equal(
+        JSON.stringify(logger.mock.calls).includes("private database failure"),
+        false,
+      );
+    } finally {
+      databaseFailure = undefined;
+      logger.mock.restore();
+      if (vehicleId) {
+        await prisma.$transaction(async (tx) => {
+          await tx.vehicleChange.deleteMany({ where: { vehicleId } });
+          await tx.vehicle.deleteMany({ where: { id: vehicleId } });
+        });
+      }
+    }
+  });
+
   it("persists draft edits, bulk archives, and confirmed draft deletion", async () => {
     session = { user: { role: "user", id: actorId } };
     const createdIds: string[] = [];

@@ -21,7 +21,9 @@ The source implementation and docs show working database-backed inventory, media
 
 ## Remaining work
 
-The list below includes **every unchecked item** in the current checklist (**26 items** after completing 09.12). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
+The list below includes **every unchecked item** in the current checklist (**25 items** after completing 16.13). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
+
+After each point is verified and marked complete in [Checklist.md](./Checklist.md), update this report in the same change: move the point to **Completed since the initial review**, tick it, record the verification result, and update the remaining count.
 
 ### Release gates and decisions
 
@@ -31,7 +33,6 @@ The list below includes **every unchecked item** in the current checklist (**26 
 - [ ] **16.06 — Approved live data.** Obtain the approved stock, dealership, and media source files/mapping; validate and dry-run the import, resolve duplicates/relationships, and report results before importing. No real-data import has been performed.
 - [ ] **16.11 — Environment separation.** Verify Production versus Preview/runtime versus direct-migration database targets, media endpoints/buckets/credentials, email settings, and any test callbacks without exposing secret values. The recorded Vercel names include `RESEND_FROM_EMAIL`, while the application and [.env.example](../.env.example) expect `INQUIRY_EMAIL_FROM`; map or remove the unused setting. Production storage separation and masked targets remain unverified.
 - [ ] **16.12 — Controlled Production migration.** Review migrations, test them on an isolated branch, confirm an approved recovery point, apply through the approved Production workflow, and regenerate Prisma Client if required. This is an operational gate, not permission to modify Production now.
-- [ ] **16.13 — Deployment path.** Record the approved manual/CLI/CI deployment procedure or deliberately change the current policy. [vercel.json](../vercel.json) disables Git deployments, so merging does not prove deployment.
 - [ ] **16.14 — Production smoke test.** After deployment, validate the deployed revision, login/staff restrictions, public listing/detail, media, settings, inquiry intake and protected inbox using only approved test data/recipients.
 - [ ] **16.15 — Release and rollback evidence.** Record tested revision, migration/data/storage rollback criteria, and confirm no secrets or demo customer records entered commits.
 - [ ] **10.01 — Staff email readiness, only if email is part of v1.** Provider/domain/key setup is partial; the secret/API validity was not inspected, approved real staff recipients and provider acceptance are pending, and live sending is not implemented. Either finish the separately approved delivery setup or explicitly exclude email from v1 and keep it disabled. Do not send customer emails during verification.
@@ -69,10 +70,11 @@ The list below includes **every unchecked item** in the current checklist (**26 
 2. Complete counsel/business decisions (09.05, 14.01, 14.03) and obtain approved real data for 16.06.
 3. Verify and align environment configuration under 16.11, including the sender-variable name; keep secrets private.
 4. Reconcile checklist/test-guide evidence, then finish the isolated DB and combined non-Production browser retests listed above.
-5. Approve and execute the migration/recovery/deployment workflow (16.12–16.13), then complete Production smoke/rollback evidence (16.14–16.15).
+5. Complete the migration/recovery workflow (16.12), execute the approved manual deployment procedure (16.13) only after release authorization, then complete Production smoke/rollback evidence (16.14–16.15).
 
 This report does not authorize a Production change, data import, migration, email send, or deployment.
 
 ## Completed since the initial review
 
-- **09.12 — Inquiry intake verification:** completed on 2026-11-20 after the isolated migration/query suite passed 30/30. It verifies durable intake, inquiry categories, quota/window reset, stale/forged vehicle context, invalid consent/date, duplicate/concurrent retries, database failures, inbox readback, and notes. The broader browser retest remains pending under 11.08 and 16.14.
+- [x] **09.12 — Inquiry intake verification:** completed on 2026-11-20 after the isolated migration/query suite passed 30/30. It verifies durable intake, inquiry categories, quota/window reset, stale/forged vehicle context, invalid consent/date, duplicate/concurrent retries, database failures, inbox readback, and notes. The broader browser retest remains pending under 11.08 and 16.14.
+- [x] **16.13 — Deployment path:** approved on 2026-11-20 and recorded in the [operations runbook](./Operations-and-Recovery-Runbook.md#manual-production-deployment-1613). Verified the documented `vercel deploy --prod` command against the Vercel CLI reference and confirmed Git deployments remain disabled. No Production deployment was run.

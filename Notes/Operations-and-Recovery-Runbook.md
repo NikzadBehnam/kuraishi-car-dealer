@@ -115,12 +115,41 @@ and [notification configuration](../src/lib/inquiry-email-config.ts).
 - Production monitoring, restore drills, and any alert thresholds require
   approval after the Production deployment and backup plan are established.
 
+## Manual Production deployment (16.13)
+
+Approved on 2026-11-20: an authorized release operator deploys through the
+[Vercel CLI](https://vercel.com/docs/cli/deploy). Automatic Git deployments
+remain disabled in [vercel.json](../vercel.json). A merge or push is not a
+deployment, and approval of this procedure does not authorize running it.
+
+1. Before deploying, obtain explicit release approval for the candidate commit.
+   Verify the Production/Preview configuration (16.11), complete the approved
+   migration and recovery steps (16.12), and confirm the remaining launch gates
+   for the agreed scope. Record the current Production deployment as the code
+   rollback candidate and confirm it is compatible with the planned schema.
+2. Use a clean checkout of the exact approved commit. Record the full SHA
+   (`git rev-parse HEAD`) and confirm there are no local changes or local
+   environment files in the release checkout. From the project root, sign in
+   with the authorized release account and use `vercel link` to select the
+   existing approved team and project. Stop if the target or account is
+   uncertain; do not create a new project or pass secrets as CLI arguments.
+3. Only when the release is authorized, run `vercel deploy --prod` from that
+   checkout. This may assign the Production domain as soon as the deployment
+   is ready. Stop on failure; do not blindly retry or proceed to the public
+   smoke test. Record the commit SHA, deployment URL or ID, operator and time,
+   and confirm the Vercel dashboard shows the intended deployment as Ready on
+   the Production domain.
+4. Perform the smoke test in 16.14 and record the evidence and rollback
+   decision in 16.15. If validation fails, follow the approved rollback plan.
+   Rolling back application code does not restore the database or media.
+
 ## Open operational gates
 
 - Section 09.05: legal/business approval for inquiry retention and deletion.
 - Section 16.06: approved real stock/dealership/media source files and mapping.
-- Section 16.11-16.15: Production environment separation, migration/recovery
-  point, deployment, smoke test, and rollback evidence.
+- Sections 16.11-16.12 and 16.14-16.15: Production environment separation,
+  migration/recovery point, execution of the approved deployment procedure,
+  smoke test, and rollback evidence.
 
 No Production database, bucket, deployment, email, snapshot, or restore action
 was used while preparing this runbook.

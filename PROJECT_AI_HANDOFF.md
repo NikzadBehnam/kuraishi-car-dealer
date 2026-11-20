@@ -1,6 +1,6 @@
 # Kuraishi Car Dealer - AI Agent Project Handoff
 
-This document summarizes the implemented project architecture. For active section status, safety gates, and retest instructions, use the [checklist](Notes/Checklist.md) and [full test guide](Notes/Implemented-Sections-Test-Guide.md); they take precedence over this overview.
+This document summarizes the implemented project architecture. For active section status, safety gates, and retest instructions, use the [checklist](Notes/Checklist.md), [full test guide](Notes/Implemented-Sections-Test-Guide.md), and [operations and recovery runbook](Notes/Operations-and-Recovery-Runbook.md); they take precedence over this overview.
 
 ## 1. Project Purpose
 
@@ -24,6 +24,7 @@ Better Auth provides staff email/password sign-in with persisted sessions. The a
 
 Scripts in `package.json`:
 
+- `pnpm install --frozen-lockfile`: install from the committed pnpm lockfile.
 - `pnpm serve`: `next dev`
 - `pnpm build`: production build
 - `pnpm start`: `next start`
@@ -31,6 +32,13 @@ Scripts in `package.json`:
 - `pnpm typecheck`: `tsc --noEmit`
 - `pnpm format` / `pnpm format:check`: Prettier
 - `pnpm test` / `pnpm test:watch`: Node tests over `src/**/*.test.ts`
+- `pnpm test:auth-actions`: focused account-action authorization tests.
+- `pnpm test:inventory-db`: guarded inventory migration/query integration tests.
+- Isolated media/database/storage suites:
+  `pnpm test:media-db`, `pnpm test:media-approvals`, `pnpm test:media-upload`,
+  `pnpm test:media-library`, `pnpm test:media-downloads`,
+  `pnpm test:media-deletions`, `pnpm test:vehicle-media`,
+  `pnpm test:media-storage`.
 
 Run `pnpm test` for source tests. The inventory and media database suites use isolated environment files, apply migrations, and must not run until their documented safety gates are satisfied.
 
@@ -46,6 +54,7 @@ Run `pnpm test` for source tests. The inventory and media database suites use is
 - `components.json`: shadcn config, aliases, `new-york` style, Lucide icon library.
 - `README.md`: high-level project overview.
 - `Notes/Checklist.md` and `Notes/Implemented-Sections-Test-Guide.md`: active implementation status and retest guidance.
+- `Notes/Operations-and-Recovery-Runbook.md`: database/media recovery, cleanup limits, delivery reconciliation, retention gate, and monitoring boundaries.
 - `PROJECT_AI_HANDOFF.md`: this handoff document.
 
 ## 4. Source Structure
@@ -316,6 +325,27 @@ Styling:
   - dark mode overrides under `.dark`.
   - helper classes: `.site-container`, `.section-space`, `.display-title`, `.page-title`, `.section-title`, `.eyebrow`, `.field`, `.control`, `.glass`.
 
+Environment variable names (values belong only in private local/deployment
+configuration):
+
+- Runtime database/authentication: `DATABASE_URL`, `BETTER_AUTH_SECRET`,
+  `BETTER_AUTH_URL`; direct Prisma migrations: `DIRECT_URL`.
+- S3-compatible media: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+  `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `MEDIA_PRIVATE_BUCKET`,
+  `MEDIA_PUBLIC_BUCKET`.
+- Isolated inquiry intake: `INQUIRY_TEST_MODE`, `INQUIRY_HASH_SECRET`.
+- Resend simulator-only notifications: `INQUIRY_EMAIL_MODE`, `RESEND_API_KEY`,
+  `INQUIRY_EMAIL_FROM`, `INQUIRY_EMAIL_TO`,
+  `INQUIRY_EMAIL_INBOX_ORIGIN`, `INQUIRY_NOTIFICATION_CRON_SECRET`.
+- Isolated database suites: `INVENTORY_TEST_DATABASE_URL`,
+  `INVENTORY_TEST_EXPECTED_HOST`, `MEDIA_TEST_DATABASE_URL`,
+  `MEDIA_TEST_EXPECTED_HOST`.
+
+`NODE_ENV`, `VERCEL`, `VERCEL_ENV`, and `VERCEL_URL` are runtime/platform
+environment indicators. Do not copy secret values into this document; use the
+tracked `.env.example` only as a template and keep local test environment files
+private and ignored.
+
 ## 13. SEO and Indexing
 
 - Root metadata in `src/app/layout.tsx` uses `siteConfig.url`, default/template title, German locale Open Graph, and index/follow robots.
@@ -342,7 +372,7 @@ Remote assets:
 
 ## 15. Tests
 
-Source tests live under `src/**/*.test.ts` and use Node's built-in test runner. Focused database integration suites live under `prisma/` and require their documented isolated test environment; do not point them at normal development or Production databases.
+Source tests live under `src/**/*.test.ts` and use Node's built-in test runner. Focused database integration suites live under `prisma/` and require their documented isolated test environment; do not point them at normal development or Production databases. The database suites apply migrations and temporarily write test rows. Check the [full test guide](Notes/Implemented-Sections-Test-Guide.md) before running them.
 
 Recommended validation commands before/after code changes:
 
@@ -356,10 +386,17 @@ Recommended validation commands before/after code changes:
 - Public staff self-registration and self-service password reset are intentionally disabled; staff accounts are created by the master admin.
 - There is no customer account system, confirmed booking/slot management, or CRM integration. Inquiry date preferences are not bookings.
 - Production email delivery is not enabled. Inquiry acceptance and notification outbox behavior must not be described as proof that an external email was delivered.
+- The notification worker is restricted to isolated test configuration and the Resend simulator; no Production sender or scheduler is configured. The `INQUIRY_NOTIFICATION_CRON_SECRET` is for the guarded test worker endpoint, not Production delivery.
+- `GET /api/health` exposes only aggregate `200`/`503` readiness. It checks Postgres, both configured media buckets, and delivery configuration without sending email; avoid high-frequency polling because checks can wake the Neon compute and add storage traffic.
+- Expired upload-intent cleanup is bounded and administrator-triggered, with a small opportunistic sweep during upload-intent creation. Unused `MediaAsset` rows have no automatic TTL, and there is no bucket-wide orphan purge.
+- Customer inquiry retention/deletion is unapproved under Section 09.05. No automatic inquiry or note cleanup is configured; do not invent a retention period or claim legal compliance.
+- The Section 16 roadmap is active on `test/backend-integration-and-release`: 16.04-16.05 and 16.07-16.10 are complete; 16.06 is blocked pending approved source files/mapping; 16.11-16.15 remain pending. No Production database, storage, snapshot, restore, or email operation was performed. The checklist is authoritative for the exact status.
+- `vercel.json` currently disables Git deployments. The approved manual/CLI/CI deployment path is not yet recorded; a branch merge must not be treated as evidence of deployment.
 - Vehicle-view analytics are not implemented; do not add or surface synthetic view counts.
 - Some legacy/demo fixtures remain under `src/data`; do not present them as live inventory or use them as a fallback when a database query fails.
 - Legal pages are placeholders and must be replaced before production.
 - Isolated database suites and combined browser retesting remain subject to the safety gates and pending items in the checklist/test guide.
+- Database point-in-time recovery does not restore S3-compatible media; consult the [operations and recovery runbook](Notes/Operations-and-Recovery-Runbook.md) before any approved recovery work.
 - Browser comparison state is anonymous per device and stored in `localStorage`, not tied to users.
 
 ## 17. Guidance for Future Agents

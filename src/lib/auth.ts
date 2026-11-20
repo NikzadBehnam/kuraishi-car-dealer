@@ -7,7 +7,7 @@ import { admin } from "better-auth/plugins";
 
 import { prisma } from "@/lib/db";
 import { ac, adminRole, userRole } from "@/lib/permissions";
-import { getTrustedOrigins } from "@/lib/trusted-origins";
+import { getTrustedOrigins, isVercelPreview } from "@/lib/trusted-origins";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -28,17 +28,23 @@ if (secret.length < 32) {
 }
 
 const baseURL = requireEnv("BETTER_AUTH_URL");
+const trustedOrigins = getTrustedOrigins(isProduction);
 
 if (isProduction && !baseURL.startsWith("https://")) {
   throw new Error("BETTER_AUTH_URL must use HTTPS in production.");
+}
+
+if (isVercelPreview() && trustedOrigins.length === 0) {
+  throw new Error(
+    "BETTER_AUTH_URL must be an exact HTTPS Vercel Preview origin without a trailing slash.",
+  );
 }
 
 export const auth = betterAuth({
   secret,
   baseURL,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
-  // Exact origins only; localhost is trusted outside production.
-  trustedOrigins: getTrustedOrigins(isProduction),
+  trustedOrigins,
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,

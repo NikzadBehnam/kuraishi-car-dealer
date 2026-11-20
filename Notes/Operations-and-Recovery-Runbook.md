@@ -138,7 +138,11 @@ write to the database or buckets as part of this review.
 3. Confirm `BETTER_AUTH_SECRET` was generated separately for Production and
    Preview. Check that `BETTER_AUTH_URL` points to the exact intended HTTPS
    origin for each environment; Preview must not use the Production auth
-   origin.
+   origin. For the release test branch, set a branch-specific
+   `BETTER_AUTH_URL` to its stable Vercel Preview branch URL, without a
+   trailing slash. Leave the existing Production value unchanged. After a
+   fresh Preview deployment, use that exact branch URL for sign-in and
+   protected media actions, not the per-deployment URL.
 4. In the storage provider console, compare the effective `AWS_ENDPOINT_URL_S3`
    and `AWS_REGION` with the approved storage configuration. Check
    `MEDIA_PRIVATE_BUCKET` and `MEDIA_PUBLIC_BUCKET`: the buckets must be

@@ -27,19 +27,20 @@ This guide covers the integrated work across the implemented section branches, i
 - Section 16.02: the isolated inventory query suite now passes 23 tests. A database-backed case covers draft edits, partial-success bulk archive, and permanent deletion of a never-published draft; existing cases cover public visibility/comparison, settings propagation, inquiries, lead notes, notification state, and dashboard metrics. Media approval, upload, deletion, and vehicle-media integration suites pass against the user-confirmed isolated Neon database and non-Production S3-compatible test bucket, including all 31 vehicle-media cases. The vehicle-media runner now uses the Node test loader and exports the shared authorization error in its session mock. No live email or Production access occurred.
 - Section 16.03: all 23 isolated inventory query tests and 32 focused inquiry/email tests pass. Failure coverage includes malformed JSON, unique conflicts, stale writes, missing IDs, database outages with sanitized responses/logging, invalid business dates, duplicate/concurrent submissions, provider network/throttle/server errors, malformed provider responses, stable idempotency, and partial media-storage failures. Existing media suites cover approval rollback, upload replay/cleanup and partial deletion. There is no provider callback/webhook endpoint; no live email or Production access occurred.
 - Section 16.04: all 24 isolated inventory-query tests pass. The new end-to-end case uses real vehicle creation/publication/lifecycle routes, public inventory/detail/comparison/sitemap queries, the public inquiry route and staff inbox/note persistence. It verifies visibility after sale and archive and removes its synthetic inquiry, quota, vehicle/history and media records. The S3 client is mocked for this scenario and email is disabled; storage-provider behavior remains covered by the separate media suites. No real email, S3 request or Production resource was used.
+- Section 16.05: all source tests, the isolated inventory migration/query suites (30 tests), and the sequential isolated media suites (63 tests) passed. Repository typecheck and ESLint passed. The optimized production build passed with loopback-only dummy database URLs, a synthetic HTTPS auth origin, disabled email, and a fake S3 endpoint; no Production resource was contacted. Changed-file formatting checks pass. Full-repository `prettier --check .` reports 148 pre-existing unformatted files, which were not mass-formatted. Corepack pnpm previously aborted while trying to modify `node_modules` without a TTY, so the existing script commands were executed directly using the installed Node 22 runtime.
 
 Section 04 is complete but was not merged to `master` before Section 05 began; the user deferred the combined manual retest until later. The isolated inventory query suite has passed after the inventory-test credential rotation, providing database coverage for Sections 06.10, 07.05, 08.09 and 12.08; combined manual page checks remain pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
-1. Use `feature/admin-workspace-search`, not `master`, for the current Section 13.01 implementation:
+1. For Section 16 validation, use `test/backend-integration-and-release`, not `master`:
 
    ```powershell
    git branch --show-current
    git status --short --branch
    ```
 
-   The branch should be `feature/admin-workspace-search`. It includes the integrated Sections 04-12 work plus the inventory-only top-bar search. Preserve unrelated local work; do not switch branches over uncommitted changes.
+   The branch should be `test/backend-integration-and-release`. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
 2. Use Node 22.21.1 or another Node version that supports the test-runner flags in the package scripts. The machine PATH may still select Node 14, which cannot run these scripts.
 
@@ -47,7 +48,7 @@ Section 04 is complete but was not merged to `master` before Section 05 began; t
 
 4. **Never run these tests against Production or the normal application database.** The media database suites use `.env.media-test.local` and its isolated test resources. The inventory database suite uses `.env.inventory-test.local`, applies migrations, and requires a separately verified isolated, empty test database.
 
-5. **The `.env.inventory-test.local` credential was previously exposed and must be rotated before that file is used again.** Until it is rotated and the isolated target is confirmed, skip `pnpm test:inventory-db`. Do not reset a branch or remove unfamiliar data to make a test pass.
+5. The previously exposed `.env.inventory-test.local` credential has been rotated, and the inventory target was confirmed isolated. Use the repository's guarded test client and never print or share environment values. If the isolated target or credential status becomes uncertain, stop before running `pnpm test:inventory-db`; do not reset a branch or remove unfamiliar data to make a test pass.
 
 6. Run database suites one at a time. Several use the same isolated media database and storage bucket.
 

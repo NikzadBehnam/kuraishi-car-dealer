@@ -80,6 +80,7 @@ let inquiryIntake: typeof import("../src/lib/inquiry-intake.ts");
 let adminInquiryQueries: typeof import("../src/lib/admin-inquiry-queries.ts");
 let adminInquiryNotes: typeof import("../src/lib/admin-inquiry-notes.ts");
 let adminDashboardQueries: typeof import("../src/lib/admin-dashboard-queries.ts");
+let adminVehicleRoutes: typeof import("../src/app/api/admin/vehicles/route.ts");
 const inquiryKeys: string[] = [];
 const inquiryClients: string[] = [];
 let dbMock: ReturnType<typeof mock.module> | undefined;
@@ -200,6 +201,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     adminInquiryNotes = await import("../src/lib/admin-inquiry-notes.ts");
     adminDashboardQueries =
       await import("../src/lib/admin-dashboard-queries.ts");
+    adminVehicleRoutes = await import("../src/app/api/admin/vehicles/route.ts");
   });
 
   beforeEach(() => {
@@ -270,6 +272,89 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       const detail = await queries.getStaffVehicle(ids[5]);
       assert.equal(detail?.stockNumber, `TEST-${ids[5].toUpperCase()}`);
       assert.equal(detail?.marginEstimate, "2500.10");
+    }
+  });
+
+  it("protects the real vehicle route and persists a staff draft", async () => {
+    const input = {
+      stockNumber: `ROUTE-${prefix.slice(0, 8).toUpperCase()}`,
+      slug: `route-${prefix}`,
+      make: "Example",
+      model: "Route integration",
+      mediaAssetIds: [],
+    };
+    const untrustedOrigin = await adminVehicleRoutes.POST(
+      new Request("http://localhost:3000/api/admin/vehicles", {
+        method: "POST",
+        headers: {
+          origin: "https://attacker.example",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(input),
+      }),
+    );
+    assert.equal(untrustedOrigin.status, 403);
+
+    const anonymous = await adminVehicleRoutes.POST(
+      new Request("http://localhost:3000/api/admin/vehicles", {
+        method: "POST",
+        headers: {
+          origin: "http://localhost:3000",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(input),
+      }),
+    );
+    assert.equal(anonymous.status, 401);
+
+    session = { user: { role: "user", id: actorId } };
+    const response = await adminVehicleRoutes.POST(
+      new Request("http://localhost:3000/api/admin/vehicles", {
+        method: "POST",
+        headers: {
+          origin: "http://localhost:3000",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(input),
+      }),
+    );
+    assert.equal(response.status, 201);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+
+    const result = await response.json();
+    assert.equal(typeof result.vehicleId, "string");
+    assert.equal(result.version, 1);
+    assert.equal(revalidatedPath, "/:layout");
+
+    try {
+      const saved = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: result.vehicleId },
+        select: {
+          stockNumber: true,
+          slug: true,
+          status: true,
+          createdById: true,
+          updatedById: true,
+        },
+      });
+      assert.deepEqual(saved, {
+        stockNumber: input.stockNumber,
+        slug: input.slug,
+        status: "draft",
+        createdById: actorId,
+        updatedById: actorId,
+      });
+
+      const staffView = await queries.getStaffVehicle(result.vehicleId);
+      assert.equal(staffView?.status, "draft");
+      assert.equal(staffView?.slug, input.slug);
+    } finally {
+      await prisma.$transaction(async (tx) => {
+        await tx.vehicleChange.deleteMany({
+          where: { vehicleId: result.vehicleId },
+        });
+        await tx.vehicle.deleteMany({ where: { id: result.vehicleId } });
+      });
     }
   });
 

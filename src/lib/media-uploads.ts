@@ -19,6 +19,7 @@ import {
   MEDIA_UPLOAD_INTENT_TTL_SECONDS,
   MEDIA_UPLOAD_URL_TTL_SECONDS,
   mediaUploadBatchSchema,
+  type CompletedMediaAsset,
 } from "./media-upload-validation.ts";
 import {
   getMediaStorageClient,
@@ -41,19 +42,9 @@ type CleanupReport = {
   failed: number;
 };
 
-type CompletedMediaAsset = {
-  id: string;
-  type: string;
-  title: string;
-  originalFilename: string;
-  verifiedMimeType: string;
-  sizeBytes: number;
-  uploadedAt: string;
-};
-
 function serializeAsset(asset: {
   id: string;
-  type: string;
+  type: CompletedMediaAsset["type"];
   title: string;
   originalFilename: string;
   verifiedMimeType: string;

@@ -23,7 +23,10 @@ import { z } from "zod";
 
 import type { StaffInventoryVehicleDTO } from "@/types/inventory";
 import { adminRoutes } from "@/config/admin-routes.config";
-import { MAX_MEDIA_FILES_PER_REQUEST } from "@/lib/media-upload-validation";
+import {
+  completedVehicleImageUploadResponseSchema,
+  MAX_MEDIA_FILES_PER_REQUEST,
+} from "@/lib/media-upload-validation";
 import {
   vehicleFormSchema,
   type VehicleFormValues,
@@ -65,18 +68,6 @@ const uploadIntentResponseSchema = z.strictObject({
     cleaned: z.number(),
     failed: z.number(),
   }),
-});
-
-const completedUploadResponseSchema = z.strictObject({
-  asset: z.strictObject({
-    id: z.string(),
-    title: z.string(),
-    originalFilename: z.string(),
-    verifiedMimeType: z.enum(["image/jpeg", "image/png"]),
-    sizeBytes: z.number(),
-    uploadedAt: z.string(),
-  }),
-  cleanupPending: z.boolean(),
 });
 
 const cancellationResponseSchema = z.strictObject({
@@ -385,7 +376,7 @@ export function VehicleForm({
         );
         const completion = await readApiResponse(
           completionResponse,
-          completedUploadResponseSchema,
+          completedVehicleImageUploadResponseSchema,
         );
         completedUploadIds.add(upload.uploadId);
         cleanupPending ||= completion.cleanupPending;
@@ -439,7 +430,7 @@ export function VehicleForm({
               );
               const retry = await readApiResponse(
                 retryResponse,
-                completedUploadResponseSchema,
+                completedVehicleImageUploadResponseSchema,
               );
               completedUploadIds.add(upload.uploadId);
               cleanupPending ||= retry.cleanupPending;

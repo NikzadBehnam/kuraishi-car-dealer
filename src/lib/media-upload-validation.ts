@@ -78,6 +78,26 @@ export const completeMediaUploadSchema = z.strictObject({
   uploadId: z.string().uuid(),
 });
 
+const completedMediaAssetSchema = z.strictObject({
+  id: z.string(),
+  type: z.enum(mediaTypes),
+  title: z.string(),
+  originalFilename: z.string(),
+  verifiedMimeType: z.string(),
+  sizeBytes: z.number(),
+  uploadedAt: z.string(),
+});
+
+export type CompletedMediaAsset = z.infer<typeof completedMediaAssetSchema>;
+
+export const completedVehicleImageUploadResponseSchema = z.strictObject({
+  asset: completedMediaAssetSchema.extend({
+    type: z.literal("image"),
+    verifiedMimeType: z.enum(["image/jpeg", "image/png"]),
+  }),
+  cleanupPending: z.boolean(),
+});
+
 export type MediaUploadFileInput = z.infer<typeof mediaUploadFileSchema>;
 
 export function detectMediaMimeType(prefix: Uint8Array): string | null {

@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  completedVehicleImageUploadResponseSchema,
   detectMediaMimeType,
   MAX_IMAGE_SIZE_BYTES,
   MAX_MEDIA_FILES_PER_REQUEST,
   MAX_PDF_SIZE_BYTES,
   mediaUploadBatchSchema,
+  type CompletedMediaAsset,
 } from "./media-upload-validation.ts";
 
 function validFile(overrides: Record<string, unknown> = {}) {
@@ -20,6 +22,33 @@ function validFile(overrides: Record<string, unknown> = {}) {
 }
 
 describe("media upload validation", () => {
+  it("accepts the completed image response and rejects non-vehicle media", () => {
+    const asset: CompletedMediaAsset = {
+      id: "asset-1",
+      type: "image",
+      title: "Test image",
+      originalFilename: "vehicle.png",
+      verifiedMimeType: "image/png",
+      sizeBytes: 1024,
+      uploadedAt: "2026-11-20T20:00:00.000Z",
+    };
+    const schema = completedVehicleImageUploadResponseSchema;
+    const response = { asset, cleanupPending: false };
+
+    assert.deepEqual(schema.parse(response), response);
+    for (const fields of [
+      { type: "brand" },
+      { type: "document", verifiedMimeType: "application/pdf" },
+      { verifiedMimeType: "application/pdf" },
+    ]) {
+      assert.equal(
+        schema.safeParse({ ...response, asset: { ...asset, ...fields } })
+          .success,
+        false,
+      );
+    }
+  });
+
   it("accepts five supported files and rejects a sixth", () => {
     const files = Array.from({ length: MAX_MEDIA_FILES_PER_REQUEST }, () =>
       validFile(),

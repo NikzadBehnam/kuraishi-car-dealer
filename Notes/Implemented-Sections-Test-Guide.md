@@ -83,13 +83,13 @@ pnpm test:vehicle-media
 pnpm test:media-storage
 ```
 
-After the inventory-test credential has been rotated and the target independently confirmed as isolated and empty, run the Section 02 migration/query suite:
+The inventory migration/query suite was run on 2026-11-20 against the guarded isolated test target: **30 tests passed** (6 migration, 24 query). The suite applied pending migrations to that test target and cleaned up its synthetic rows. For any future rerun, reconfirm that the credential and target are isolated and empty:
 
 ```powershell
 pnpm test:inventory-db
 ```
 
-That command deploys migrations to its configured test target. If the target is unknown, contains unexplained inventory, or the credential has not been rotated, do not run it.
+That command deploys migrations to its configured test target. If the target is unknown, contains unexplained inventory, or the credential's rotation status is uncertain, do not run it. No Production database was used for the recorded run.
 
 Optional build check: run `pnpm build` only when the build environment is configured with safe non-Production settings. Review any generated `next-env.d.ts` change afterward and preserve unrelated edits.
 
@@ -277,15 +277,15 @@ Use the isolated non-Production app and inventory database. The selected IDs are
    - Select an eligible vehicle, then make it no longer comparison-eligible through the admin workflow (for example, move it to Sold or Archived). Reopen comparison after a successful query; the stale selection should be pruned and explained. Reserved vehicles that pass inspection remain eligible.
 4. **Query failure and automated coverage**
    - In a safe isolated development environment only, verify a comparison query failure shows an error and retry control without clearing saved IDs. Do not simulate failures against Production.
-   - Run `pnpm test` for local-storage validation/recovery coverage. Run `pnpm test:inventory-db` only after rotating the previously exposed test credential and independently confirming the target is isolated and empty; it covers bounded unique selection, current eligibility, selection ordering and database error propagation.
+   - Run `pnpm test` for local-storage validation/recovery coverage. The inventory DB suite passed 30/30 on 2026-11-20, including bounded unique selection, current eligibility, selection ordering and database error propagation; browser checks remain deferred. Before any future DB-suite rerun, reconfirm the test target is isolated and empty.
 
 ## 10. Section 08 — dealership settings and shared public business data
 
-The current implementation is on `backend/dealership-settings`. Do not deploy or run its migration against Production. The inventory DB suite applies pending migrations, so first complete the credential rotation and isolated-empty-target checks in Section 1 above.
+The current implementation is on `backend/dealership-settings`. Do not deploy or run its migration against Production. The inventory migration/query suite passed 30/30 on 2026-11-20 against the guarded isolated target, including settings save/public propagation/authorization assertions; browser retest remains pending. Before any future DB-suite rerun, reconfirm the safety conditions in Section 1.
 
 1. **Automated verification**
    - Run `pnpm typecheck`, `pnpm test`, `pnpm exec prisma validate`, and the repository lint/format checks.
-   - After the inventory test credential has been rotated and the isolated child independently confirmed empty, run `pnpm test:inventory-db`. It applies migrations and exercises settings save, public propagation, authorization, conflicts and failures. Do not run it before that safety gate.
+   - The inventory DB suite has passed 30/30 on 2026-11-20, including settings save, public propagation, authorization, conflicts and failures. Before a future run of `pnpm test:inventory-db`, reconfirm that the inventory test credential and isolated empty target are safe; the suite applies migrations.
 2. **Edit/save and validation**
    - Sign in as ordinary staff and open Admin > Settings. Confirm the form shows the persisted dealership values.
    - Try an invalid email, an HTTP Website URL, a non-Google Maps URL, and an overlong/control-character public value. Each should show an actionable validation error and leave stored values unchanged.
@@ -299,18 +299,18 @@ The current implementation is on `backend/dealership-settings`. Do not deploy or
    - Confirm an unauthenticated save is denied and ordinary authenticated staff can save permitted settings.
    - In an isolated test environment only, verify database failures are shown as errors and do not produce success-shaped feedback. Do not induce failures or alter dealership rows in Production.
 
-Section 08.09 remains pending until isolated DB verification and the user's deferred manual retest.
+Section 08.09 isolated DB verification passed in the 2026-11-20 30-test inventory suite; the user's deferred manual retest remains pending.
 
 ## 11. Section 09 — guarded inquiry intake (09.01-09.04, 09.06-09.11)
 
-Intake is off by default and code-blocked in Production. Isolated development/Vercel Preview may test real persistence after the database safety gate. No email, confirmed booking or real staff inbox is implemented. Section 09.05 retention/deletion approval and 09.12 DB/browser verification remain pending.
+Intake is off by default and code-blocked in Production. Isolated development/Vercel Preview may test real persistence after the database safety gate. No email or confirmed booking is implemented; the staff inbox is database-backed. Section 09.05 retention/deletion approval remains pending. The 09.12 isolated migration/query verification passed on 2026-11-20; the combined browser retest remains deferred.
 
 1. **Automated checks without database writes**
    - Run `pnpm test`, `pnpm typecheck` and `pnpm exec prisma validate`.
    - Source coverage includes the five service/source mappings, contact/date bounds, consent, forged fields, malformed URL context, Vienna dates, Production/off gates, trusted origin/address handling, exact 16 KiB body boundaries and failure responses.
 2. **Prepare the isolated database before enabling test intake**
-   - First rotate the previously exposed inventory-test credential and independently confirm its target is isolated, empty and not an app/Production database. Do not bypass this gate.
-   - Only then run `pnpm test:inventory-db`. It applies migrations and tests inquiry history/privacy constraints, accepted records, five-request quotas/window reset, changed-payload conflicts, unavailable/forged vehicle references, DB failures and simultaneous retries.
+   - The credential rotation and isolated-target gate was satisfied for the 2026-11-20 run. The inventory migration/query suite passed **30/30** (6 migration, 24 query), exercising inquiry persistence, quotas/window reset, changed-payload conflicts, unavailable/forged vehicle references, DB failures, and simultaneous retries. No Production database was used.
+   - If rerunning `pnpm test:inventory-db`, re-confirm the credential and target are isolated and empty; it applies migrations and temporarily writes synthetic rows. Never bypass the guard.
    - For browser testing, use a separately verified disposable non-Production app database with the required migrations and synthetic dealership/vehicle fixtures. Do not point the running app at the DB suite's empty target while the suite runs.
    - In its ignored server environment only, set `INQUIRY_TEST_MODE=true` and a new random `INQUIRY_HASH_SECRET` of at least 32 characters. Never reuse an auth secret or commit its value. Restart the app.
    - Local testing uses `http://localhost:3000` and one shared development quota. Vercel Preview requires actual platform environment flags, the current deployment origin and its single trusted `x-vercel-forwarded-for` address; fabricated forwarding headers outside Vercel cannot create new quota identities.
@@ -332,7 +332,7 @@ Intake is off by default and code-blocked in Production. Isolated development/Ve
    - With a safe isolated failure simulation or browser request blocking, verify no false success appears, fields remain and an unchanged in-page retry retains its key. Reloading does not retain the retry key; do not claim cross-reload deduplication.
    - Verify unexpected server errors are generic to the visitor and server logs contain no submitted contact/message data. Restore safe configuration after failure simulation.
 
-Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. No migrations, DB suites or browser checks above have been run for this milestone; use the completion record below to track the deferred results.
+Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. The isolated DB suite has passed; the browser checks above remain deferred. Use the completion record below to track them.
 
 ## 12. Section 10.01 — Resend account and DNS setup (partial implementation)
 
@@ -421,10 +421,10 @@ The outbox and worker are implemented, but no database migration or provider cal
 4. Review the retry policy: five maximum attempts, 1/5/30/120-minute retry delays, 2-minute lease, batch size 10, stable provider idempotency key and terminal failure after exhaustion or permanent rejection.
 5. Check worker boundaries: POST only, no request body, matching 32+ character bearer secret, isolated test configuration, no-store responses and aggregate-only output. Invalid credentials/configuration, provider bodies and customer data must not be echoed or logged.
 
-### Isolated database and simulator checks (deferred; do not run until the gate is satisfied)
+### Isolated worker database and simulator checks (still pending)
 
-1. The `InquiryNotification` migration is additive and remains unapplied in this work. Do not run any migration against the normal app database or Production.
-2. Before `pnpm test:inventory-db`, rotate the previously exposed inventory-test credential and independently verify that `.env.inventory-test.local` targets an isolated, empty test database. Then run the suite only against that target; it applies migrations and exercises inquiry persistence. If either safety condition is unresolved, skip it.
+1. The `InquiryNotification` migration is additive and was applied to the guarded isolated test database by the 2026-11-20 inventory suite. It has not been applied to Production. Do not run any migration against the normal app database or Production.
+2. The inventory suite passed 30/30 on 2026-11-20, but it does not exercise worker delivery. Before any future `pnpm test:inventory-db` run, reconfirm that `.env.inventory-test.local` targets an isolated, empty test database and the credential rotation remains valid; the suite applies migrations and writes synthetic rows. If either safety condition is unresolved, skip it.
 3. For an end-to-end worker check, use only a disposable isolated database, synthetic inquiry data and the Resend `delivered@resend.dev` simulator. Set the test-mode prerequisites privately in the isolated local/Preview environment; never use a real visitor or staff recipient. The worker's bearer secret must be at least 32 characters and must not be shared in chat/screenshots.
 4. The authenticated empty POST to `/api/internal/inquiry-notifications` returns aggregate `claimed`, `sent`, `retried` and `failed` counts. Wrong method/body/token and disabled/Production mode must not claim or deliver rows. Confirm simulator acceptance updates the row to `sent`; use fake provider failures or an isolated DB test to verify `retry`, eventual `failed`, and stable idempotency behavior. Do not manually wait or retry against real customer data.
 5. Do not configure cron or enable Production sending as part of this test. Any schedule must run frequently enough to keep ambiguous retries inside Resend's idempotency retention window; outage/recovery beyond that window can allow duplicate delivery. Production also remains blocked on Section 09 legal approval and a future explicit decision.
@@ -432,14 +432,14 @@ The outbox and worker are implemented, but no database migration or provider cal
 
 ## 15. Section 11.01-11.04 — database-backed staff inquiry inbox
 
-The inbox now uses authenticated inquiry records and the notification outbox. Append-only internal notes are implemented in 11.05-11.06; their database and browser verification remain deferred.
+The inbox now uses authenticated inquiry records and the notification outbox. The isolated query suite passed on 2026-11-20 and covers inbox reads and append-only internal notes; combined browser verification remains deferred.
 
 ### Source and isolated-database checks
 
 1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`. Source tests cover strict/repeated URL values, bounded search/page values, field-to-search mapping, DTO projection, historical snapshots, safe failed-delivery messages, and strict note validation/serialization.
 2. The protected query calls `requireSession`; verify signed-out requests are redirected by the admin layout and a direct selected inquiry ID cannot bypass authentication.
 3. Before any database test, rotate the previously exposed inventory-test credential and independently confirm `.env.inventory-test.local` targets an isolated, empty database. Then run `pnpm test:inventory-db`, which applies migrations; otherwise skip it.
-4. The gated DB case creates synthetic inquiries, checks multi-term search, bounded results, selected detail, failed notification status, allowlisted error code serialization, absence of privacy evidence, and anonymous query denial. It also checks authorized note creation/readback, session-derived authorship, accurate counts, concurrent note additions, invalid/unknown inputs, and unauthorized writes. It must clean its inquiry/rate-limit rows.
+4. The isolated inventory query suite passed on 2026-11-20 as part of the 30-test run. Its inquiry coverage checks accepted records, staff inbox reads, failed notification status, private-field exclusion, note creation/readback, session-derived authorship, counts, concurrent note additions, invalid/unknown inputs, unauthorized writes, quota behavior, and cleanup of synthetic inquiry/rate-limit rows.
 
 ### Deferred browser checks (isolated non-Production app only)
 
@@ -459,8 +459,8 @@ The dashboard uses authenticated database aggregates and recent inquiry rows; it
 ### Source and gated database checks
 
 1. Run `pnpm typecheck`, `pnpm test`, targeted ESLint/Prettier, and `git diff --check`. The source suite covers dashboard inquiry DTO mapping, historical vehicle context, protected link construction, and shared authorization behavior.
-2. Before running `pnpm test:inventory-db`, rotate the previously exposed inventory-test credential and independently confirm `.env.inventory-test.local` targets an isolated, empty database. The suite applies migrations; otherwise skip it.
-3. The gated query case checks aggregate inventory/status counts, `soldAt` on an archived vehicle, all-time inquiry totals, historical vehicle-inquiry snapshots, the recent-five limit, and anonymous access denial. These assertions are added but have not been executed.
+2. Before a future `pnpm test:inventory-db` run, reconfirm `.env.inventory-test.local` targets an isolated, empty database. The suite applies migrations; otherwise skip it. The guarded target and rotated credential were confirmed for the 2026-11-20 run.
+3. The isolated inventory query suite passed on 2026-11-20. Its assertions check aggregate inventory/status counts, `soldAt` on an archived vehicle, all-time inquiry totals, historical vehicle-inquiry snapshots, the recent-five limit, and anonymous access denial.
 
 ### Deferred dashboard browser checks (isolated non-Production app only)
 
@@ -503,26 +503,26 @@ The account menu shows Create account only for role `admin`. The page redirects 
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
-| Area                                                                      | Result  | Notes                                                                                   |
-| ------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------- |
-| Branch and non-Production target confirmed                                |         |                                                                                         |
-| TypeScript, lint, formatting and unit tests                               |         |                                                                                         |
-| Section 02 inventory migration/query DB suite (after credential rotation) |         |                                                                                         |
-| Section 03 media DB/storage suites                                        |         |                                                                                         |
-| Section 03 manual media workflow                                          |         |                                                                                         |
-| Section 04 manual admin/public/dashboard workflow                         |         |                                                                                         |
-| Section 06 public detail workflow                                         | Pending | Section 06.01-06.10                                                                     |
-| Section 07 live comparison workflow                                       | Pending | Section 07.01-07.05                                                                     |
-| Section 08 dealership settings workflow                                   | Pending | Section 08.09                                                                           |
-| Section 09 guarded inquiry intake                                         | Pending | Isolated DB/browser checks; Production blocked                                          |
-| Section 10.01 Resend setup                                                | Partial | Domain/key scope/quotas and template ready; real recipients/provider acceptance pending |
-| Section 10.02 privacy-minimal staff content                               | Passed  | Source tests only; no provider send or browser retest                                   |
-| Section 10.04-10.05 outbox/retry core                                     | Partial | Source tests pass; DB migration and schedule remain pending                             |
-| Section 10.07 provider verification                                       | Pending | No real provider call/email; isolated DB and simulator verification not run             |
-| Section 11.01-11.04 real protected inbox                                  | Partial | Source tests pass; DB suite and deferred browser retest remain pending                  |
-| Section 11.05-11.06 append-only staff notes                               | Partial | Source tests pass; migration, gated DB suite, and browser retest remain pending         |
-| Sections 13.01-13.03 inventory-only workspace search                      | Partial | Source tests pass; gated DB assertions and browser verification remain pending          |
-| Section 13.04 truthful staff identity and sign-in copy                    | Partial | Typecheck/source tests pass; authenticated browser verification remains deferred        |
-| Section 13.05 account creation role boundary                              | Partial | Shared policy tests pass; direct action/browser verification remains under 13.07        |
-| Section 03.14 / Section 15.09 public-image refresh                        | Pending | Do not mark Section 03 complete until verified                                          |
-| Homepage/list database propagation                                        | Pending | Section 05.01-05.02                                                                     |
+| Area                                                   | Result  | Notes                                                                                          |
+| ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------- |
+| Branch and non-Production target confirmed             |         |                                                                                                |
+| TypeScript, lint, formatting and unit tests            |         |                                                                                                |
+| Section 02 inventory migration/query DB suite          | Passed  | 30/30 on 2026-11-20; 6 migration and 24 query tests on isolated target                         |
+| Section 03 media DB/storage suites                     |         |                                                                                                |
+| Section 03 manual media workflow                       |         |                                                                                                |
+| Section 04 manual admin/public/dashboard workflow      |         |                                                                                                |
+| Section 06 public detail workflow                      | Partial | Isolated query assertions pass; combined browser/freshness retest pending                      |
+| Section 07 live comparison workflow                    | Partial | DB/query assertions pass; browser storage/workflow retest pending                              |
+| Section 08 dealership settings workflow                | Partial | Isolated DB assertions pass; combined browser retest pending                                   |
+| Section 09 guarded inquiry intake                      | Partial | Isolated migration/query suite 30/30 on 2026-11-20; browser retest pending; Production blocked |
+| Section 10.01 Resend setup                             | Partial | Domain/key scope/quotas and template ready; real recipients/provider acceptance pending        |
+| Section 10.02 privacy-minimal staff content            | Passed  | Source tests only; no provider send or browser retest                                          |
+| Section 10.04-10.05 outbox/retry core                  | Partial | Migration applied on isolated test DB; worker DB/provider schedule verification pending        |
+| Section 10.07 provider verification                    | Pending | No real provider call/email; isolated DB and simulator verification not run                    |
+| Section 11.01-11.04 real protected inbox               | Partial | Isolated DB query assertions pass; deferred browser retest remains pending                     |
+| Section 11.05-11.06 append-only staff notes            | Partial | Isolated DB note assertions pass; browser retest remains pending                               |
+| Sections 13.01-13.03 inventory-only workspace search   | Partial | Isolated query assertions pass; browser verification remains pending                           |
+| Section 13.04 truthful staff identity and sign-in copy | Partial | Typecheck/source tests pass; authenticated browser verification remains deferred               |
+| Section 13.05 account creation role boundary           | Partial | Shared policy tests pass; direct action/browser verification remains under 13.07               |
+| Section 03.14 / Section 15.09 public-image refresh     | Pending | Do not mark Section 03 complete until verified                                                 |
+| Homepage/list database propagation                     | Pending | Section 05.01-05.02                                                                            |

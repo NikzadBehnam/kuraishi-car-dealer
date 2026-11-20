@@ -892,6 +892,7 @@ function MediaPreview({ asset }: { asset: AdminMediaAsset }) {
       fill
       sizes="(max-width: 768px) 50vw, 20rem"
       src={asset.url}
+      unoptimized={asset.bucketAccess === "private"}
       alt={asset.alt}
       className="object-cover"
     />

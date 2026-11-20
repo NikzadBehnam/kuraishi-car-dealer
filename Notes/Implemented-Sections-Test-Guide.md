@@ -133,6 +133,7 @@ Run the media suites from Section 2 before the manual checks. For manual checks,
 1. **Upload and validation**
    - Sign in as an authorized staff test account.
    - Upload a small valid JPEG or PNG and verify it becomes a private media asset. Images are limited to 10 MiB each; a request accepts at most 5 files.
+   - In the Media library, confirm the private image renders on its card and in **Details**, without a `/_next/image` request for the signed private URL. Confirm **Download** opens the same image and the asset still shows **Private**. Do not copy or share the signed URL.
    - Try an unsupported type, invalid file signature, an image over 10 MiB, and more than 5 files in one request. Each should fail with an actionable error and must not become a usable asset.
    - Upload a test PDF up to 20 MiB and confirm it is stored as a private document; a PDF over 20 MiB must be rejected.
 2. **Interrupted/retried uploads**

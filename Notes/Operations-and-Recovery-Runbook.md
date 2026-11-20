@@ -115,6 +115,54 @@ and [notification configuration](../src/lib/inquiry-email-config.ts).
 - Production monitoring, restore drills, and any alert thresholds require
   approval after the Production deployment and backup plan are established.
 
+## Environment separation verification (16.11)
+
+An authorized operator performs these read-only checks before any migration or
+release. Do not export environment files, submit inquiries, send email, or
+write to the database or buckets as part of this review.
+
+1. In the approved [Vercel project](https://vercel.com/docs/environment-variables),
+   open **Settings > Environment Variables**. Review Production and Preview
+   separately, including any branch-specific overrides and linked shared
+   variables. Record only pass/fail/unknown. Two entries with the same name do
+   not prove that their values differ. When a value is write-only, confirm its
+   target or provenance from trusted provisioning records. If that is not
+   possible, mark it unknown and obtain separate approval before replacing it.
+2. In the Neon Console, use the project's **Connect** dialog to identify the
+   approved branch and database for each environment. Verify that
+   `DATABASE_URL` is [pooled](https://neon.com/docs/connect/connection-pooling)
+   (`-pooler` in the Neon hostname) and `DIRECT_URL` is direct (no `-pooler`).
+   Within each environment both must target the same intended branch and
+   database; Production and Preview must target different branches. Guarded
+   test targets must not point at either live app database.
+3. Confirm `BETTER_AUTH_SECRET` was generated separately for Production and
+   Preview. Check that `BETTER_AUTH_URL` points to the exact intended HTTPS
+   origin for each environment; Preview must not use the Production auth
+   origin.
+4. In the storage provider console, compare the effective `AWS_ENDPOINT_URL_S3`
+   and `AWS_REGION` with the approved storage configuration. Check
+   `MEDIA_PRIVATE_BUCKET` and `MEDIA_PUBLIC_BUCKET`: the buckets must be
+   distinct within each environment and not shared across Production, Preview,
+   or the isolated media suite. Confirm that `AWS_ACCESS_KEY_ID` and
+   `AWS_SECRET_ACCESS_KEY` use separate credentials scoped to each
+   environment's own buckets. The private bucket must not allow anonymous read;
+   the public bucket must not allow anonymous writes.
+5. In Vercel, verify Production has `INQUIRY_TEST_MODE` unset or `false` and
+   `INQUIRY_EMAIL_MODE` unset or `disabled`. Preview delivery should also stay
+   disabled unless simulator testing is separately approved. In that case,
+   verify Preview-only settings: `INQUIRY_EMAIL_FROM` on
+   `notifications.kuraishicars.com`, `INQUIRY_EMAIL_TO=delivered@resend.dev`,
+   `INQUIRY_EMAIL_INBOX_ORIGIN` matching that exact Preview deployment, and
+   separate test credentials/secrets. `RESEND_FROM_EMAIL` is not read by the
+   app; record it as unused if still present, not as evidence of a configured
+   sender. Confirm no callbacks/webhooks or worker schedules are configured
+   for this app. Do not enable anything during this review.
+
+Report the date and **DB / Auth / Media / Email and callbacks: pass, fail, or
+unknown**, with a brief explanation for each unresolved result. Do not share
+connection strings, tokens, credentials, or screenshots showing values.
+Leave 16.11 open if any required check fails or remains unknown.
+
 ## Manual Production deployment (16.13)
 
 Approved on 2026-11-20: an authorized release operator deploys through the

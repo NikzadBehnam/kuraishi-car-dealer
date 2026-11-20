@@ -81,6 +81,7 @@ let adminInquiryQueries: typeof import("../src/lib/admin-inquiry-queries.ts");
 let adminInquiryNotes: typeof import("../src/lib/admin-inquiry-notes.ts");
 let adminDashboardQueries: typeof import("../src/lib/admin-dashboard-queries.ts");
 let adminVehicleRoutes: typeof import("../src/app/api/admin/vehicles/route.ts");
+let inventoryMutations: typeof import("../src/lib/inventory-mutations.ts");
 const inquiryKeys: string[] = [];
 const inquiryClients: string[] = [];
 let dbMock: ReturnType<typeof mock.module> | undefined;
@@ -202,6 +203,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     adminDashboardQueries =
       await import("../src/lib/admin-dashboard-queries.ts");
     adminVehicleRoutes = await import("../src/app/api/admin/vehicles/route.ts");
+    inventoryMutations = await import("../src/lib/inventory-mutations.ts");
   });
 
   beforeEach(() => {
@@ -355,6 +357,84 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         });
         await tx.vehicle.deleteMany({ where: { id: result.vehicleId } });
       });
+    }
+  });
+
+  it("persists draft edits, bulk archives, and confirmed draft deletion", async () => {
+    session = { user: { role: "user", id: actorId } };
+    const createdIds: string[] = [];
+    const createDraft = async (suffix: string) => {
+      const result = await inventoryMutations.createDraftVehicle({
+        stockNumber: `FLOW-${prefix.slice(0, 8).toUpperCase()}-${suffix}`,
+        slug: `flow-${prefix}-${suffix.toLowerCase()}`,
+        make: "Example",
+        model: "Integration",
+        mediaAssetIds: [],
+      });
+      createdIds.push(result.vehicleId);
+      return result;
+    };
+
+    try {
+      const editedDraft = await createDraft("EDIT");
+      const bulkDraftA = await createDraft("BULK-A");
+      const deletedDraft = await createDraft("DELETE");
+
+      const edited = await inventoryMutations.updateVehicle({
+        vehicleId: editedDraft.vehicleId,
+        expectedVersion: editedDraft.version,
+        slug: `edited-${prefix}`,
+        price: "19999.99",
+      });
+      assert.equal(edited.version, editedDraft.version + 1);
+      const persistedEdit = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: editedDraft.vehicleId },
+        select: { slug: true, price: true, status: true },
+      });
+      assert.equal(persistedEdit.slug, `edited-${prefix}`);
+      assert.equal(persistedEdit.price?.toFixed(2), "19999.99");
+      assert.equal(persistedEdit.status, "draft");
+      assert.equal(await queries.getPublicVehicle(persistedEdit.slug), null);
+
+      const missingBulkId = `missing-${prefix}`;
+      const archived = await inventoryMutations.bulkTransitionVehicles({
+        ids: [bulkDraftA.vehicleId, missingBulkId],
+        status: "archived",
+      });
+      assert.deepEqual(archived.succeeded, [
+        { vehicleId: bulkDraftA.vehicleId, changed: true },
+      ]);
+      assert.deepEqual(archived.failed, [
+        { vehicleId: missingBulkId, error: "Vehicle was not found." },
+      ]);
+      const archivedRow = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: bulkDraftA.vehicleId },
+        select: { status: true },
+      });
+      assert.equal(archivedRow.status, "archived");
+
+      const deleted = await inventoryMutations.deleteDraftVehicle({
+        vehicleId: deletedDraft.vehicleId,
+        expectedVersion: deletedDraft.version,
+        confirmPermanently: true,
+      });
+      assert.deepEqual(deleted, {
+        vehicleId: deletedDraft.vehicleId,
+        deleted: true,
+      });
+      assert.equal(
+        await prisma.vehicle.count({ where: { id: deletedDraft.vehicleId } }),
+        0,
+      );
+    } finally {
+      if (createdIds.length) {
+        await prisma.$transaction(async (tx) => {
+          await tx.vehicleChange.deleteMany({
+            where: { vehicleId: { in: createdIds } },
+          });
+          await tx.vehicle.deleteMany({ where: { id: { in: createdIds } } });
+        });
+      }
     }
   });
 

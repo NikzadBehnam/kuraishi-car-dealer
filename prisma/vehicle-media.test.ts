@@ -5,6 +5,7 @@ import { after, before, describe, it, mock } from "node:test";
 
 import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import {
+  AuthorizationError,
   assertAuthenticatedSession,
   type AuthSession,
 } from "../src/lib/auth-access.ts";
@@ -196,7 +197,11 @@ describe("vehicle media persistence on isolated Neon resources", () => {
       },
     });
     await prisma.dealer.create({
-      data: { id: dealerId, name: "Vehicle media test dealership" },
+      data: {
+        id: dealerId,
+        name: "Vehicle media test dealership",
+        phone: "+43 676 989 0630",
+      },
     });
 
     dbMock = mock.module("../src/lib/db.ts", {
@@ -204,6 +209,7 @@ describe("vehicle media persistence on isolated Neon resources", () => {
     });
     sessionMock = mock.module("../src/lib/session.ts", {
       namedExports: {
+        AuthorizationError,
         requireSession: async () => assertAuthenticatedSession(session),
       },
     });
@@ -388,7 +394,11 @@ describe("vehicle media persistence on isolated Neon resources", () => {
       );
     } finally {
       await prisma.dealer.create({
-        data: { id: dealerId, name: "Vehicle media test dealership" },
+        data: {
+          id: dealerId,
+          name: "Vehicle media test dealership",
+          phone: "+43 676 989 0630",
+        },
       });
     }
     const secondDealerId = randomUUID();

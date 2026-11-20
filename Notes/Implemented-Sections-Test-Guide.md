@@ -1,6 +1,6 @@
 # Full test guide for implemented checklist sections
 
-This guide covers the integrated work currently on `backend/seo-and-cache-consistency`, based on `feature/public-content-and-consent`, `feature/admin-workspace-search`, and `backend/dashboard-metrics`, including Sections 04-15.04:
+This guide covers the integrated work across the implemented section branches, including Sections 04-16.04:
 
 - Section 01: approved business rules and pure policy/auth contracts.
 - Section 02: inventory schema, migration, queries, search, DTOs and controlled fixture-import logic.
@@ -26,6 +26,7 @@ This guide covers the integrated work currently on `backend/seo-and-cache-consis
 - Section 16.01: four focused tests invoke the real account-creation Server Action with the real input schema and authorization policy; Better Auth is mocked at the external-service boundary. Anonymous and regular staff are rejected, master admin creation succeeds, and an attempted `role: "admin"` is not forwarded. A database-backed integration test invokes the actual vehicle creation Route Handler, verifies untrusted-origin and anonymous rejection, and confirms regular-staff draft persistence through Prisma and the staff query. All 134 source tests pass. In this environment, Corepack pnpm aborted when it tried to remove `node_modules` without a TTY, so validation used the installed Node 22 executable directly.
 - Section 16.02: the isolated inventory query suite now passes 23 tests. A database-backed case covers draft edits, partial-success bulk archive, and permanent deletion of a never-published draft; existing cases cover public visibility/comparison, settings propagation, inquiries, lead notes, notification state, and dashboard metrics. Media approval, upload, deletion, and vehicle-media integration suites pass against the user-confirmed isolated Neon database and non-Production S3-compatible test bucket, including all 31 vehicle-media cases. The vehicle-media runner now uses the Node test loader and exports the shared authorization error in its session mock. No live email or Production access occurred.
 - Section 16.03: all 23 isolated inventory query tests and 32 focused inquiry/email tests pass. Failure coverage includes malformed JSON, unique conflicts, stale writes, missing IDs, database outages with sanitized responses/logging, invalid business dates, duplicate/concurrent submissions, provider network/throttle/server errors, malformed provider responses, stable idempotency, and partial media-storage failures. Existing media suites cover approval rollback, upload replay/cleanup and partial deletion. There is no provider callback/webhook endpoint; no live email or Production access occurred.
+- Section 16.04: all 24 isolated inventory-query tests pass. The new end-to-end case uses real vehicle creation/publication/lifecycle routes, public inventory/detail/comparison/sitemap queries, the public inquiry route and staff inbox/note persistence. It verifies visibility after sale and archive and removes its synthetic inquiry, quota, vehicle/history and media records. The S3 client is mocked for this scenario and email is disabled; storage-provider behavior remains covered by the separate media suites. No real email, S3 request or Production resource was used.
 
 Section 04 is complete but was not merged to `master` before Section 05 began; the user deferred the combined manual retest until later. The isolated inventory query suite has passed after the inventory-test credential rotation, providing database coverage for Sections 06.10, 07.05, 08.09 and 12.08; combined manual page checks remain pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
@@ -40,7 +41,7 @@ Section 04 is complete but was not merged to `master` before Section 05 began; t
 
    The branch should be `feature/admin-workspace-search`. It includes the integrated Sections 04-12 work plus the inventory-only top-bar search. Preserve unrelated local work; do not switch branches over uncommitted changes.
 
-2. Use Node 25.8.0, or a Node version that supports the test-runner flags in the package scripts. The machine PATH previously selected Node 14, which cannot run these scripts; Node 22.21.1 also lacked `--test-isolation=none`.
+2. Use Node 22.21.1 or another Node version that supports the test-runner flags in the package scripts. The machine PATH may still select Node 14, which cannot run these scripts.
 
 3. Use the repository's existing pnpm setup. Keep test database and object-storage configuration private. Do not print, paste, commit, or include environment-file contents in screenshots or reports.
 

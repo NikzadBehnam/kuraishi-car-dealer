@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
 
 import { z } from "zod";
@@ -81,12 +81,16 @@ let adminInquiryQueries: typeof import("../src/lib/admin-inquiry-queries.ts");
 let adminInquiryNotes: typeof import("../src/lib/admin-inquiry-notes.ts");
 let adminDashboardQueries: typeof import("../src/lib/admin-dashboard-queries.ts");
 let adminVehicleRoutes: typeof import("../src/app/api/admin/vehicles/route.ts");
+let adminVehiclePublishRoute: typeof import("../src/app/api/admin/vehicles/publish/route.ts");
+let adminVehicleLifecycleRoute: typeof import("../src/app/api/admin/vehicles/[id]/lifecycle/route.ts");
+let inquiryRoute: typeof import("../src/app/api/inquiries/route.ts");
 let inventoryMutations: typeof import("../src/lib/inventory-mutations.ts");
 const inquiryKeys: string[] = [];
 const inquiryClients: string[] = [];
 let dbMock: ReturnType<typeof mock.module> | undefined;
 let sessionMock: ReturnType<typeof mock.module> | undefined;
 let cacheMock: ReturnType<typeof mock.module> | undefined;
+let mediaStorageMock: ReturnType<typeof mock.module> | undefined;
 let revalidatedPath: string | undefined;
 
 async function deleteImportedTestRows(tx: Prisma.TransactionClient) {
@@ -195,6 +199,17 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         },
       },
     });
+    mediaStorageMock = mock.module("../src/lib/media-storage.ts", {
+      namedExports: {
+        getMediaStorageClient: () => ({
+          send: async () => ({ ContentLength: 8, ContentType: "image/png" }),
+        }),
+        getPrivateMediaBucket: () => "private-test-bucket",
+        getPublicMediaBucket: () => "public-test-bucket",
+        getPublicMediaObjectUrl: () =>
+          "https://media.example.invalid/integration.png",
+      },
+    });
     queries = await import("../src/lib/inventory-queries.ts");
     dealershipSettings = await import("../src/lib/dealership-settings.ts");
     inquiryIntake = await import("../src/lib/inquiry-intake.ts");
@@ -203,6 +218,11 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     adminDashboardQueries =
       await import("../src/lib/admin-dashboard-queries.ts");
     adminVehicleRoutes = await import("../src/app/api/admin/vehicles/route.ts");
+    adminVehiclePublishRoute =
+      await import("../src/app/api/admin/vehicles/publish/route.ts");
+    adminVehicleLifecycleRoute =
+      await import("../src/app/api/admin/vehicles/[id]/lifecycle/route.ts");
+    inquiryRoute = await import("../src/app/api/inquiries/route.ts");
     inventoryMutations = await import("../src/lib/inventory-mutations.ts");
   });
 
@@ -248,6 +268,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       dbMock?.restore();
       sessionMock?.restore();
       cacheMock?.restore();
+      mediaStorageMock?.restore();
       await prisma.$disconnect();
     }
   });
@@ -466,6 +487,289 @@ describe("isolated inventory queries", { concurrency: false }, () => {
           await tx.vehicle.deleteMany({ where: { id: vehicleId } });
         });
       }
+    }
+  });
+
+  it("completes the staff-to-visitor-to-sale flow across real routes and queries", async () => {
+    session = { user: { role: "user", id: actorId } };
+    const stockNumber = `FLOW-${prefix.slice(0, 8).toUpperCase()}`;
+    const vehicleSlug = `flow-${prefix}`;
+    const make = "Flowmark";
+    const model = "Journey";
+    const imageId = randomUUID();
+    const requestId = randomUUID();
+    const hashSecret = `synthetic-e2e-secret-${prefix}`;
+    const previousEnv = new Map<string, string | undefined>(
+      [
+        "NODE_ENV",
+        "INQUIRY_TEST_MODE",
+        "INQUIRY_EMAIL_MODE",
+        "INQUIRY_HASH_SECRET",
+      ].map((key) => [key, process.env[key]]),
+    );
+    const setTestEnv = () => {
+      Object.assign(process.env, {
+        NODE_ENV: "test",
+        INQUIRY_TEST_MODE: "true",
+        INQUIRY_EMAIL_MODE: "disabled",
+        INQUIRY_HASH_SECRET: hashSecret,
+      });
+    };
+    const restoreTestEnv = () => {
+      for (const [key, value] of previousEnv) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    };
+    const jsonRequest = (url: string, method: string, body: unknown) =>
+      new Request(url, {
+        method,
+        headers: {
+          origin: "http://localhost:3000",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    let vehicleId: string | undefined;
+
+    const clientHash = createHmac("sha256", hashSecret)
+      .update("client\0local-development")
+      .digest("hex");
+    inquiryKeys.push(requestId);
+    inquiryClients.push(clientHash);
+
+    try {
+      await prisma.mediaAsset.create({
+        data: {
+          id: imageId,
+          objectKey: `integration/${imageId}.png`,
+          bucketAccess: "public_read",
+          type: "image",
+          title: "Integration flow image",
+          originalFilename: "integration.png",
+          altText: "Synthetic integration vehicle",
+          verifiedMimeType: "image/png",
+          sizeBytes: BigInt(8),
+          uploadedById: actorId,
+          publicApprovedAt: new Date(),
+          publicApprovedById: actorId,
+        },
+      });
+
+      const draftResponse = await adminVehicleRoutes.POST(
+        jsonRequest("http://localhost:3000/api/admin/vehicles", "POST", {
+          stockNumber,
+          slug: vehicleSlug,
+          make,
+          model,
+          mediaAssetIds: [],
+        }),
+      );
+      assert.equal(draftResponse.status, 201);
+      const draft: { vehicleId: string; version: number } =
+        await draftResponse.json();
+      vehicleId = draft.vehicleId;
+
+      const publicationResponse = await adminVehiclePublishRoute.POST(
+        jsonRequest(
+          "http://localhost:3000/api/admin/vehicles/publish",
+          "POST",
+          {
+            vehicleId,
+            expectedVersion: draft.version,
+            stockNumber,
+            slug: vehicleSlug,
+            make,
+            model,
+            description:
+              "A synthetic vehicle created for the complete integration flow.",
+            location: "Vienna",
+            condition: "used",
+            price: "24900.00",
+            firstRegistration: "2020-05",
+            mileage: 45000,
+            powerKw: "110",
+            fuelType: "petrol",
+            transmissionType: "automatic",
+            bodyType: "wagon",
+            mediaAssetIds: [imageId],
+            confirmInspectionPassed: true,
+          },
+        ),
+      );
+      assert.equal(publicationResponse.status, 200);
+      const published: { version: number; created: boolean } =
+        await publicationResponse.json();
+      assert.equal(published.created, false);
+
+      const catalog = await queries.listPublicVehicles({ search: make });
+      assert.ok(
+        catalog.items.some((vehicle) => vehicle.id === draft.vehicleId),
+      );
+      const detail = await queries.resolvePublicVehicleDetail(vehicleSlug);
+      assert.equal(detail.kind, "visible");
+      if (detail.kind !== "visible") {
+        throw new Error("The published integration vehicle must be visible.");
+      }
+      assert.equal(detail.vehicle.id, draft.vehicleId);
+      assert.deepEqual(
+        (await queries.getPublicComparisonVehicles([draft.vehicleId])).map(
+          ({ id }) => id,
+        ),
+        [draft.vehicleId],
+      );
+      assert.ok(
+        (
+          await queries.listPublicVehicleSitemapEntries({ pageSize: 100 })
+        ).items.some(({ id }) => id === draft.vehicleId),
+      );
+
+      const inquirySubmission = {
+        requestId,
+        fields: {
+          name: "Scenario Visitor",
+          email: "scenario@example.invalid",
+          appointmentType: "Beratung",
+          message: "I would like details about this vehicle.",
+          consent: true,
+        },
+        vehicleSlug,
+        website: "",
+        privacyNoticeVersion: inquiryPrivacyNotice.version,
+      };
+      setTestEnv();
+      const inquiryRequest = () =>
+        jsonRequest(
+          "http://localhost:3000/api/inquiries",
+          "POST",
+          inquirySubmission,
+        );
+      const inquiryResponse = await inquiryRoute.POST(inquiryRequest());
+      assert.equal(inquiryResponse.status, 202);
+      const replayResponse = await inquiryRoute.POST(inquiryRequest());
+      assert.equal(replayResponse.status, 202);
+      assert.equal(
+        await prisma.inquiry.count({ where: { submissionKey: requestId } }),
+        1,
+      );
+
+      const inquiry = await prisma.inquiry.findUniqueOrThrow({
+        where: { submissionKey: requestId },
+      });
+      session = { user: { role: "user", id: actorId } };
+      const inbox = await adminInquiryQueries.getAdminInquiryPage({
+        q: "",
+        page: "1",
+        lead: inquiry.id,
+      });
+      assert.equal(inbox.selectedInquiry?.vehicleSlugSnapshot, vehicleSlug);
+      assert.equal(
+        inbox.selectedInquiry?.vehicleTitleSnapshot,
+        `${make} ${model}`,
+      );
+      assert.equal(inbox.selectedInquiry?.delivery?.status, "disabled");
+
+      const note = await adminInquiryNotes.addAdminInquiryNote({
+        inquiryId: inquiry.id,
+        content: "Synthetic end-to-end staff follow-up.",
+      });
+      assert.deepEqual(note, { ok: true });
+      const inboxAfterNote = await adminInquiryQueries.getAdminInquiryPage({
+        q: "",
+        page: "1",
+        lead: inquiry.id,
+      });
+      assert.equal(
+        inboxAfterNote.selectedInquiry?.notes[0]?.content,
+        "Synthetic end-to-end staff follow-up.",
+      );
+
+      const soldResponse = await adminVehicleLifecycleRoute.POST(
+        jsonRequest(
+          `http://localhost:3000/api/admin/vehicles/${vehicleId}/lifecycle`,
+          "POST",
+          { expectedVersion: published.version, status: "sold" },
+        ),
+        { params: Promise.resolve({ id: vehicleId }) },
+      );
+      assert.equal(soldResponse.status, 200);
+      const sold: { version: number; status: string } =
+        await soldResponse.json();
+      assert.equal(sold.status, "sold");
+      assert.equal(
+        (await queries.getPublicVehicle(vehicleSlug))?.status,
+        "sold",
+      );
+      assert.equal(
+        (await queries.resolvePublicVehicleDetail(vehicleSlug)).kind,
+        "visible",
+      );
+      assert.equal(
+        (await queries.listPublicVehicles({ search: make })).items.some(
+          (vehicle) => vehicle.id === vehicleId,
+        ),
+        false,
+      );
+      assert.deepEqual(
+        await queries.getPublicComparisonVehicles([vehicleId]),
+        [],
+      );
+      assert.ok(
+        (
+          await queries.listPublicVehicleSitemapEntries({ pageSize: 100 })
+        ).items.some(({ id }) => id === vehicleId),
+      );
+
+      const archivedResponse = await adminVehicleLifecycleRoute.POST(
+        jsonRequest(
+          `http://localhost:3000/api/admin/vehicles/${vehicleId}/lifecycle`,
+          "POST",
+          { expectedVersion: sold.version, status: "archived" },
+        ),
+        { params: Promise.resolve({ id: vehicleId }) },
+      );
+      assert.equal(archivedResponse.status, 200);
+      assert.equal((await archivedResponse.json()).status, "archived");
+      assert.equal(await queries.getPublicVehicle(vehicleSlug), null);
+      assert.equal(
+        (await queries.resolvePublicVehicleDetail(vehicleSlug)).kind,
+        "ineligible",
+      );
+      assert.equal(await queries.getPublicVehicleMetadata(vehicleSlug), null);
+      assert.equal(await queries.getPublicVehicleForInquiry(vehicleSlug), null);
+      assert.equal(await queries.getPublicComparisonVehicle(vehicleId), null);
+      assert.deepEqual(
+        await queries.getPublicComparisonVehicles([vehicleId]),
+        [],
+      );
+      assert.equal(
+        (await queries.listPublicVehicles({ search: make })).items.some(
+          (vehicle) => vehicle.id === vehicleId,
+        ),
+        false,
+      );
+      assert.equal(
+        (
+          await queries.listPublicVehicleSitemapEntries({ pageSize: 100 })
+        ).items.some(({ id }) => id === vehicleId),
+        false,
+      );
+    } finally {
+      restoreTestEnv();
+      await prisma.inquiry.deleteMany({
+        where: { submissionKey: requestId },
+      });
+      await prisma.inquiryRateLimit.deleteMany({ where: { key: clientHash } });
+      if (vehicleId) {
+        await prisma.$transaction(async (tx) => {
+          await tx.vehicleChange.deleteMany({ where: { vehicleId } });
+          await tx.vehicle.deleteMany({ where: { id: vehicleId } });
+        });
+      }
+      await prisma.mediaAsset.deleteMany({ where: { id: imageId } });
     }
   });
 

@@ -56,6 +56,10 @@ Plan-dependent history and snapshot settings must be confirmed in the Console.
   cause of the cancellation event is unresolved. Compare with another browser
   and a plain 204 control, then correlate with sanitized storage-side status
   or request timing before drawing a conclusion.
+- Hosted Preview `192b842` reproduced the warning on two synthetic image
+  POSTs. Both Fetch calls returned 204 and finalized; the replacement image
+  decoded on the public detail page behind Vercel Authentication. The
+  cancellation event remains unresolved.
 - There is no automatic time-based deletion for unused `MediaAsset` records
   and no bucket-wide orphan purge. An unused asset may have been intentionally
   finalized for later attachment. Review each candidate in the protected media
@@ -82,8 +86,8 @@ Implementation references:
   including inherited values and overrides. Confirm isolated database and
   storage endpoints and credentials, a dedicated Preview auth secret and
   exact HTTPS Preview auth origin, and disabled inquiry delivery. Record only
-  non-secret evidence. The 15.09 verification used an isolated local build;
-  hosted verification remains open in [report.md](./report.md).
+  non-secret evidence. Hosted 15.09 verification passed on Preview `192b842`;
+  see [report.md](./report.md).
 
 ## Inquiry notification reconciliation
 

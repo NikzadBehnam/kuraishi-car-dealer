@@ -39,13 +39,9 @@ export async function createAccountAction(
       body: { email, password, name: `${firstName} ${lastName}` },
       headers: await headers(),
     });
-  } catch (error) {
-    const message =
-      error instanceof Error && error.message
-        ? error.message
-        : "The account could not be created.";
-
-    return { ok: false, error: message };
+  } catch {
+    console.error("Staff account creation failed.");
+    return { ok: false, error: "The account could not be created." };
   }
 
   return { ok: true };

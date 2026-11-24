@@ -42,6 +42,13 @@ const privateNoStoreHeader = {
 };
 
 const nextConfig: NextConfig = {
+  logging: {
+    // Staff account creation sends credentials as server-action arguments.
+    serverFunctions: false,
+    incomingRequests: {
+      ignore: [/^\/(?:login|admin\/accounts\/new|api\/auth)(?:[/?]|$)/],
+    },
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

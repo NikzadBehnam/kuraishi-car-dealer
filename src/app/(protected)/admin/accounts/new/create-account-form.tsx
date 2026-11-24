@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { AuthField } from "@/app/(auth)/_components/auth-field";
+import { CredentialForm } from "@/app/(auth)/_components/credential-form";
 import {
   createAccountSchema,
   type CreateAccountFormValues,
@@ -28,19 +29,24 @@ export function CreateAccountForm() {
   });
 
   const submit = async (values: CreateAccountFormValues) => {
-    const result = await createAccountAction(values);
+    try {
+      const result = await createAccountAction(values);
 
-    if (!result.ok) {
-      toast.error(result.error);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+    } catch {
+      toast.error("The account could not be created.");
       return;
     }
 
-    toast.success(`Account created for ${values.email}.`);
+    toast.success("Account created.");
     reset();
   };
 
   return (
-    <form noValidate className="grid gap-4" onSubmit={handleSubmit(submit)}>
+    <CredentialForm onSubmit={handleSubmit(submit)}>
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <AuthField
           id="account-first-name"
@@ -94,7 +100,7 @@ export function CreateAccountForm() {
           />
           <button
             type="button"
-            className="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="text-muted-foreground hover:bg-surface-muted hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-[var(--radius-sm)] transition-colors focus-visible:ring-1 focus-visible:outline-none"
             aria-label={showPassword ? "Hide password" : "Show password"}
             onClick={() => setShowPassword((value) => !value)}
           >
@@ -111,11 +117,15 @@ export function CreateAccountForm() {
         type="submit"
         variant="accent"
         disabled={isSubmitting}
-        className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
+        className="w-full rounded-[var(--radius-sm)] text-center whitespace-normal"
       >
-        {isSubmitting ? <LoaderCircle className="animate-spin" /> : <UserPlus />}
+        {isSubmitting ? (
+          <LoaderCircle className="animate-spin" />
+        ) : (
+          <UserPlus />
+        )}
         {isSubmitting ? "Creating account" : "Create account"}
       </Button>
-    </form>
+    </CredentialForm>
   );
 }

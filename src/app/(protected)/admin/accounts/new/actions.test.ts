@@ -11,6 +11,7 @@ import {
 let session: AuthSession | null = null;
 let createdUserBody: unknown;
 let createdUserHeaders: Headers | undefined;
+let createUserError: Error | undefined;
 const requestHeaders = new Headers({ "x-test-request": "create-account" });
 let headersMock: ReturnType<typeof mock.module> | undefined;
 let authMock: ReturnType<typeof mock.module> | undefined;
@@ -33,6 +34,7 @@ describe("createAccountAction integration", { concurrency: false }, () => {
               body: unknown;
               headers: Headers;
             }) => {
+              if (createUserError) throw createUserError;
               createdUserBody = body;
               createdUserHeaders = headers;
             },
@@ -56,6 +58,7 @@ describe("createAccountAction integration", { concurrency: false }, () => {
     session = null;
     createdUserBody = undefined;
     createdUserHeaders = undefined;
+    createUserError = undefined;
   });
 
   after(() => {
@@ -125,5 +128,28 @@ describe("createAccountAction integration", { concurrency: false }, () => {
 
     assert.deepEqual(result, { ok: false, error: "Enter the first name." });
     assert.equal(createdUserBody, undefined);
+  });
+
+  it("does not return or log raw errors from credential submission", async (t) => {
+    session = { user: { role: "admin" } };
+    const sentinel = "synthetic-credential-canary";
+    createUserError = new Error(`Unexpected request failure: ${sentinel}`);
+    const log = t.mock.method(console, "error", () => {});
+
+    const result = await action.createAccountAction({
+      firstName: "Staff",
+      lastName: "Member",
+      email: "staff@example.invalid",
+      password: sentinel,
+    });
+
+    assert.deepEqual(result, {
+      ok: false,
+      error: "The account could not be created.",
+    });
+    assert.deepEqual(
+      log.mock.calls.map(({ arguments: args }) => args),
+      [["Staff account creation failed."]],
+    );
   });
 });

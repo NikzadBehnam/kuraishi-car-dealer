@@ -8,6 +8,7 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { AuthField } from "@/app/(auth)/_components/auth-field";
+import { CredentialForm } from "@/app/(auth)/_components/credential-form";
 import {
   loginSchema,
   type LoginFormValues,
@@ -37,18 +38,25 @@ export function LoginForm() {
   });
 
   const submit = async (values: LoginFormValues) => {
-    const { error } = await authClient.signIn.email({
-      email: values.email,
-      password: values.password,
-      rememberMe: values.remember,
-    });
+    try {
+      const { error } = await authClient.signIn.email({
+        email: values.email,
+        password: values.password,
+        rememberMe: values.remember,
+      });
 
-    if (error) {
-      toast.error(
-        error.status === 429
-          ? "Too many attempts. Please wait and try again."
-          : error.message || "Login failed. Check your email and password.",
-      );
+      if (error) {
+        toast.error(
+          error.status === 429
+            ? "Too many attempts. Please wait and try again."
+            : error.status === 401
+              ? "Login failed. Check your email and password."
+              : "Could not sign in. Please try again.",
+        );
+        return;
+      }
+    } catch {
+      toast.error("Could not sign in. Please try again.");
       return;
     }
 
@@ -57,7 +65,7 @@ export function LoginForm() {
   };
 
   return (
-    <form noValidate className="grid gap-4" onSubmit={handleSubmit(submit)}>
+    <CredentialForm onSubmit={handleSubmit(submit)}>
       <AuthField id="login-email" label="Email" error={errors.email?.message}>
         <Input
           id="login-email"
@@ -86,7 +94,7 @@ export function LoginForm() {
           />
           <button
             type="button"
-            className="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-[var(--radius-sm)] text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="text-muted-foreground hover:bg-surface-muted hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-[var(--radius-sm)] transition-colors focus-visible:ring-1 focus-visible:outline-none"
             aria-label={showPassword ? "Hide password" : "Show password"}
             onClick={() => setShowPassword((value) => !value)}
           >
@@ -109,7 +117,9 @@ export function LoginForm() {
                 checked={field.value}
                 onCheckedChange={(checked) => field.onChange(checked === true)}
               />
-              <span className="text-muted-foreground">Remember this device</span>
+              <span className="text-muted-foreground">
+                Remember this device
+              </span>
             </label>
           )}
         />
@@ -119,11 +129,11 @@ export function LoginForm() {
         type="submit"
         variant="accent"
         disabled={isSubmitting}
-        className="w-full whitespace-normal rounded-[var(--radius-sm)] text-center"
+        className="w-full rounded-[var(--radius-sm)] text-center whitespace-normal"
       >
         {isSubmitting ? <LoaderCircle className="animate-spin" /> : <LogIn />}
         {isSubmitting ? "Signing in" : "Login"}
       </Button>
-    </form>
+    </CredentialForm>
   );
 }

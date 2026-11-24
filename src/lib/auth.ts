@@ -2,6 +2,7 @@ import "server-only";
 
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
+import { isAPIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 
@@ -63,6 +64,13 @@ export const auth = betterAuth({
   rateLimit: {
     // Counters in the database, because serverless instances do not share memory.
     storage: "database",
+  },
+  onAPIError: {
+    onError(error) {
+      if (!isAPIError(error) || error.statusCode >= 500) {
+        console.error("Authentication request failed.");
+      }
+    },
   },
   advanced: {
     useSecureCookies: isProduction,

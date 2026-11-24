@@ -50,6 +50,12 @@ Plan-dependent history and snapshot settings must be confirmed in the Console.
   the reopened image decodes. Do not retain signed URLs, form fields, or
   credentials in diagnostic evidence. Investigate failures separately from
   an aborted trace event with a verified successful upload.
+- A follow-up isolated Chromium trace tied the same Fetch request to both
+  an HTTP 204 response and a subsequent `net::ERR_ABORTED` event marked
+  canceled. The browser Fetch returned 204 and finalization succeeded. The
+  cause of the cancellation event is unresolved. Compare with another browser
+  and a plain 204 control, then correlate with sanitized storage-side status
+  or request timing before drawing a conclusion.
 - There is no automatic time-based deletion for unused `MediaAsset` records
   and no bucket-wide orphan purge. An unused asset may have been intentionally
   finalized for later attachment. Review each candidate in the protected media

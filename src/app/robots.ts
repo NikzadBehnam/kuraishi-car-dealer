@@ -1,7 +1,12 @@
 import type { MetadataRoute } from "next";
 import { internalRoutes, publicRoutes } from "@/config/routes.config";
 import { siteConfig } from "@/config/site.config";
+import { allowsSearchIndexing } from "@/lib/search-indexing";
 export default function robots(): MetadataRoute.Robots {
+  if (!allowsSearchIndexing()) {
+    return { rules: { userAgent: "*", disallow: "/" } };
+  }
+
   const publicPaths = new Set<string>(Object.values(publicRoutes));
   return {
     rules: {

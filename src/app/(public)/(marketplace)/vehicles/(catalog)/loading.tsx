@@ -1,4 +1,5 @@
 import { VehicleCardSkeleton } from "@/components/vehicle/vehicle-card-skeleton";
+
 export default function Loading() {
   return (
     <div className="site-container space-y-8 py-12">

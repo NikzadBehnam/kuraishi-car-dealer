@@ -71,6 +71,20 @@ Implementation references:
 [upload cleanup](../src/lib/media-uploads.ts) and
 [media deletion](../src/lib/admin-media-deletions.ts).
 
+## Preview search indexing
+
+- Only Vercel Production builds opt into indexing. Local/test and Preview
+  should send `X-Robots-Tag: noindex, nofollow`; `/robots.txt` should disallow
+  all crawling without advertising a sitemap.
+- These directives do not make a Preview private. Keep deployment protection
+  enabled and verify it on both the generated deployment URL and branch alias.
+  Before deploying, check the exact branch's effective Preview environment,
+  including inherited values and overrides. Confirm isolated database and
+  storage endpoints and credentials, a dedicated Preview auth secret and
+  exact HTTPS Preview auth origin, and disabled inquiry delivery. Record only
+  non-secret evidence. The 15.09 verification used an isolated local build;
+  hosted verification remains open in [report.md](./report.md).
+
 ## Inquiry notification reconciliation
 
 - Inquiry acceptance is durable independently of notification delivery. The

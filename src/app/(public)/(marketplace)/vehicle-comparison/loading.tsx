@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function MarketplaceLoading() {
+export default function VehicleComparisonLoading() {
   return (
     <div
       className="site-container space-y-5 py-16"

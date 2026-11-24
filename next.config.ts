@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { allowsSearchIndexing } from "./src/lib/search-indexing";
 
 const publicBucket = process.env.MEDIA_PUBLIC_BUCKET;
 const publicMediaPattern = publicBucket
@@ -57,6 +58,14 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      ...(!allowsSearchIndexing()
+        ? [
+            {
+              source: "/:path*",
+              headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+            },
+          ]
+        : []),
       { source: "/admin/:path*", headers: [privateNoStoreHeader] },
       { source: "/api/:path*", headers: [privateNoStoreHeader] },
     ];

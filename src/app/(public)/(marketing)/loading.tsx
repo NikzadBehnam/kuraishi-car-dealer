@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+
 export default function Loading() {
   return (
     <div className="site-container space-y-5 py-20">

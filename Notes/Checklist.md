@@ -609,7 +609,7 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 **Branch:** `backend/public-vehicle-catalog`.
 
-**Evidence:** [homepage](<../src/app/(public)/(marketing)/page.tsx>), [vehicle listing](<../src/app/(public)/(marketplace)/vehicles/page.tsx>), [search results](<../src/app/(public)/(marketplace)/vehicles/_components/vehicle-search-results.tsx>), [vehicle cards](../src/components/vehicle/vehicle-card.tsx).
+**Evidence:** [homepage](<../src/app/(public)/(marketing)/page.tsx>), [vehicle listing](<../src/app/(public)/(marketplace)/vehicles/(catalog)/page.tsx>), [search results](<../src/app/(public)/(marketplace)/vehicles/_components/vehicle-search-results.tsx>), [vehicle cards](../src/components/vehicle/vehicle-card.tsx).
 
 **Commit 1: `feat: render public vehicle lists from database queries`**
 
@@ -937,7 +937,7 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 **Commit 3: `test: verify publish to public refresh and SEO lifecycle`**
 
-- [ ] **15.09** Test publish/update/unpublish, image replacement, price changes, slug changes, setting changes, and removal across public pages plus metadata/sitemap. A successful write is not complete if a stale public page still shows old data. _The full isolated inventory suite passed (30 tests), and the public image replacement browser case passed under 03.14. The other browser checks remain pending. No Production app or storage was used._
+- [ ] **15.09** Test publish/update/unpublish, image replacement, price changes, slug changes, setting changes, and removal across public pages plus metadata/sitemap. A successful write is not complete if a stale public page still shows old data. _Isolated browser freshness, metadata, sitemap and optimized Preview-simulation crawler checks passed. Unavailable details now return a verified HTTP 404. The operator confirmed the hosted Preview configuration; deployment of the candidate revision and hosted runtime verification are pending. See [report.md](./report.md). No Production resources were used._
 
 **Done when:** public links, search-engine metadata, and cached views accurately reflect live eligible inventory.
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { VehicleSearchResults } from "./_components/vehicle-search-results";
+import { VehicleSearchResults } from "../_components/vehicle-search-results";
 import { vehicleListingContent as content } from "@/content/de/vehicle-listing";
 import { createPublicMetadata } from "@/lib/metadata";
 import { publicRoutes } from "@/config/routes.config";

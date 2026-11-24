@@ -5,6 +5,8 @@ import "./globals.css";
 import { siteConfig } from "@/config/site.config";
 import { VehicleStateProvider } from "@/components/providers/vehicle-state-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { allowsSearchIndexing } from "@/lib/search-indexing";
+const indexable = allowsSearchIndexing();
 const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-mono",
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "de_AT",
   },
-  robots: { index: true, follow: true },
+  robots: { index: indexable, follow: indexable },
 };
 export default function RootLayout({
   children,

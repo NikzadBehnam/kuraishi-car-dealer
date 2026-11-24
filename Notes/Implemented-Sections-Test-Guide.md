@@ -436,16 +436,18 @@ The outbox and worker are implemented, but no database migration or provider cal
 
 ## 15. Section 11.01-11.04 — database-backed staff inquiry inbox
 
-The inbox now uses authenticated inquiry records and the notification outbox. The isolated query suite passed on 2026-11-20 and covers inbox reads and append-only internal notes; combined browser verification remains deferred.
+The inbox uses authenticated inquiry records and the notification outbox. Task 11.08 passed on a loopback app backed by a disposable non-Production database with synthetic data and email disabled. See [report.md](./report.md) for the observed browser, API, and database outcomes.
 
 ### Source and isolated-database checks
 
 1. Run `pnpm test`, `pnpm typecheck`, targeted ESLint/Prettier, and `git diff --check`. Source tests cover strict/repeated URL values, bounded search/page values, field-to-search mapping, DTO projection, historical snapshots, safe failed-delivery messages, and strict note validation/serialization.
 2. The protected query calls `requireSession`; verify signed-out requests are redirected by the admin layout and a direct selected inquiry ID cannot bypass authentication.
-3. Before any database test, rotate the previously exposed inventory-test credential and independently confirm `.env.inventory-test.local` targets an isolated, empty database. Then run `pnpm test:inventory-db`, which applies migrations; otherwise skip it.
+3. Before a rerun, confirm `.env.inventory-test.local` uses the rotated inventory-test credential and a dedicated isolated database with the existing Better Auth baseline applied and no dealership or vehicle fixtures. Then run `pnpm test:inventory-db`, which applies the release migrations. Do not clear existing records to meet this precondition.
 4. The isolated inventory query suite passed on 2026-11-20 as part of the 30-test run. Its inquiry coverage checks accepted records, staff inbox reads, failed notification status, private-field exclusion, note creation/readback, session-derived authorship, counts, concurrent note additions, invalid/unknown inputs, unauthorized writes, quota behavior, and cleanup of synthetic inquiry/rate-limit rows.
 
-### Deferred browser checks (isolated non-Production app only)
+### Browser retest matrix (isolated non-Production app only)
+
+For 11.08, the browser exercised accepted submissions, name/message and combined email/message search, live and historical vehicle context, absent phone/vehicle, disabled delivery, note persistence and save failure, unknown inquiry, and signed-out denial. Strict query parsing, pagination links, oversized note rejection, and notification-state variants are covered by automated checks; no real delivery was attempted.
 
 1. Sign in as an ordinary authenticated staff user and open `/admin/leads`. Confirm newest inquiries appear first, with no fixture records, and database-backed note counts. Confirm a fresh/empty database shows an honest empty state.
 2. Search using a unique synthetic value in each supported field: name, email, phone, message, and linked vehicle make/model. Combine multiple terms and confirm every term must match. Open a second page and verify stable ordering and that the search remains in the URL.

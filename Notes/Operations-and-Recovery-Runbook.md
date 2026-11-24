@@ -249,6 +249,14 @@ deployment, and approval of this procedure does not authorize running it.
 
 ## Open operational gates
 
+- **11.08 verification:** Passed on loopback with a disposable database,
+  synthetic inquiries, and email delivery disabled. Keep provider and worker
+  credentials unset for this retest. Check that failed intake leaves no inquiry
+  or outbox row and that a failed note save leaves the authored note history
+  unchanged. Remove only the disposable database after verification. This does
+  not authorize enabling hosted intake, test-provider delivery, or Production
+  changes; 16.12 remains a separate Production migration and recovery gate.
+
 - **08.09 verification:** Use a disposable non-Production database and synthetic
   staff. A failed settings save must show an error and leave the persisted
   record and version unchanged. The saved business Website URL is not a trusted

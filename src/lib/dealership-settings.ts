@@ -99,13 +99,18 @@ function serializeAdminDealership(
   return { ...serializePublicDealership(row), version: row.version };
 }
 
-async function findSingleAdminDealership(): Promise<AdminDealershipRow> {
-  const rows = await prisma.dealer.findMany({
+function findAdminDealerships(
+  client: Pick<Prisma.TransactionClient, "dealer">,
+) {
+  return client.dealer.findMany({
     orderBy: { id: "asc" },
     select: adminDealershipSelect,
     take: 2,
   });
-  return requireSingleDealership(rows);
+}
+
+async function findSingleAdminDealership(): Promise<AdminDealershipRow> {
+  return requireSingleDealership(await findAdminDealerships(prisma));
 }
 
 export const getPublicDealershipSettings = cache(
@@ -119,12 +124,17 @@ export const getPublicDealershipSettings = cache(
   },
 );
 
-export async function getAdminDealershipSettings(): Promise<AdminDealershipSettingsDTO> {
-  await requireSession();
-  return serializeAdminDealership(await findSingleAdminDealership());
-}
+export const getAdminDealershipSettings = cache(
+  async (): Promise<AdminDealershipSettingsDTO | null> => {
+    await requireSession();
+    const rows = await findAdminDealerships(prisma);
+    return rows.length === 0
+      ? null
+      : serializeAdminDealership(requireSingleDealership(rows));
+  },
+);
 
-export async function updateDealershipSettings(
+export async function saveDealershipSettings(
   input: unknown,
 ): Promise<DealershipSettingsSaveResult> {
   try {
@@ -165,6 +175,35 @@ export async function updateDealershipSettings(
   }
 
   const { expectedVersion, ...changes } = parsed.data;
+  if (expectedVersion === null) {
+    const result = await prisma.$transaction(
+      async (tx): Promise<DealershipSettingsSaveResult> => {
+        // Lock before reading so competing first saves cannot both see an empty table.
+        await tx.$executeRaw`LOCK TABLE "Dealer" IN SHARE ROW EXCLUSIVE MODE`;
+        const rows = await findAdminDealerships(tx);
+        if (rows.length !== 0) {
+          return {
+            ok: false,
+            kind: "conflict",
+            settings: serializeAdminDealership(requireSingleDealership(rows)),
+            message:
+              "Another session already created the dealership. Reload the latest settings before editing.",
+          };
+        }
+        const created = await tx.dealer.create({
+          data: changes,
+          select: adminDealershipSelect,
+        });
+        return { ok: true, settings: serializeAdminDealership(created) };
+      },
+      { isolationLevel: "ReadCommitted" },
+    );
+    if (result.ok) {
+      revalidatePath("/", "layout");
+    }
+    return result;
+  }
+
   const current = await findSingleAdminDealership();
   if (current.version !== expectedVersion) {
     return {

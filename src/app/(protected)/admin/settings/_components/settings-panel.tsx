@@ -22,32 +22,33 @@ const settingsTabClassName =
   "min-h-9 flex-1 basis-[8.5rem] bg-secondary px-3 text-xs sm:flex-none sm:text-sm";
 
 function formValues(
-  settings: AdminDealershipSettingsDTO,
+  settings: AdminDealershipSettingsDTO | null,
 ): DealershipSettingsFields {
   return {
-    name: settings.name,
-    shortName: settings.shortName,
-    tagline: settings.tagline,
-    websiteUrl: settings.websiteUrl,
-    description: settings.description,
-    phone: settings.phone,
-    email: settings.email,
-    street: settings.street,
-    postalCode: settings.postalCode,
-    city: settings.city,
-    country: settings.country,
-    mapUrl: settings.mapUrl,
+    name: settings?.name ?? "",
+    shortName: settings?.shortName ?? "",
+    tagline: settings?.tagline ?? "",
+    websiteUrl: settings?.websiteUrl ?? "",
+    description: settings?.description ?? "",
+    phone: settings?.phone ?? "",
+    email: settings?.email ?? "",
+    street: settings?.street ?? "",
+    postalCode: settings?.postalCode ?? "",
+    city: settings?.city ?? "",
+    country: settings?.country ?? "",
+    mapUrl: settings?.mapUrl ?? "",
   };
 }
 
 export function SettingsPanel({
   settings,
 }: {
-  settings: AdminDealershipSettingsDTO;
+  settings: AdminDealershipSettingsDTO | null;
 }) {
   const router = useRouter();
   const [values, setValues] = useState(() => formValues(settings));
-  const [version, setVersion] = useState(settings.version);
+  const [version, setVersion] = useState(settings?.version ?? null);
+  const [tab, setTab] = useState("dealership");
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof DealershipSettingsFields, string>>
   >({});
@@ -78,6 +79,20 @@ export function SettingsPanel({
       if (!result.ok) {
         if (result.kind === "invalid") {
           setFieldErrors(result.fieldErrors);
+          const firstField = Object.keys(result.fieldErrors)[0];
+          if (firstField) {
+            setTab(
+              [
+                "name",
+                "shortName",
+                "tagline",
+                "websiteUrl",
+                "description",
+              ].includes(firstField)
+                ? "dealership"
+                : "contact",
+            );
+          }
         } else if (result.kind === "conflict") {
           setConflict(result.settings);
         }
@@ -100,6 +115,9 @@ export function SettingsPanel({
 
   return (
     <div className="grid min-w-0 gap-4">
+      {version === null && !conflict ? (
+        <p>Complete both tabs, then save to create your dealership.</p>
+      ) : null}
       {conflict ? (
         <div
           className="border-destructive/50 bg-destructive/5 flex flex-col gap-3 rounded-[var(--radius-sm)] border p-4 sm:flex-row sm:items-center sm:justify-between"
@@ -126,7 +144,7 @@ export function SettingsPanel({
         </div>
       ) : null}
       <form className="grid min-w-0 gap-4" onSubmit={handleSubmit} noValidate>
-        <Tabs defaultValue="dealership">
+        <Tabs value={tab} onValueChange={setTab}>
           <div className="bg-surface min-w-0 rounded-[var(--radius-sm)] border p-2">
             <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0">
               <TabsTrigger className={settingsTabClassName} value="dealership">

@@ -1,7 +1,7 @@
 "use server";
 
-import { updateDealershipSettings } from "@/lib/dealership-settings";
+import { saveDealershipSettings } from "@/lib/dealership-settings";
 
 export async function saveDealershipSettingsAction(input: unknown) {
-  return updateDealershipSettings(input);
+  return saveDealershipSettings(input);
 }

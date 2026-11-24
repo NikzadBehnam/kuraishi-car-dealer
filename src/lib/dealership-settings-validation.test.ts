@@ -23,6 +23,20 @@ const validSettings = {
 };
 
 describe("dealership settings validation", () => {
+  it("requires an explicit null version for first-run creation", () => {
+    assert.equal(
+      saveDealershipSettingsSchema.safeParse({
+        ...validSettings,
+        expectedVersion: null,
+      }).success,
+      true,
+    );
+    assert.equal(
+      saveDealershipSettingsSchema.safeParse(validSettings).success,
+      false,
+    );
+  });
+
   it("accepts trimmed public settings and a valid optimistic version", () => {
     assert.deepEqual(
       saveDealershipSettingsSchema.parse({

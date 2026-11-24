@@ -90,7 +90,7 @@ export const dealershipSettingsFieldsSchema = z.strictObject({
 
 export const saveDealershipSettingsSchema =
   dealershipSettingsFieldsSchema.extend({
-    expectedVersion: z.number().int().min(1).max(2_147_483_647),
+    expectedVersion: z.number().int().min(1).max(2_147_483_647).nullable(),
   });
 
 export type DealershipSettingsFields = z.infer<

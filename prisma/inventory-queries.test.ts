@@ -1957,7 +1957,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       dealershipSettings.getAdminDealershipSettings(),
       AuthorizationError,
     );
-    const denied = await dealershipSettings.updateDealershipSettings({
+    const denied = await dealershipSettings.saveDealershipSettings({
       ...publicSettings,
       expectedVersion: 1,
     });
@@ -1968,8 +1968,9 @@ describe("isolated inventory queries", { concurrency: false }, () => {
 
     session = { user: { role: "user" } };
     const current = await dealershipSettings.getAdminDealershipSettings();
+    assert.ok(current);
     const { version, ...fields } = current;
-    const invalid = await dealershipSettings.updateDealershipSettings({
+    const invalid = await dealershipSettings.saveDealershipSettings({
       ...fields,
       email: "invalid",
       expectedVersion: version,
@@ -1979,7 +1980,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       assert.equal(invalid.kind, "invalid");
     }
 
-    const saved = await dealershipSettings.updateDealershipSettings({
+    const saved = await dealershipSettings.saveDealershipSettings({
       ...fields,
       name: "Updated query test dealership",
       websiteUrl: "https://business.example",
@@ -2000,7 +2001,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     assert.equal(refreshedPublicSettings.name, saved.settings.name);
     assert.equal(refreshedPublicSettings.websiteUrl, saved.settings.websiteUrl);
 
-    const stale = await dealershipSettings.updateDealershipSettings({
+    const stale = await dealershipSettings.saveDealershipSettings({
       ...fields,
       expectedVersion: version,
     });
@@ -2012,7 +2013,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     const failure = new Error("Settings database unavailable.");
     databaseFailure = failure;
     await assert.rejects(
-      dealershipSettings.updateDealershipSettings({
+      dealershipSettings.saveDealershipSettings({
         ...fields,
         expectedVersion: saved.settings.version,
       }),

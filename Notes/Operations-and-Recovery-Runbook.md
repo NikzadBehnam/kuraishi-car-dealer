@@ -93,9 +93,28 @@ and [notification configuration](../src/lib/inquiry-email-config.ts).
   Deleting its associated vehicle only removes the live vehicle relation while
   retaining the inquiry's historical vehicle snapshots. These effects must be
   considered in any future approved deletion procedure.
-- The data import in Section 16.06 is separately blocked until approved source
-  files and mappings are provided. No real-data import or Production operation
-  is authorized by this runbook.
+- Section 16.06 uses synthetic records for non-Production verification. The
+  customer enters real data after handoff. No real-data import or Production
+  operation is authorized by this runbook.
+
+### First-run dealership setup (16.06)
+
+After migrations and staff-account provisioning, sign in and open **Admin →
+Settings**. On a database with no dealership, complete the **Dealership** and
+**Contact** tabs, then save. Reload Settings to confirm the saved values, and
+make and reload a follow-up edit. If another session created the dealership
+first, use **Reload latest settings** instead of submitting another creation.
+Do not seed a placeholder dealership or expose the public site before the
+customer completes setup. For release verification, use a fresh, isolated
+database, isolated media storage, and synthetic records only.
+
+For the full inventory suite, use a dedicated database with the existing
+Better Auth baseline already applied and no dealership or vehicle fixtures.
+The inventory migration test fingerprints the auth tables before it applies
+the release migrations. Run the vehicle-media suite on a separate fresh,
+fully migrated test database with no dealership; that suite creates its own.
+Verify both targets before running either suite. Do not clear existing rows
+to satisfy a test precondition.
 
 ## Dependency and cost monitoring
 
@@ -198,7 +217,6 @@ deployment, and approval of this procedure does not authorize running it.
 ## Open operational gates
 
 - Section 09.05: legal/business approval for inquiry retention and deletion.
-- Section 16.06: approved real stock/dealership/media source files and mapping.
 - Sections 16.11-16.12 and 16.14-16.15: Production environment separation,
   migration/recovery point, execution of the approved deployment procedure,
   smoke test, and rollback evidence.

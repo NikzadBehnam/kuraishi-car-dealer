@@ -699,7 +699,7 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 **Commit 3: `test: verify settings persistence and consumers`**
 
-- [ ] **08.09** Test save -> refresh -> public propagation, invalid settings/URLs, ordinary staff authorization, unauthenticated mutation denial, and canonical-domain consistency without expanding trusted origins. _Unit coverage passes. The isolated inventory migration/query suite passed 30/30 on 2026-11-20, including settings persistence, propagation, authorization and conflicts; browser retest remains deferred._
+- [x] **08.09** Test save -> refresh -> public propagation, invalid settings/URLs, ordinary staff authorization, unauthenticated mutation denial, and canonical-domain consistency without expanding trusted origins. _Browser and database checks passed in isolation, including stale-save conflict, failed-save feedback and unchanged persisted values, and rejection of the saved business URL as an authentication origin. See [report.md](./report.md)._
 
 **Done when:** updating a permitted dealership setting persists and consistently changes every intended public/admin consumer.
 

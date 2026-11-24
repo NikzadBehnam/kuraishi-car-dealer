@@ -249,6 +249,13 @@ deployment, and approval of this procedure does not authorize running it.
 
 ## Open operational gates
 
+- **08.09 verification:** Use a disposable non-Production database and synthetic
+  staff. A failed settings save must show an error and leave the persisted
+  record and version unchanged. The saved business Website URL is not a trusted
+  authentication origin and must not change the canonical URL or sitemap.
+  The isolated browser retest passed; this does not change the Preview credential
+  cutover plan or resolve the storage upload warning.
+
 ### Outstanding security maintenance
 
 - **High priority: exposed Preview database credential rotation.** Handle the

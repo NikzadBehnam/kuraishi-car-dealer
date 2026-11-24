@@ -21,7 +21,7 @@ The source implementation and docs show working database-backed inventory, media
 
 ## Remaining work
 
-The list below includes **every unchecked item** in the current checklist (**18 items** after completing 07.05). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
+The list below includes **every unchecked item** in the current checklist (**17 items** after completing 08.09). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
 
 After each point is verified and marked complete in [Checklist.md](./Checklist.md), update this report in the same change: move the point to **Completed since the initial review**, tick it, record the verification result, and update the remaining count.
 
@@ -44,7 +44,6 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 
 ### Verification still required for implemented flows
 
-- [ ] **08.09 — Settings regression.** Verify save/refresh/public propagation, invalid settings/URLs, ordinary staff authorization, unauthenticated denial, and canonical-domain consistency in the integrated app. DB coverage is reported as passing; browser retest remains.
 - [ ] **10.07 — Notification verification.** Run isolated DB/simulator verification for retries, idempotency, environment isolation, escaping, and protected links. Synthetic source tests cover failure classes, but no real Resend request/email or DB worker test was run. Callback testing is not applicable unless callbacks are adopted.
 - [ ] **11.08 — Inquiry-to-inbox regression.** Verify public submission through inbox search/detail, saved note and refresh, plus unauthorized direct actions, unknown IDs, no-vehicle leads, stale links, and note failures.
 - [ ] **12.08 — Dashboard regression.** Verify counts after inventory/inquiry changes, empty periods, zero-inventory percentages, and dashboard access/error states. The current checklist records isolated DB coverage; confirm the browser behavior in the combined retest.
@@ -58,7 +57,7 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 ## Checklist and evidence that need reconciliation
 
 1. The checklist’s **Review-wide findings** and **Coverage register** are stale relative to later completed sections. They still describe no business API, fixture-based sitemap/search/comparison, fake settings save, fixture leads, and placeholder dashboard metrics, while later sections and current source describe database-backed implementations. Update these as current-state documentation, not as new feature work.
-2. The isolated inventory run reconciled the DB status for 09.12 and the query coverage referenced by Sections 06.10, 07.05, 08.09, and 12.08. Sections 06.10 and 07.05 also have browser evidence; combined browser retests for 08.09 and 12.08 remain open. Continue to distinguish **source test**, **isolated DB test**, **browser test**, and **Production test**.
+2. The isolated inventory run reconciled the DB status for 09.12 and the query coverage referenced by Sections 06.10, 07.05, 08.09, and 12.08. Sections 06.10, 07.05, and 08.09 also have browser evidence; the combined browser retest for 12.08 remains open. Continue to distinguish **source test**, **isolated DB test**, **browser test**, and **Production test**.
 3. Keep the unapproved/deferred items above open but label them as intentional scope decisions, not unfinished v1 implementation. Do not claim completion based on a source test when the corresponding DB/browser or deployment gate is still open.
 4. The test guide records a full-repository Prettier check finding 148 pre-existing unformatted files. Avoid mass-formatting unrelated files; decide whether that baseline is an accepted limitation or a separate cleanup task.
 
@@ -73,6 +72,10 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 This report does not authorize a Production change, data import, migration, email send, or deployment.
 
 ## Completed since the initial review
+
+- [x] **08.09 — Settings regression.** Ordinary staff signed in and saved synthetic identity and contact changes, saw pending and success feedback, and verified persistence after refresh. A stale form could not overwrite the newer record. Invalid email, an HTTP business URL, a non-Google Maps URL, and an overlong short name were rejected without persisting. A cookie-free save request was denied. An induced database failure returned error feedback without success; a direct read after recovery confirmed the stored values and version were unchanged.
+  - Anonymous reads of the homepage, contact page, vehicle detail, about page, and imprint showed updated dealership values. The contact page retained additional phone and social links and showed the updated map link; admin used the updated short name. The vehicle canonical and sitemap were unchanged, and Better Auth rejected the saved business URL as an origin with `403 INVALID_ORIGIN`.
+  - All 147 source tests and the focused isolated first-run settings database regression passed. TypeScript and Prisma schema validation passed at the unchanged application revision; the unchanged inventory suite passed 30/30 in 06.10. The isolated browser server was stopped and its disposable database removed. No application changes, hosted writes, or Production access were needed.
 
 - [x] **07.05 — Comparison regression.** An anonymous browser on the optimized loopback build retained three selected synthetic vehicles across refresh and detail/catalog navigation, rejected a fourth with a clear message, and supported individual removal and clear-all. It repaired malformed and legacy storage, removed duplicates and invalid IDs, pruned a nonexistent ID and a selected vehicle archived after selection, and retained the eligible order. Reserved showed as Reserved; a changed price, missing mileage, and image placeholders rendered as expected. A real missing-table query error in the disposable database showed an error and retry without clearing saved IDs; restoring the table and clicking retry recovered the comparison. The disposable database was removed. All 147 source tests passed, including four focused storage tests. The unchanged inventory suite passed 30/30 in 06.10. No app changes, Production access, or hosted changes were needed.
 

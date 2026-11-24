@@ -285,7 +285,7 @@ Use the isolated non-Production app and inventory database. The selected IDs are
 
 ## 10. Section 08 — dealership settings and shared public business data
 
-The current implementation is on `backend/dealership-settings`. Do not deploy or run its migration against Production. The inventory migration/query suite passed 30/30 on 2026-11-20 against the guarded isolated target, including settings save/public propagation/authorization assertions; browser retest remains pending. Before any future DB-suite rerun, reconfirm the safety conditions in Section 1.
+The integrated release branch passed the 08.09 browser verification against disposable synthetic data. Do not deploy or run migrations against Production as part of this test. Before any future DB-suite rerun, reconfirm the safety conditions in Section 1.
 
 1. **Automated verification**
    - Run `pnpm typecheck`, `pnpm test`, `pnpm exec prisma validate`, and the repository lint/format checks.
@@ -303,7 +303,7 @@ The current implementation is on `backend/dealership-settings`. Do not deploy or
    - Confirm an unauthenticated save is denied and ordinary authenticated staff can save permitted settings.
    - In an isolated test environment only, verify database failures are shown as errors and do not produce success-shaped feedback. Do not induce failures or alter dealership rows in Production.
 
-Section 08.09 isolated DB verification passed in the 2026-11-20 30-test inventory suite; the user's deferred manual retest remains pending.
+08.09 passed ordinary-staff save/refresh, stale-form conflict, validation, anonymous denial, public propagation, unchanged canonical/sitemap, and Better Auth origin rejection. The disposable database failure produced an error with no write. All 147 source tests and the focused first-run database test passed; the 30-test inventory baseline also passed in 06.10.
 
 ## 11. Section 09 — guarded inquiry intake (09.01-09.04, 09.06-09.11)
 

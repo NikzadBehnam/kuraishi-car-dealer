@@ -251,12 +251,18 @@ deployment, and approval of this procedure does not authorize running it.
 
 ### Outstanding security maintenance
 
-- **Preview database credential rotation:** Coordinate with the operator to rotate
-  the Frankfurt `dev` credential used for Preview recovery. Update only the
-  release branch's Preview pooled and direct secrets, verify a protected Preview
-  on the replacement credential, and confirm the old credential no longer
-  authenticates. Do not store connection strings in chat, logs or Git. Production
-  credentials and deployments are outside this maintenance authorization.
+- **High priority: exposed Preview database credential rotation.** Handle the
+  Frankfurt `dev` recovery credential separately from checklist testing. First
+  confirm the affected role and its non-Production consumers without sharing
+  secrets. If supported, stage an independent replacement with the necessary
+  grants and update only the release branch's pooled and direct Preview secrets.
+  Verify a separately authorized protected Preview deployment on the replacement
+  with health, synthetic sign-in, and read/write checks before retiring the old
+  credential. If parallel credentials are not possible, agree on a short
+  maintenance window for the cutover. Confirm the old credential can no longer
+  authenticate, and never restore an exposed credential as a rollback. Do not
+  store connection strings in chat, logs or Git. Production credentials and
+  deployments are outside this procedure. The cutover has not been performed.
 - **Synthetic account cleanup:** After the remaining browser checks, identify
   the exact temporary Preview staff and recovery accounts and their references.
   With operator approval, revoke their sessions and disable the credentials

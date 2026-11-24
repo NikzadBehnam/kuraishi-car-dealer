@@ -673,7 +673,7 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 **Commit 2: `test: cover comparison state and catalog changes`**
 
-- [ ] **07.05** Verify persistence on refresh, removing/clearing selections, the maximum, corrupt or legacy browser storage, stale IDs, database failure, and a vehicle changing visibility after being selected. _Added storage unit coverage and isolated inventory-query assertions for bounds, ordering, eligibility and error propagation; all 77 unit tests pass. The isolated inventory migration/query suite passed 30/30 on 2026-11-20; manual browser checks remain deferred._
+- [x] **07.05** Verify persistence on refresh, removing/clearing selections, the maximum, corrupt or legacy browser storage, stale IDs, database failure, and a vehicle changing visibility after being selected. _Verified in an anonymous browser against disposable synthetic inventory. A real query failure preserved selection and retry recovered without reselecting. All 147 source tests passed, including the four comparison storage tests; the unchanged isolated inventory suite passed 30/30 in the preceding 06.10 run._
 
 **Done when:** comparison remains an anonymous browser feature but always renders current eligible inventory. Account-based favorites or cross-device comparison are optional future products, not existing missing backend.
 

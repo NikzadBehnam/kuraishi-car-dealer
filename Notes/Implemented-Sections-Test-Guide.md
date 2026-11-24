@@ -280,7 +280,8 @@ Use the isolated non-Production app and inventory database. The selected IDs are
    - Select an eligible vehicle, then make it no longer comparison-eligible through the admin workflow (for example, move it to Sold or Archived). Reopen comparison after a successful query; the stale selection should be pruned and explained. Reserved vehicles that pass inspection remain eligible.
 4. **Query failure and automated coverage**
    - In a safe isolated development environment only, verify a comparison query failure shows an error and retry control without clearing saved IDs. Do not simulate failures against Production.
-   - Run `pnpm test` for local-storage validation/recovery coverage. The inventory DB suite passed 30/30 on 2026-11-20, including bounded unique selection, current eligibility, selection ordering and database error propagation; browser checks remain deferred. Before any future DB-suite rerun, reconfirm the test target is isolated and empty.
+   - In 07.05 the optimized loopback browser passed selection, limit, refresh, remove/clear, malformed/legacy storage, unavailable-ID pruning and live-value/placeholder checks using disposable synthetic inventory. An induced database query failure preserved the saved IDs and retry recovered after restoration. The disposable database was removed; approved-image behavior was covered separately in 06.10, not re-exercised in this loopback comparison run.
+   - All 147 source tests passed, including four storage tests. The inventory DB suite passed 30/30 in 06.10, including bounded unique selection, current eligibility, selection ordering and database error propagation. Before any future DB-suite rerun, reconfirm the test target is isolated and empty.
 
 ## 10. Section 08 — dealership settings and shared public business data
 

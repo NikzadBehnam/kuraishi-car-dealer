@@ -654,7 +654,7 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 **Commit 3: `test: verify live detail and lifecycle rendering`**
 
-- [ ] **06.10** Test unknown/nonpublic slugs, missing media, edited slugs, correct dealer/owner data, sold/unavailable claims, similar-vehicle exclusions, and updates to images/price/status without stale output. _Added assertions for unknown/ineligible slugs, missing media, ordered approved alt text, Dealer/owner values, and updated prices; existing suites cover slug immutability, sold availability and bounded related-vehicle exclusions. The isolated inventory migration/query suite passed 30/30 on 2026-11-20; manual page/freshness checks remain pending._
+- [x] **06.10** Test unknown/nonpublic slugs, missing media, edited slugs, correct dealer/owner data, sold/unavailable claims, similar-vehicle exclusions, and updates to images/price/status without stale output. _Protected Preview and disposable legacy browser verification passed. The unchanged database constraints and visibility matrix cover inspection-ineligible Published/Reserved states. All 147 source, 30 inventory DB and 30 vehicle-media tests passed. See [report.md](./report.md)._
 
 **Done when:** the public detail view is a truthful projection of the same vehicle edited in the dashboard.
 

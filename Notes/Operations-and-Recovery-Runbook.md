@@ -60,6 +60,9 @@ Plan-dependent history and snapshot settings must be confirmed in the Console.
   POSTs. Both Fetch calls returned 204 and finalized; the replacement image
   decoded on the public detail page behind Vercel Authentication. The
   cancellation event remains unresolved.
+- The 06.10 hosted retest reproduced it on two more synthetic image POSTs.
+  Both returned 204, finalized, and rendered in the gallery. This is another
+  observation, not a diagnosis; keep the browser/control/provider comparison open.
 - There is no automatic time-based deletion for unused `MediaAsset` records
   and no bucket-wide orphan purge. An unused asset may have been intentionally
   finalized for later attachment. Review each candidate in the protected media
@@ -245,6 +248,21 @@ deployment, and approval of this procedure does not authorize running it.
    Rolling back application code does not restore the database or media.
 
 ## Open operational gates
+
+### Outstanding security maintenance
+
+- **Preview database credential rotation:** Coordinate with the operator to rotate
+  the Frankfurt `dev` credential used for Preview recovery. Update only the
+  release branch's Preview pooled and direct secrets, verify a protected Preview
+  on the replacement credential, and confirm the old credential no longer
+  authenticates. Do not store connection strings in chat, logs or Git. Production
+  credentials and deployments are outside this maintenance authorization.
+- **Synthetic account cleanup:** After the remaining browser checks, identify
+  the exact temporary Preview staff and recovery accounts and their references.
+  With operator approval, revoke their sessions and disable the credentials
+  without deleting referenced audit history. Preserve any account still needed
+  for authorized Preview access. The earlier recovery revoked the synthetic
+  administrator's old sessions; final account cleanup is still pending.
 
 - Section 09.05: legal/business approval for inquiry retention and deletion.
 - Sections 16.11-16.12 and 16.14-16.15: Production environment separation,

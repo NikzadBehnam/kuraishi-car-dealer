@@ -233,13 +233,15 @@ Use the isolated non-Production app/database and test media bucket. Create or ed
 
 ## 8. Section 06 — public vehicle detail (06.01-06.10)
 
-Use the isolated non-Production app, inventory and media resources. Create and change vehicles only through the admin workflow; do not edit production records to exercise a page.
+Use isolated non-Production app, inventory and media resources. Use the admin workflow for normal lifecycle tests. For legacy data that the admin workflow cannot create, use existing verified synthetic records or a separately approved disposable database. Do not weaken application rules or schema constraints.
+
+Protected Preview `192b842` verified the normal lifecycle and gallery flows. The optimized loopback build showed the accessible no-image placeholder and missing-value fallbacks for a synthetic legacy listing, and returned HTTP 404 with `noindex` for a failed-inspection draft. The disposable database rejected both Published and Reserved with failed inspection. Use the inventory suite's hypothetical-state SQL matrix to test the visibility rules for those unpersistable combinations.
 
 1. **Database-backed detail and truthful stored data**
    - Open a published, inspection-passed vehicle and compare its detail page with the saved admin record: make/model/variant, price, location, registration, mileage, fuel, transmission, power, body type, color, condition, owners, consumption, CO₂, features, labels and description.
    - Check missing optional values: they must remain blank/unavailable, not show fixture values, invented owners, or zeroes. Confirm no hard-coded preparation or 120-point inspection claims appear.
    - Open a Reserved vehicle that passed inspection. It should show Reserved, not immediately available, while retaining the comparison action allowed by the shared policy. Open a Sold vehicle; it may have a detail page, but must show Sold and unavailable, omit comparison actions and use a general contact action.
-   - Try guessed URLs for Draft, Archived, and inspection-ineligible Published/Reserved vehicles. They should return the same not-found view; page metadata should be noindex.
+   - Try guessed URLs for Draft (including failed inspection) and Archived vehicles. They should return HTTP 404 and the same not-found view with `noindex`. The current schema rejects inspection-ineligible Published/Reserved combinations; do not disable its check to create them.
 2. **Approved gallery media and accessible text**
    - Attach multiple images in a known order, including a private or unapproved image. Confirm only approved public images appear, in attachment order, and the first is used for social preview metadata.
    - Open each gallery image in the preview slider; verify saved alt text is used and the fallback describes the vehicle view without claiming an unsupported angle.

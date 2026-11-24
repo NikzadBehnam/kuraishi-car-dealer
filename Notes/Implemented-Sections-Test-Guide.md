@@ -34,7 +34,7 @@ This guide covers the integrated work across the implemented section branches, i
 - Section 16.10: documentation-only. The [README](../README.md) and [PROJECT_AI_HANDOFF](../PROJECT_AI_HANDOFF.md) now list verified pnpm commands, environment-variable names only, implemented service boundaries, isolated-test safeguards, and deferred functionality. No tests were needed.
 - Section 16.11: partial environment audit; still blocked. The local runtime/direct migration URLs and isolated inventory/media database targets pass host-separation checks, and dependency pins are exact. Vercel variable names/scopes were viewed without revealing values; no project-scoped `AWS_*`, `MEDIA_*`, or current `INQUIRY_*` variables are present, and `RESEND_FROM_EMAIL` does not match the code's `INQUIRY_EMAIL_FROM`. Local/test media buckets are distinct from each other, but the media test suite does not assert separation from Production; Production/test storage and masked Vercel database/auth values cannot be compared. No configuration was changed and no Production operation or integration suite was run.
 
-Section 04 is complete but was not merged to `master` before Section 05 began; the user deferred the combined manual retest until later. The isolated inventory query suite has passed after the inventory-test credential rotation, providing database coverage for Sections 06.10, 07.05, 08.09 and 12.08; combined manual page checks remain pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 is still incomplete pending the public-image-refresh check in Section 15.09. Section 05.07's optional filter/sort controls were not approved and are not implemented.
+Section 04 is complete but was not merged to `master` before Section 05 began; the user deferred the combined manual retest until later. The isolated inventory query suite has passed after the inventory-test credential rotation, providing database coverage for Sections 06.10, 07.05, 08.09 and 12.08; combined manual page checks remain pending. Section 08.08 uses the user-approved legacy Dealer fixture as its one-time contact-data baseline. Section 03.14 passed the public-image refresh check; other Section 15.09 checks remain open. Section 05.07's optional filter/sort controls were not approved and are not implemented.
 
 ## 1. Safety and prerequisites
 
@@ -156,7 +156,7 @@ Run the media suites from Section 2 before the manual checks. For manual checks,
    - Delete an unused asset, then try an attached asset. The attached asset must be blocked until detached/replaced. Check per-item results for mixed bulk outcomes.
 6. **Public rendering**
    - After a vehicle is Published, open its canonical detail URL and check that only approved public images render.
-   - Do not mark 03.14 complete yet: public-image replacement/freshness still requires the Section 15.09 verification described in the checklist.
+   - Replace the approved image with a different approved image. Reload the same public catalog and detail URLs. The new image must render and the old image must no longer appear. Check that the detail page's `og:image` points to the replacement. This passed for 03.14; repeat during the full retest.
 
 ## 6. Section 04 — admin vehicle workflows (04.01-04.17)
 
@@ -525,5 +525,5 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Sections 13.01-13.03 inventory-only workspace search   | Partial | Isolated query assertions pass; browser verification remains pending                           |
 | Section 13.04 truthful staff identity and sign-in copy | Partial | Typecheck/source tests pass; authenticated browser verification remains deferred               |
 | Section 13.05 account creation role boundary           | Partial | Shared policy tests pass; direct action/browser verification remains under 13.07               |
-| Section 03.14 / Section 15.09 public-image refresh     | Pending | Do not mark Section 03 complete until verified                                                 |
+| Section 03.14 / Section 15.09 public-image refresh     | Passed  | Isolated catalog and detail displayed the replacement; detail metadata matched                 |
 | Homepage/list database propagation                     | Pending | Section 05.01-05.02                                                                            |

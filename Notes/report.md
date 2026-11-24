@@ -21,7 +21,7 @@ The source implementation and docs show working database-backed inventory, media
 
 ## Remaining work
 
-The list below includes **every unchecked item** in the current checklist (**23 items** after completing 16.06). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
+The list below includes **every unchecked item** in the current checklist (**22 items** after completing 03.14). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
 
 After each point is verified and marked complete in [Checklist.md](./Checklist.md), update this report in the same change: move the point to **Completed since the initial review**, tick it, record the verification result, and update the remaining count.
 
@@ -44,15 +44,14 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 
 ### Verification still required for implemented flows
 
-- [ ] **03.14 — Media end-to-end regression.** Confirm public-image refresh after replacement; the checklist records other upload, authorization, ordering, and deletion cases as covered. This final freshness case is also part of 15.09.
 - [ ] **06.10 — Public detail regression.** Complete the combined browser check for unknown/nonpublic slugs, missing media, owner/dealer details, sold state, related-vehicle exclusions, and updates. The current checklist says its isolated inventory DB assertions pass; the browser portion is still deferred.
 - [ ] **07.05 — Comparison regression.** Verify refresh persistence, remove/clear, maximum, corrupt/legacy storage, stale IDs, database failure, and a vehicle becoming nonpublic. DB/query coverage is reported as passing; browser retest remains.
 - [ ] **08.09 — Settings regression.** Verify save/refresh/public propagation, invalid settings/URLs, ordinary staff authorization, unauthenticated denial, and canonical-domain consistency in the integrated app. DB coverage is reported as passing; browser retest remains.
 - [ ] **10.07 — Notification verification.** Run isolated DB/simulator verification for retries, idempotency, environment isolation, escaping, and protected links. Synthetic source tests cover failure classes, but no real Resend request/email or DB worker test was run. Callback testing is not applicable unless callbacks are adopted.
 - [ ] **11.08 — Inquiry-to-inbox regression.** Verify public submission through inbox search/detail, saved note and refresh, plus unauthorized direct actions, unknown IDs, no-vehicle leads, stale links, and note failures.
 - [ ] **12.08 — Dashboard regression.** Verify counts after inventory/inquiry changes, empty periods, zero-inventory percentages, and dashboard access/error states. The current checklist records isolated DB coverage; confirm the browser behavior in the combined retest.
-- [ ] **13.07 — Workspace/auth regression.** Verify search privacy/navigation, normal staff access, anonymous denial, live identity refresh, sign-out, and direct account-creation denial for ordinary staff.
-- [ ] **15.09 — Public freshness/SEO regression.** In a confirmed non-Production app, verify publish/update/unpublish, image replacement, price/slug/settings changes, and removal across public pages, metadata, and sitemap. No confirmed non-Production browser URL is recorded.
+- [ ] **13.07 — Workspace/auth regression.** Verify search privacy/navigation, normal staff access, anonymous denial, live identity refresh, sign-out, and direct account-creation denial for ordinary staff. Prioritize a cold-load sign-in finding observed during 03.14: before client hydration the login form made a GET submission containing synthetic credential fields in the URL. The disposable credential was disabled; no real credentials were tested. Prevent credential fields from entering URLs and verify cold-load and normal sign-in before closure.
+- [ ] **15.09 — Public freshness/SEO regression.** Image replacement passed on the isolated local app under 03.14. Complete the remaining publish/update/unpublish, price/slug/settings changes, and removal checks across public pages, metadata, and sitemap.
 
 ### Deferred or conditional—not approved v1 requirements
 
@@ -79,6 +78,9 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 This report does not authorize a Production change, data import, migration, email send, or deployment.
 
 ## Completed since the initial review
+
+- [x] **03.14 — Public-image replacement regression (2026-11-24).** On an isolated local app, a synthetic administrator uploaded and approved two distinct images and published a synthetic listing with the first. The original rendered on the German catalog and detail pages. A versioned update through the authenticated inventory API replaced the attachment. The same browser URLs showed the decoded replacement and no stale original; the detail page's `og:image` matched the replacement. Fresh anonymous canonical requests confirmed the new image, without a redeploy. Prior isolated suites cover the other applicable cases. No application changes or Production access.
+  - **Upload trace follow-up:** Chromium again recorded `net::ERR_ABORTED` for the private storage POSTs while the browser fetches reported success and both assets finalized, were approved, and rendered. Keep this as an open diagnostic observation, not an upload failure; see the [media runbook](./Operations-and-Recovery-Runbook.md#media-uploads-and-orphan-cleanup).
 
 - [x] **16.06 — Synthetic CRUD verification and customer handoff (2026-11-24).** The customer enters real dealership, inventory, and media data after handoff. No real data was imported or published. Registered legal identity remains under 14.01.
   - **First-run implementation:** Admin Settings opens a blank form with no dealership, creates the first record on authenticated save, rejects a competing first save as a conflict, and preserves version-checked updates. No schema or dependency changes were needed.

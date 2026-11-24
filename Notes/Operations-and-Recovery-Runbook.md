@@ -44,6 +44,12 @@ Plan-dependent history and snapshot settings must be confirmed in the Console.
 - Upload completion/cancellation can also report `cleanupPending`. Retry
   cleanup through the existing guarded flow; do not delete objects or rows
   manually to make the status look successful.
+- The isolated 16.06 and 03.14 browser traces recorded aborted storage POST
+  events even though uploads finalized and the stored images rendered. If it
+  recurs, capture timestamps, HTTP status, finalization result, and whether
+  the reopened image decodes. Do not retain signed URLs, form fields, or
+  credentials in diagnostic evidence. Investigate failures separately from
+  an aborted trace event with a verified successful upload.
 - There is no automatic time-based deletion for unused `MediaAsset` records
   and no bucket-wide orphan purge. An unused asset may have been intentionally
   finalized for later attachment. Review each candidate in the protected media

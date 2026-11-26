@@ -267,11 +267,26 @@ and who verifies each outcome. Do not include secrets or customer records.
 | Media storage | Objects are inaccessible, missing, or disagree with their database references | Freeze affected media changes and compare records with the approved bucket and object inventory. Recover only the affected objects and verify their access policy and references. A database restore does not restore storage. |
 
 After an authorized deployment, record the exact deployment ID and revision,
-operator/time, 16.14 results, and any recovery decision and retest. The current
-code cannot accept Production inquiries in isolated test mode; approve an
-off-state smoke check if intake is out of v1, or resolve the legal and
-implementation gates before promising live intake. Neither a repository
-build nor test-mode provider acceptance is Production release evidence.
+operator/time, 16.14 results, and any recovery decision and retest. For initial
+smoke verification, keep Production inquiry intake off **only if this cannot
+interrupt an existing live service**. At the authorized smoke gate, confirm
+that condition first; stop and escalate if it is unclear or intake is already
+live. Verify the disabled state without persisting an inquiry or sending email,
+and verify protected inbox access separately. Enabling live intake requires
+separate authorization. Neither a repository build nor test-mode provider
+acceptance is Production release evidence.
+
+Recommended code rollback candidate, pending approval:
+`d942bf177ea3a2a77f4dd1211a3d0690a9b5c404`. It includes the credential-form
+hardening (`43f0d88`) and dashboard retry fix, and its Prisma schema,
+migrations, configuration and dependency lock match the preflight candidate
+`53434be`. Its known application difference is the bodyless POST fix for the
+isolated-only notification worker, which it does not contain. Do not select
+it if that worker becomes an essential enabled flow. Before any authorized
+rollback, verify the actual migration ledger, deployment configuration and
+critical paths; reuse only an approved deployment with current secrets or
+build the approved SHA with current secrets. No code rollback authorizes a
+schema restore or changes to data or storage.
 
 ## Open operational gates
 
@@ -299,18 +314,8 @@ build nor test-mode provider acceptance is Production release evidence.
 
 ### Outstanding security maintenance
 
-- **High priority: exposed Preview database credential rotation.** Handle the
-  Frankfurt `dev` recovery credential separately from checklist testing. First
-  confirm the affected role and its non-Production consumers without sharing
-  secrets. If supported, stage an independent replacement with the necessary
-  grants and update only the release branch's pooled and direct Preview secrets.
-  Verify a separately authorized protected Preview deployment on the replacement
-  with health, synthetic sign-in, and read/write checks before retiring the old
-  credential. If parallel credentials are not possible, agree on a short
-  maintenance window for the cutover. Confirm the old credential can no longer
-  authenticate, and never restore an exposed credential as a rollback. Do not
-  store connection strings in chat, logs or Git. Production credentials and
-  deployments are outside this procedure. The cutover has not been performed.
+- **High priority: exposed Preview database credential rotation.** Follow the
+  coordinated cutover below. It has not been authorized or performed.
 - **Synthetic account cleanup:** After the remaining browser checks, identify
   the exact temporary Preview staff and recovery accounts and their references.
   With operator approval, revoke their sessions and disable the credentials
@@ -322,6 +327,71 @@ build nor test-mode provider acceptance is Production release evidence.
 - Sections 16.11-16.12 and 16.14-16.15: Production environment separation,
   migration/recovery point, execution of the approved deployment procedure,
   smoke test, and rollback evidence.
+
+### Coordinated Preview database credential cutover
+
+**Target:** Frankfurt `dev` (`br-plain-surf-b9e05n7g`, compute
+`ep-morning-term-b9su1div`), database `kuraishi-car-dealer-db`, password role
+`kuraishi-car-dealer-db_owner`. Read-only Neon metadata confirmed the role on
+`dev`, not the password or its validity elsewhere.
+
+| Consumer | Evidence and cutover requirement |
+| --- | --- |
+| Vercel Preview | Branch-specific `DATABASE_URL` (pooled runtime, including Better Auth) and `DIRECT_URL` (direct Prisma tooling) for `test/backend-integration-and-release`. Inventory the branch alias and generated deployment URLs; older deployments retain their original environment values. |
+| Local development | Checked `.env.local` and the current shell: the active file uses different endpoint and role names; the shell had no applicable URL override. Check separately saved Preview overrides on other workstations. Do not change unrelated local settings. |
+| Database tests | `.env.inventory-test.local` and `.env.media-test.local` use other endpoints and role names. One ignored `.env.inventory-test.local.txt` backup has the same role name at a different endpoint; its password was not compared. Confirm that endpoint's provenance privately; do not activate the backup or point tests at hosted `dev`. |
+| Recovery and other integrations | The isolated staff recovery helper takes the `dev` direct URL via secure input. Check operator vault entries, saved database clients, CI secrets, scheduled jobs and other integrations for both endpoint forms. No additional active consumer is confirmed. The previous staff password reset did not change this Postgres role. |
+
+**Cross-branch status is unresolved.** [Neon branch creation](https://neon.com/docs/manage/branches)
+can copy role passwords from a parent unless protection regenerates them.
+Check the source branch and recovery/child clones that existed during the
+credential's lifetime, using branch lineage and private operator records.
+For explicitly scoped non-Production endpoints only, the operator can verify
+unclear cases with a fresh, secure authentication check without printing the
+secret. A shared role name is not proof of reuse. Do not test any Production
+endpoint; if reuse there cannot be ruled out, escalate it as a separate security
+decision. Rotating `dev` does not prove that copies on other branches are revoked.
+
+1. **Approve scope and window.** Confirm the consumer inventory, clone/reuse
+   findings, maintenance owner and window, exact protected Preview revision,
+   and separate permission for a Preview-only redeployment/alias cutover.
+   Record the current URLs and a protected fallback revision. Pause writes and
+   jobs during any traffic swap. If active misuse is suspected, escalate for
+   immediate authorized revocation instead of prolonging parallel access.
+2. **Stage if practical.** Prefer a short overlap with a new, scoped Preview
+   login if it can perform required runtime operations without unnecessary
+   privileges. Preserve ownership and validate the direct tooling role
+   separately without running migrations; do not remove or reassign the owner
+   role. If grants or ownership make this unsuitable, use a coordinated
+   in-place reset of `dev`'s owner password. [Neon's role reset](https://neon.com/docs/reference/api/branches/reset-project-branch-role-password)
+   drops compute connections; wait for its operations to finish. Expect the
+   existing deployment, local clients and direct tooling using the old secret
+   to fail until refreshed. Keep any overlap short and time-bounded.
+3. **Update and verify.** Store new URLs only in the approved secret stores;
+   update both branch-scoped Preview variables and only confirmed local or
+   integration consumers. Preserve SSL options, connection types and all
+   other environment settings. [Vercel changes apply only to new deployments](https://vercel.com/docs/environment-variables/managing-environment-variables).
+   Verify Deployment Protection and the exact revision on the generated URL
+   and branch alias. Open fresh pooled and direct connections and check the
+   expected database/role and migration ledger read-only. Behind protection,
+   check `/api/health`, synthetic staff sign-in and anonymous access denial,
+   and create/edit/read/delete a disposable never-published draft. Confirm
+   inquiry and email delivery are off. Restart affected clients and verify
+   their fresh connections. Don't run migrations or send email.
+4. **Revoke and close.** For a staged cutover, invalidate the old owner
+   password as soon as the replacement is verified. For either path, confirm
+   from fresh connections that the old password is rejected on both `dev`
+   endpoint forms and the replacement still works; a network or TLS failure
+   is not evidence of rejection. Ensure old sessions cannot continue using
+   access; retire or mark stale Preview deployments as unavailable under
+   the approved scope. Record timestamps, revision, URL disposition and
+   sanitized results, not secret values.
+5. **Recover forward if checks fail.** Keep Preview protected and writes
+   paused. Fix the new settings/grants or issue a fresh unexposed owner
+   password on `dev`, update all affected settings, and re-verify. Use a
+   previous known-good code revision only with current valid credentials.
+   Do not restore the exposed password, repoint to another branch or restore
+   database/storage state to recover from a credential cutover.
 
 No Production database, bucket, deployment, email, snapshot, or restore action
 was used while preparing this runbook.

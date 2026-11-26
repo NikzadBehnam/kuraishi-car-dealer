@@ -539,8 +539,8 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
    hosting access gate; an invited browser without a staff session must not
    have access to staff data. Verify Preview noindex and robots protections.
 2. In admin Settings, enter the card's legal name **Kuraishi Autohandel e.U.**,
-   short name **KURAISHI**, legal form **Eingetragenes Einzelunternehmen
-   (e.U.)**, activity **Gebrauchtwagen An- und Verkauf**, address and website
+   short name **KURAISHI**, legal form **Eingetragenes Einzelunternehmen**,
+   activity **Gebrauchtwagen An- und Verkauf**, address and website
    as supplied, and the card's email and three telephone numbers in order.
    The third is a phone, not a fax. Where the required tagline and description
    lack owner copy, use the confirmed activity rather than adding claims.
@@ -561,6 +561,27 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
    the synthetic submission reaches the protected inbox and delivery remains
    disabled. Do not repeat the prior mock worker or storage diagnostic
    absent a relevant change or a new signal.
+
+### Owner test sequence after handoff approval
+
+1. Open the protected [review site](https://kuraishi-v1-review-sandbox.vercel.app/)
+   using the named hosting access. Sign in to the [admin dashboard](https://kuraishi-v1-review-sandbox.vercel.app/admin)
+   with the separate review staff account. Do not reuse the operator login.
+2. On desktop and phone, review branding, About, Contact, the footer QR and
+   the legal placeholders. In Settings, review the card details and correct
+   only confirmed facts. Save and reload to verify any intended changes.
+3. Use a fictional vehicle and synthetic image. In Vehicles, create and edit
+   a draft and upload a private image. Ask the review administrator to approve
+   a public copy, then attach it, publish, find the listing in the catalog,
+   compare it and archive it. The review administrator also handles direct
+   media downloads and permanent media deletion. Never upload real customer
+   or vehicle documents.
+4. Submit a fictional Contact inquiry with an `example.invalid` address and
+   confirm it appears in Leads. Do not put real personal data in any field.
+   Provide missing business information and approved legal documentation
+   separately through the agreed private channel. Record issues or requested
+   adjustments with the page, browser/device, expected result and
+   reproduction steps; omit credentials and personal information.
 
 ## 21. Section 14.08 — browser storage and external request inventory
 

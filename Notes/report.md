@@ -105,7 +105,7 @@ owner/legal items stay unchecked and the three Production gates stay separate.
 
 | Category | Status and remaining action |
 | --- | --- |
-| Technical blockers for customer review | The current hosted Preview evidence is from an older revision. The candidate adds editable legal form, activity and two optional phone fields, replaces static secondary phone rendering, and restricts test inquiry submissions to `.invalid` email addresses. The additive migration has no backfill or business records. Before inviting the owner, apply it only to an authorized isolated review database, validate save/clear and rendering, and complete the exact-revision protected smoke and isolation checks below. |
+| Technical blockers for customer review | Core hosted smoke and the ordinary staff role passed on the initial review deployment. The homepage fix passed locally; deploy the new candidate only after approval and rerun affected hosted checks before invitation. |
 | Business information | Use the supplied business card for the protected review. The owner still verifies the details and supplies registration, VAT, representative, opening hours, service details and additional branding when available. Do not invent or publish those values. |
 | Legal approval | 09.05, 11.07, 14.01, 14.03 and 14.06–14.08 remain open. Protected review shows the pending legal notice; comparison, theme and authentication are unchanged. No real inquiries, optional tracking, embedded social/map widgets, or external mail are enabled. |
 | Security maintenance | Preserve the coordinated Preview cutover and provisional November 27, 21:00–23:00 CET slot. Verify clone expiry at the scheduled time and complete consumer checks; no exposed credential may be used for review. Keep the existing storage warning and synthetic-account cleanup open. |
@@ -117,10 +117,82 @@ and [owner acceptance guide](./Implemented-Sections-Test-Guide.md#protected-v1-c
 **Candidate verification:** 151 source tests passed, with none skipped.
 TypeScript, changed-file ESLint and Prettier, Prisma schema validation and
 client generation, and an isolated optimized Webpack build passed. The build
-used a dummy loopback database URL and mocked font responses. No migration
-was applied; the database-backed settings regression and exact-revision
-browser acceptance are still pending. No new runtime defect was confirmed.
-The previously observed hosted storage warning remains unresolved.
+used a dummy loopback database URL and mocked font responses.
+
+**Authorized rehearsal (2026-11-26):** Pushed `release/v1-customer-review`
+at `a7b5d14da70c64eaac74ef3306ccf53a7e3b617e`. Full repository ESLint,
+TypeScript and 151 source tests passed. The [isolated rehearsal record](./Operations-and-Recovery-Runbook.md#customer-review-rehearsal-record)
+identifies the database, buckets and exact hosted deployment. The additive
+migration applied separately after the 12 baseline migrations; schema diff
+was clean and all 30 database tests passed on the separate regression
+database, including first-run settings, updates, public readback and clearing
+an optional field.
+
+The exact SHA is Ready on a protected non-Production Vercel deployment.
+Anonymous app, admin, health and robots requests were blocked by Vercel SSO.
+Vercel emitted `noindex` on the generated Preview URLs, not on the
+authentication redirect for the manual alias. The operator reached the
+protected dashboard with the sole isolated review account; the review
+database showed one active session and zero dealership records before onboarding.
+
+- [x] **Hosted first-run business-card onboarding:** Saved the approved details
+  through both Admin Settings tabs on the isolated review alias. Reloaded
+  Settings and verified that dealership and contact values persisted,
+  including the third number as a phone. No missing legal facts were added.
+  A read-only count confirmed exactly one dealership record in the isolated
+  `v1_customer_review` database.
+
+**Hosted acceptance (2026-11-26, exact candidate above):**
+
+| Area | Hosted result |
+| --- | --- |
+| Business details and legal pages | Contact, shared footer, About and Impressum showed the appropriate saved details. The three `tel:` targets and `mailto:` matched, and the hosted QR matrix matched an independently rendered vCard with the approved contact values. About metadata used the legal name. No missing registry, VAT or opening-hours values were displayed on the checked pages. All four legal pages explicitly marked their texts and disclosures incomplete. The homepage separately contains an unconfirmed claim about documented pre-handover inspections; keep it under 14.01 for owner confirmation or removal. |
+| Desktop and mobile-width browser | Homepage, navigation, catalog, comparison, contact, dashboard, inventory and Settings rendered in the same Chromium engine at desktop and mobile widths. Mobile navigation opened and the local homepage video decoded. At 380 CSS px the homepage and Contact fit; at 321 CSS px the homepage reached 365 px because the featured-section “Alle Fahrzeuge” link extended past the right edge. This is a confirmed responsive defect, not a physical-device test. |
+| Inventory and media | Tested missing-slug validation, draft creation, edit/readback, admin status filtering, private upload, public-copy approval, replacing the private attachment with its approved public copy, and publication. Catalog search both excluded and found the fixture; comparison retained it on navigation, and the mobile detail loaded the approved image from the dedicated review bucket. Archive removed it from comparison and returned a hard HTTP 404 on detail. The unused private original was deleted via the media UI and its DB row was gone. Permanent vehicle deletion was not exercised; the archived fixture retained its public image. |
+| App and hosting access | Anonymous requests were stopped by Vercel Authentication. With hosting access but after app sign-out, `/admin/leads` redirected to app login and `/api/admin/media` returned 401. The operator session was used for the first end-to-end checks; the follow-up below covers ordinary staff. Authenticated app health returned 200, robots was `Disallow: /`, and tested public HTML contained `noindex, nofollow`; canonical URLs retained the configured live-site origin without accessing it. |
+| Synthetic inquiries and isolation | The test-only warning rendered. A non-`.invalid` synthetic address got HTTP 400 and persisted no row; the `.invalid` fixture got HTTP 202 and appeared in Leads and the dashboard. The dedicated review DB matched the browser fixtures, and its notification was `disabled`: zero attempts, no send timestamp or provider ID. The safeguard rejects deliverable email domains and warns against real data; it does not detect personal information in other fields. |
+
+**Final-candidate follow-up (2026-11-26):** The featured heading and its
+non-shrinking, no-wrap link shared a single forced flex row, wider than the
+narrow content container. The row now wraps when needed without changing the
+desktop alignment. Chromium on the optimized loopback build passed exact
+viewport widths of 320, 321, 360, 375, 390, 430, 768, 1024 and 1440 CSS px.
+Document width stayed within the client width, and the link, hero actions
+and featured card stayed in bounds. At 321 px, forcing the old no-wrap
+behavior increased scroll width from 309 to 365 px. The mobile menu opened,
+the desktop featured row stayed inline, and neutral listing copy replaced
+the unsupported inspection claim. The 151 source tests, TypeScript, full
+ESLint, changed-homepage formatting and isolated optimized Webpack build
+passed. The local browser used synthetic fixtures and mocked font loading;
+it did not certify the hosted replacement.
+
+**Ordinary staff on the initial hosted revision:** Provisioned one synthetic
+`user` via the existing administrator account screen. The user signed in,
+opened Dashboard, Leads, Settings, Vehicles and Media, saved unchanged
+dealership values, and created and edited a draft with a private upload.
+Direct account creation was denied and its form was not shown. Public media
+approval, permanent media deletion and direct media download each returned
+HTTP 403 with the administrator-only error. After logout, Admin redirected
+to login and the media API returned 401. The temporary account and fixtures
+remain isolated for tracked cleanup; no temporary password was retained.
+
+**Handoff recommendation:** Do not invite yet. Obtain approval to deploy
+the exact replacement to the dedicated protected Preview, then rerun the
+homepage width/copy, hosting/indexing and ordinary-staff checks there.
+Public-copy approval, direct media downloads and permanent media deletion
+require an application administrator: use the supervised workflow in the
+[owner guide](./Implemented-Sections-Test-Guide.md#protected-v1-customer-review-acceptance),
+not elevated owner access by default. Hosted synthetic fixtures remain
+isolated; record their cleanup and revoke the temporary operator account
+before unrestricted launch. No invitation was sent and no Production
+resource was accessed.
+
+The [hosted storage observation](./Operations-and-Recovery-Runbook.md#customer-review-upload-observation)
+recurred during a successful ordinary-staff upload: the browser reported
+204 and `net::ERR_ABORTED`, while finalization returned 200, exactly one
+attachment persisted, and an independent 15,368-byte object readback
+matched the synthetic PNG byte-for-byte. The cause remains unresolved.
+No storage implementation change or repeat disposable investigation was made.
 
 ## Consolidated V1 verification evidence
 
@@ -138,7 +210,7 @@ record the setup and coverage limits. Do not combine counts from different runs.
 | Legal, consent and local media (14.08 baseline) | Four routes, synthetic shared contact details and six service CTA contexts verified. Local media playback, fallback, reduced motion and absence of external decorative-media requests verified separately at `e44d26a`; 148 source tests and an optimized build passed. | Placeholders and legal classification are still open; see [implementation readiness](./Implemented-Sections-Test-Guide.md#implementation-readiness-after-legal-approval). |
 | Release and recovery preparation (16.11, 16.13, 16.15 preflight) | Environment segregation evidence, isolated recovery drill and documented manual path; offline preflight at `53434be` passed 148 source tests plus type/lint/schema/build checks. Archived `d942bf1` passed 147 source tests as a code rollback candidate. | No newly verified Production recovery point, smoke, or final release approval; 16.12, 16.14 and 16.15 remain separate. |
 | Storage warning follow-up | Owner accepted the [isolated provider evidence](./Operations-and-Recovery-Runbook.md#2026-11-26-isolated-provider-trace-evidence). Tested normal upload, integrity, replacement, deletion, retry and concurrency were consistent. | Preserve the implementation. Root cause is unresolved; use the [next-occurrence protocol](./Operations-and-Recovery-Runbook.md#capture-the-next-hosted-preview-occurrence) only during authorized testing. Do not provision another lab without new evidence or a specific hypothesis. |
-| Protected customer-review candidate | Optional business-card fields use the existing settings write/read flow; shared contacts replace fixed secondary contact numbers. The synthetic inquiry safeguard rejects deliverable email at the server boundary. | Exact-revision review migration, browser save/readback and protected smoke remain distinct from the accepted historical evidence. |
+| Protected customer-review candidate | Initial deployment: isolated migration rehearsal, hosted onboarding, both access gates, indexing, synthetic inquiry, inventory and media smoke, and ordinary staff authorization. Replacement candidate: verified locally at nine viewport widths, with neutral homepage copy. | Approve the replacement deployment, repeat its affected hosted checks, then obtain separate handoff approval. |
 
 **Preview maintenance:** The recovery clone lookup is due only after
 **November 27, 2026, 20:27:11 CET (19:27:11 UTC)**. It has not been performed

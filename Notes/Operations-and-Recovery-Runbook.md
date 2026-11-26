@@ -442,6 +442,85 @@ the app is protected; never upload private or real inventory media for review.
    Production or undoing unrelated Preview settings. Keep the credential
    cutover, synthetic account cleanup and Production gates separate.
 
+### Customer-review rehearsal record
+
+- Candidate: `release/v1-customer-review`, `a7b5d14da70c64eaac74ef3306ccf53a7e3b617e`.
+- Neon Frankfurt project `twilight-bread-36837209`; independent schema-only
+  branch `br-green-salad-b9ny9nov` (`v1-customer-review`), compute
+  `ep-weathered-feather-b9l8tucg`. `v1_customer_review` was created empty;
+  `v1_review_regression` was a separate database on the same review branch.
+  Migration ownership and non-DDL runtime access use separate new roles.
+  The new branch-scoped storage credential has read/write storage scopes
+  only, and the empty `v1-customer-review-private` and
+  `v1-customer-review-public` buckets matched their intended visibility.
+- The 12 baseline migrations and then the additive migration applied only
+  to the review database. Prisma reported no schema drift. All four added
+  columns were nullable, length-bounded, and had no defaults. The migrated
+  review database had zero dealership, staff, vehicle, inquiry and media rows
+  at `2026-11-26T12:10:01.299Z` (`0/27A5D08`). This is a pre-onboarding
+  recovery anchor, not a backup or proof of a restore. Before later writes,
+  recheck the available recovery window; before owner onboarding, the empty
+  state can also be rebuilt from the exact migration chain.
+- Dedicated Vercel project `prj_8LDQLTEcBGwJUV6phHwlWyPpF1z8`;
+  Ready non-Production deployment `dpl_ESRoRqatdodL9hdA2UeLhSxnb7ia`.
+  [Generated URL](https://kuraishi-v1-customer-review-bwaysav2y-nikzad-behnams-projects.vercel.app)
+  and [review sign-in origin](https://kuraishi-v1-review-sandbox.vercel.app).
+  Vercel Authentication applies to all URLs; the 13 review variables were
+  confirmed as Preview-only and branch-specific. External email is disabled;
+  no provider callback or worker credential was configured.
+- The initial API request omitted the deployment target, and Vercel
+  classified it as `production` inside the new isolated project. It was
+  canceled while building (`dpl_3fgAFq7cbKv4r4LTMvfht3TnkcWF`); no Ready
+  Production target exists there. Use the explicit `staging` target for this
+  API path, and verify exact SHA, target and project before testing. The live
+  Production and development Preview projects and data were not touched.
+- The authorized review operator completed Settings onboarding and the
+  hosted synthetic smoke described in the [readiness report](./report.md#protected-v1-customer-review-readiness).
+  Keep the exact deployment protected. Before inviting anyone, settle the
+  replacement deployment and confirm the ordinary staff workflow on it. Obtain
+  separate approval for named owner access, grant only review deployment
+  access, and provision a separate, named ordinary staff account in the
+  review database. Use private approved channels for credentials, never the
+  test guide or the shared operator account. Assist with master-only media
+  approval and deletion rather than broadening permissions.
+
+#### Customer-review upload observation
+
+On November 26 at `12:59:27.581 UTC`, the built-in Chromium browser reported
+`net::ERR_ABORTED` for the synthetic vehicle image POST to the private review
+bucket. No navigation or cancellation was requested during the upload. The
+app reported success and the asset persisted once as an attached private
+image; its approved public copy decoded on the published listing. The
+private original was detached and deleted through the approved UI flow,
+and readback confirmed no private asset row remained. Provider storage logs
+were present in the bounded time window, but a matching POST status and
+request ID were not established. The browser did not correlate a 204 with
+the terminal event. Byte-for-byte comparison and staging cleanup were not
+independently checked in this hosted pass. Classify as a successful write
+with an unresolved trace warning, not a verified recurrence of the exact
+204 sequence. Do not retry merely to clear the warning.
+
+During ordinary-staff acceptance (`2026-11-26 13:13:10.319 UTC`), Chromium
+reported HTTP 204 and `net::ERR_ABORTED` for the private bucket's POST
+traffic. The trace did not establish that the events shared a request ID.
+Finalization returned 200, and one private vehicle attachment persisted.
+After reopening the draft, a separate signed GET from the review bucket
+returned 200 and decoded at 640 by 480; all 15,368 bytes matched the
+synthetic PNG. Provider-side request ID and staging cleanup were not
+independently verified. Keep the warning open without changing upload code.
+
+#### Replacement candidate deployment gate
+
+After explicit approval, pin the verified replacement SHA on
+`release/v1-customer-review` and update only the dedicated review project's
+exact-commit build guard. Deploy using explicit `staging`, verify the Ready
+SHA and project, and update only the protected review alias. Retain the
+previous Ready deployment as the review rollback candidate. This homepage
+change needs no migrations or environment updates. Recheck anonymous SSO,
+app noindex/robots, the responsive homepage and neutral copy, and ordinary
+staff sign-in, allowed workflows, administrator denials and logout before
+requesting separate permission to invite the owner.
+
 ## Release evidence and rollback decisions (16.15)
 
 Before deploying, record the exact candidate SHA, validation results,

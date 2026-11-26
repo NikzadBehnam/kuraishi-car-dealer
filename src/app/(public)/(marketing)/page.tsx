@@ -50,10 +50,7 @@ export default async function HomePage() {
           poster={heroPoster}
           aria-hidden="true"
         >
-          <source
-            src="/videos/decorative/hero-drive.mp4"
-            type="video/mp4"
-          />
+          <source src="/videos/decorative/hero-drive.mp4" type="video/mp4" />
         </video>
         <div className="hero-overlay absolute inset-0 -z-10" />
 
@@ -96,7 +93,7 @@ export default async function HomePage() {
       </section>
       <section className="section-space bg-surface">
         <div className="site-container">
-          <div className="flex items-end justify-between gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="eyebrow">Sofort verfügbar</p>
               <h2 className="section-title mt-3">
@@ -129,13 +126,13 @@ export default async function HomePage() {
       <section className="section-space">
         <div className="site-container">
           <div>
-            <p className="eyebrow">Unser Versprechen</p>
+            <p className="eyebrow">Unser Angebot</p>
             <h2 className="section-title mt-3 max-w-3xl">
               {homePageContent.benefitsTitle}
             </h2>
             <p className="text-muted-foreground mt-4 max-w-2xl leading-7">
-              Klare Fahrzeugdaten, nachvollziehbare Preise und eine Prüfung, die
-              vor der Übergabe dokumentiert wird.
+              In den Fahrzeugangeboten finden Sie Angaben zur Ausstattung, zu
+              den technischen Daten und zum Preis.
             </p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">

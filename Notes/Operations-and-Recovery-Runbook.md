@@ -249,6 +249,13 @@ deployment, and approval of this procedure does not authorize running it.
 
 ## Open operational gates
 
+- **12.08 verification:** Passed on loopback with two disposable non-Production
+  databases. If dashboard data cannot load, **Try again** reloads the current
+  URL and requests the metrics again; the error state must not display stale
+  or zero KPIs. Restore the isolated query target before retrying and remove
+  disposable resources afterwards. This does not resolve the Preview database
+  credential rotation, upload warning, or hosted synthetic staff cleanup.
+
 - **11.08 verification:** Passed on loopback with a disposable database,
   synthetic inquiries, and email delivery disabled. Keep provider and worker
   credentials unset for this retest. Check that failed intake leaves no inquiry

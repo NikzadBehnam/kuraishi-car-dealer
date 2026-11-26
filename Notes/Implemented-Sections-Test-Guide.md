@@ -16,7 +16,7 @@ This guide covers the integrated work across the implemented section branches, i
 - Section 10.04-10.05: durable outbox, bounded retries, Resend simulator adapter and test-only worker endpoint; no automatic schedule or Production delivery.
 - Section 11.01-11.04: protected database-backed inquiry inbox, server-side search and pagination, selected detail, historical vehicle context, contact links, and per-inquiry notification status/failure display.
 - Section 11.05-11.06: append-only authored inquiry notes with isolated database query coverage; combined browser verification remains deferred.
-- Section 12.01-12.07: database-backed dashboard aggregates and latest-five inquiries; unsupported view counters are hidden by decision. The isolated query suite verifies Section 12.08 database behavior; browser retest remains pending.
+- Section 12.01-12.08: database-backed dashboard aggregates and latest-five inquiries; unsupported view counters are hidden by decision. The isolated browser and inventory suite verified dashboard behavior.
 - Section 13.01-13.03: inventory-only top-bar search routed through the existing bounded, authenticated inventory query; lead/media global-result routing is not applicable.
 - Section 13.04: live staff identity in the sidebar and truthful staff sign-in copy; top-bar sign-out behavior is unchanged.
 - Section 13.05: Create account is restricted to master admins, while ordinary staff operations remain available to authenticated staff.
@@ -465,16 +465,18 @@ The dashboard uses authenticated database aggregates and recent inquiry rows; it
 ### Source and gated database checks
 
 1. Run `pnpm typecheck`, `pnpm test`, targeted ESLint/Prettier, and `git diff --check`. The source suite covers dashboard inquiry DTO mapping, historical vehicle context, protected link construction, and shared authorization behavior.
-2. Before a future `pnpm test:inventory-db` run, reconfirm `.env.inventory-test.local` targets an isolated, empty database. The suite applies migrations; otherwise skip it. The guarded target and rotated credential were confirmed for the 2026-11-20 run.
-3. The isolated inventory query suite passed on 2026-11-20. Its assertions check aggregate inventory/status counts, `soldAt` on an archived vehicle, all-time inquiry totals, historical vehicle-inquiry snapshots, the recent-five limit, and anonymous access denial.
+2. Before a future `pnpm test:inventory-db` run, reconfirm `.env.inventory-test.local` targets a dedicated isolated database with the Better Auth baseline applied and no dealer or vehicle fixtures. The suite applies release migrations.
+3. The isolated inventory suite passed 30/30 on 2026-11-26. Its assertions check aggregate inventory/status counts, `soldAt` on an archived vehicle, all-time inquiry totals, historical vehicle-inquiry snapshots, the recent-five limit, and anonymous access denial.
 
-### Deferred dashboard browser checks (isolated non-Production app only)
+### Dashboard browser retest (isolated non-Production app only)
 
 1. Sign in as ordinary staff and open `/admin`. Confirm inventory and status counts agree with the staff inventory list; all persisted statuses are included.
 2. Compare Leads and Vehicle inquiries to accepted inquiry records. General inquiries count as leads but not vehicle inquiries; deleted vehicle relations retain vehicle context through stored snapshots.
 3. Confirm Sold vehicles counts every record with `soldAt`, including a vehicle subsequently archived. Confirm the dashboard does not show view counts or mock leads.
 4. Confirm the newest five inquiries appear with current/historical vehicle context and each Open link selects the correct inquiry in the protected inbox. A new database should show the explicit no-inquiries state and zero inventory percentages without NaN.
-5. Confirm an anonymous visit cannot read dashboard metrics. Do not use real customer data or Production. This browser retest remains deferred at the user's request.
+5. Confirm an anonymous visit cannot read dashboard metrics. On an isolated database, induce a dashboard query failure: the error state must replace the loading skeleton without showing numeric KPIs. Restore the database and click **Try again**; verify a fresh server request and current metrics.
+
+12.08 passed on a loopback app with synthetic records; see [report.md](./report.md) for the distinction between browser fixtures and automated publish/sell coverage.
 
 ## 17. Sections 13.01-13.03 — inventory-only workspace search
 

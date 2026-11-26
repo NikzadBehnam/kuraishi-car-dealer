@@ -860,7 +860,7 @@ If anything fails, report only the check name, expected/actual result and a reda
 
 **Commit 3: `test: verify metrics reconcile with source records`**
 
-- [ ] **12.08** Test counts after create/publish/sell/archive, new general/vehicle inquiries, empty periods, percentages with zero inventory, view deduplication if enabled, and dashboard access/error states. _Added DB assertions for aggregate totals, archived `soldAt`, inquiry counts, historical vehicle context, recent-five rows, and anonymous denial. The isolated inventory migration/query suite passed 30/30 on 2026-11-20; live dashboard/browser checks remain deferred._
+- [x] **12.08** Test counts after create/publish/sell/archive, new general/vehicle inquiries, empty periods, percentages with zero inventory, view deduplication if enabled, and dashboard access/error states. _Isolated browser and database checks passed, including a real query failure and recovery through the fixed Try again action. View tracking remains disabled. See [report.md](./report.md)._
 
 **Done when:** every shown KPI can be reconciled to defined stored data, and no mock view/inquiry figures are presented as actual business performance.
 

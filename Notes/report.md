@@ -21,7 +21,7 @@ The source implementation and docs show working database-backed inventory, media
 
 ## Remaining work
 
-The list below includes **every unchecked item** in the current checklist (**16 items** after completing 11.08). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
+The list below includes **every unchecked item** in the current checklist (**15 items** after completing 12.08). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
 
 After each point is verified and marked complete in [Checklist.md](./Checklist.md), update this report in the same change: move the point to **Completed since the initial review**, tick it, record the verification result, and update the remaining count.
 
@@ -45,7 +45,7 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 ### Verification still required for implemented flows
 
 - [ ] **10.07 — Notification verification.** Run isolated DB/simulator verification for retries, idempotency, environment isolation, escaping, and protected links. Synthetic source tests cover failure classes, but no real Resend request/email or DB worker test was run. Callback testing is not applicable unless callbacks are adopted.
-- [ ] **12.08 — Dashboard regression.** Verify counts after inventory/inquiry changes, empty periods, zero-inventory percentages, and dashboard access/error states. The current checklist records isolated DB coverage; confirm the browser behavior in the combined retest.
+
 ### Deferred or conditional—not approved v1 requirements
 
 - [ ] **05.07 — Extra public filters/sorts.** Explicitly optional and unapproved. Do not implement without agreement on facets, ranges, stable sorting, reset behavior, and query validation.
@@ -56,7 +56,7 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 ## Checklist and evidence that need reconciliation
 
 1. The checklist’s **Review-wide findings** and **Coverage register** are stale relative to later completed sections. They still describe no business API, fixture-based sitemap/search/comparison, fake settings save, fixture leads, and placeholder dashboard metrics, while later sections and current source describe database-backed implementations. Update these as current-state documentation, not as new feature work.
-2. The isolated inventory run reconciled the DB status for 09.12 and the query coverage referenced by Sections 06.10, 07.05, 08.09, and 12.08. Sections 06.10, 07.05, and 08.09 also have browser evidence; the combined browser retest for 12.08 remains open. Continue to distinguish **source test**, **isolated DB test**, **browser test**, and **Production test**.
+2. The isolated inventory suite and the section-specific browser retests have passed for 06.10, 07.05, 08.09, and 12.08. Continue to distinguish **source test**, **isolated DB test**, **browser test**, and **Production test**.
 3. Keep the unapproved/deferred items above open but label them as intentional scope decisions, not unfinished v1 implementation. Do not claim completion based on a source test when the corresponding DB/browser or deployment gate is still open.
 4. The test guide records a full-repository Prettier check finding 148 pre-existing unformatted files. Avoid mass-formatting unrelated files; decide whether that baseline is an accepted limitation or a separate cleanup task.
 
@@ -71,6 +71,10 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 This report does not authorize a Production change, data import, migration, email send, or deployment.
 
 ## Completed since the initial review
+
+- [x] **12.08 — Dashboard regression.** Isolated ordinary staff saw the loading skeleton, four zero KPIs, five zero percentages, and the empty inquiry message. Draft creation and archiving used the actual app routes; Published and Sold browser states used database fixtures because object storage was not connected. The isolated inventory suite exercised the real publish and sell handlers with simulated media reads. The browser verified 50/50 Draft/Archived percentages, a sale still counted after archive, and separate general/vehicle inquiry changes. The final totals (2 inventory, 6 leads, 1 sold, 1 vehicle inquiry) matched a direct database read. The recent list excluded the older sixth inquiry while keeping historical vehicle context, and its row link opened the correct protected inquiry. The inventory link opened both expected records. Anonymous access was redirected; unsupported views were absent.
+  - An induced database query failure showed an error without stale or zero metrics. The original boundary's reset replayed the failed result without a fresh server request. Changed only the admin retry action to reload the current URL; the browser confirmed a new request and restored metrics after the fault was cleared.
+  - All 147 source tests, 30 isolated inventory tests, TypeScript, and targeted ESLint passed. Both disposable databases were removed, the loopback server was stopped, and no mail provider, hosted media storage, or Production resources were contacted. The storage warning, coordinated Preview credential rotation, and hosted synthetic-account cleanup remain open in the [runbook](./Operations-and-Recovery-Runbook.md).
 
 - [x] **11.08 — Inquiry-to-inbox regression.** Two synthetic browser submissions (general and vehicle-linked) returned only `202 {"ok":true}`. Ordinary staff verified newest-first ordering, search, contact links, vehicle context, and an authored, trimmed note that survived refresh. Anonymous access to the inbox and to a known inquiry was denied, as was an anonymous note submission. An unknown ID showed not-found, a general lead had no vehicle or call link, and removing the synthetic live relation preserved the historical vehicle reference.
   - Missing consent showed browser validation and returned HTTP 400 at the API. A disposable-database fault caused the public endpoint to return a sanitized HTTP 503; a separate note-write fault showed refresh-before-retry guidance. Database checks confirmed exactly two accepted inquiries with consent evidence, two disabled notification rows with zero attempts, and one saved note. No application changes, provider calls, hosted testing, or Production access were needed.

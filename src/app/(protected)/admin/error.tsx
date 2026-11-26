@@ -4,7 +4,7 @@ import { RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-export default function AdminError({ reset }: { reset: () => void }) {
+export default function AdminError() {
   return (
     <section className="bg-surface rounded-[var(--radius-sm)] border p-8 text-center">
       <p className="eyebrow">Admin error</p>
@@ -18,7 +18,7 @@ export default function AdminError({ reset }: { reset: () => void }) {
       <Button
         type="button"
         className="mt-6 rounded-[var(--radius-sm)]"
-        onClick={reset}
+        onClick={() => window.location.reload()}
       >
         <RotateCcw />
         Try again

@@ -544,6 +544,45 @@ and check actual direct, proxied and CSS resource requests when unset, denied,
 allowed and withdrawn, including after reload. Legal copy and required runtime
 behavior remain open under 14.03 and 14.06–14.08.
 
+### Feasibility: serve decorative stock media from the application origin
+
+Technically feasible without a database, storage-provider, or consent change.
+Prefer dealership-owned media with permission for web publication. Otherwise
+select individually verified stock assets and record the source page, creator,
+asset ID, applicable license, permitted commercial use and any attribution or
+release requirements. A CDN URL is not proof of permission to redistribute an
+asset. The specific current assets were not cleared or downloaded in this review.
+The [Unsplash download license](https://unsplash.com/license) generally allows
+commercial use, but the [Unsplash API guidelines](https://help.unsplash.com/en/articles/2511245-unsplash-api-guidelines)
+require hotlinking for API uses. No Unsplash API client was found in the app;
+confirm the acquisition route rather than copying CDN URLs. The
+[Pexels license](https://www.pexels.com/license/) generally permits website use
+but restricts uses such as implying endorsement. Check identifiable people,
+brands and property separately. Do not depict illustrative stock as the
+dealership, its premises, or actual inventory.
+
+| Surface | Minimum change after approval |
+| --- | --- |
+| Homepage hero | Put an approved compressed poster and, if motion is retained, a short optimized video under `public/images/` and `public/videos/`. Update both the `poster` and video source in the [homepage](../src/app/(public)/(marketing)/page.tsx) and the CSS `.hero-poster` backdrop in [globals.css](../src/app/globals.css). Use the same poster for both paths; retain the fallback, muted/inline playback and reduced-motion behavior. A static poster is the lowest-bandwidth option if approved. |
+| About image | Update the [About page](../src/app/(public)/(marketing)/about-us/page.tsx) `Image` source to a local asset; keep its responsive sizes and truthful alt text. |
+| Image allowlist and fixtures | Once runtime call sites are local, remove only the Unsplash allowlist entry in [next.config.ts](../next.config.ts), after checking no intended consumer remains. Leave the configured vehicle-media origin intact. [Vehicle demo fixtures](../src/data/vehicles.ts) are referenced by a source test and an unreferenced admin fixture, not by runtime inventory; do not broaden the change to fixture cleanup. |
+
+This removes direct browser requests and the About optimizer's upstream fetch
+to the stock providers, reducing outside availability dependencies and
+disclosure of visitor network metadata to those providers. It does not remove
+the app host's traffic metadata, the separate inventory object-storage path, or
+any remaining legal or consent obligations. Bundling video increases repository
+and deployment payload and shifts delivery bandwidth to the app host. Check
+encoded size, caching and byte-range playback before choosing video over a
+poster; an autoplay or metadata preload can still incur transfer on mobile.
+
+After approval, verify on a loopback build with a fresh browser: no
+Unsplash/Pexels requests on first load, reload or navigation, including direct
+requests, image optimizer URLs and CSS; local image/video requests succeed;
+mobile and desktop rendering, static fallback and reduced motion still work;
+and approved inventory images remain unaffected. Compare first-load bytes with
+the current behavior. No media or consent behavior was changed in this review.
+
 | Area                                                   | Result  | Notes                                                                                          |
 | ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------- |
 | Branch and non-Production target confirmed             |         |                                                                                                |

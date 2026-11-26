@@ -76,6 +76,8 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 
 **Independent of Preview credential rotation:** 14.01, 14.03 and 14.06–14.08 can proceed locally after business/counsel decisions. 09.05 and 11.07 need an approved retention/deletion policy before implementation or testing. Optional 05.07 and the deferred 10.03/10.06 need scope decisions, not infrastructure changes. Provider verification under 10.01 is not a local-only task.
 
+**Remaining-item review (2026-11-26):** Reviewed all 14 unchecked items. None can be closed under current approvals. Group local verification by dependency: business and legal content (14.01/14.03/14.08), consent behavior if required (14.06–14.08), and inquiry retention/privacy (09.05/11.07). Existing privacy and authorization regressions were rerun with the source suite (148 passed, none skipped); this does not verify a retention policy. The 14.08 technical results were accepted, but the owner/counsel approvals remain open. The [local stock-media feasibility review](./Implemented-Sections-Test-Guide.md#feasibility-serve-decorative-stock-media-from-the-application-origin) identifies the affected surfaces, license checks and local retest. No assets or application behavior changed. The provisional Preview window and separate 16.12, 16.14 and 16.15 gates are unchanged.
+
 This report does not authorize a Production change, data import, migration, email send, or deployment.
 
 ## Completed since the initial review

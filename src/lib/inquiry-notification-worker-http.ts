@@ -22,6 +22,20 @@ function hasValidBearerToken(request: Request, secret: string): boolean {
   );
 }
 
+async function hasRequestBody(request: Request): Promise<boolean> {
+  if (!request.body) return false;
+  const reader = request.body.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return false;
+      if (value.byteLength > 0) return true;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function handleInquiryNotificationWorkerRequest(
   request: Request,
   runBatch: () => Promise<{
@@ -35,9 +49,6 @@ export async function handleInquiryNotificationWorkerRequest(
   if (request.method !== "POST") {
     return response({ error: "Method not allowed." }, 405, { Allow: "POST" });
   }
-  if (request.body !== null) {
-    return response({ error: "Request body must be empty." }, 400);
-  }
   if (env.INQUIRY_EMAIL_MODE !== "test" || !inquiryTestModeEnabled(env)) {
     return response({ error: "Notification processing is unavailable." }, 503);
   }
@@ -48,6 +59,13 @@ export async function handleInquiryNotificationWorkerRequest(
   }
   if (!hasValidBearerToken(request, secret)) {
     return response({ error: "Unauthorized." }, 401);
+  }
+  try {
+    if (await hasRequestBody(request)) {
+      return response({ error: "Request body must be empty." }, 400);
+    }
+  } catch {
+    return response({ error: "Request body could not be read." }, 400);
   }
   try {
     return response({ ok: true, ...(await runBatch()) }, 200);

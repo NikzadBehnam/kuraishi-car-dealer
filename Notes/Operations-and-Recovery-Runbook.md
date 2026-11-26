@@ -101,10 +101,13 @@ Implementation references:
   and the Resend simulator. There is no Production sender, scheduler, or
   callback/webhook endpoint. Do not set test mode in Production or manually
   replay customer notifications.
-- For an isolated test, inspect the protected inbox state and use the worker
-  only with the simulator. Investigate pending/retry/failed outcomes from the
-  stored status and allowlisted error code; never log or export customer
-  content, provider response bodies, credentials, or idempotency secrets.
+- Task 10.07 passed with a disposable database, synthetic inquiries, and a
+  fail-closed mock that did not contact Resend. Keep hosted Preview delivery
+  disabled. Use an authenticated POST with no body for the local worker; an
+  empty request stream is valid, but any actual body bytes are rejected.
+  Investigate status and allowlisted error codes in the protected inbox.
+  Never log or export customer data, provider bodies, or credentials.
+  External simulator testing requires separate explicit authorization.
 - A Production reconciliation procedure is not active. It requires a separate
   approved delivery configuration, legal approval, and an explicitly
   authorized scheduling/replay decision.

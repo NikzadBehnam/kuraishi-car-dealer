@@ -23,6 +23,17 @@ function request(method = "POST", token?: string, body?: string): Request {
 }
 
 describe("inquiry notification worker HTTP boundary", () => {
+  it("accepts a bodyless POST represented by an empty request stream", async () => {
+    const emptyPost = request("POST", secret, "");
+    assert.ok(emptyPost.body);
+    const result = await handleInquiryNotificationWorkerRequest(
+      emptyPost,
+      async () => ({ claimed: 0, sent: 0, retried: 0, failed: 0 }),
+      env,
+    );
+    assert.equal(result.status, 200);
+  });
+
   it("allows only an empty POST in enabled isolated test environments", async () => {
     let runs = 0;
     const run = async () => {

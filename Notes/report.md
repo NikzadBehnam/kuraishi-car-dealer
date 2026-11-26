@@ -21,7 +21,7 @@ The source implementation and docs show working database-backed inventory, media
 
 ## Remaining work
 
-The list below includes **every unchecked item** in the current checklist (**15 items** after completing 12.08). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
+The list below includes **every unchecked item** in the current checklist (**14 items** after completing 10.07). “Release gate” means it must be completed or explicitly excluded from the agreed v1 scope before launch; conditional and unapproved items are not authorization to build extra features.
 
 After each point is verified and marked complete in [Checklist.md](./Checklist.md), update this report in the same change: move the point to **Completed since the initial review**, tick it, record the verification result, and update the remaining count.
 
@@ -41,10 +41,6 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 - [ ] **16.15 — Release and rollback evidence.** Record tested revision, migration/data/storage rollback criteria, and confirm no secrets or demo customer records entered commits.
 - [ ] **10.01 — Staff email readiness, only if email is part of v1.** Provider/domain/key setup is partial; the secret/API validity was not inspected, approved real staff recipients and provider acceptance are pending, and live sending is not implemented. Either finish the separately approved delivery setup or explicitly exclude email from v1 and keep it disabled. Do not send customer emails during verification.
 - [ ] **11.07 — Customer-data lifecycle.** Keep projections private and follow the approved inquiry retention policy; do not add a TTL, deletion, or anonymization rule before 09.05 is approved. Lead statuses, assignment, closure, and delete controls are separate CRM scope and are not implemented.
-
-### Verification still required for implemented flows
-
-- [ ] **10.07 — Notification verification.** Run isolated DB/simulator verification for retries, idempotency, environment isolation, escaping, and protected links. Synthetic source tests cover failure classes, but no real Resend request/email or DB worker test was run. Callback testing is not applicable unless callbacks are adopted.
 
 ### Deferred or conditional—not approved v1 requirements
 
@@ -71,6 +67,9 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 This report does not authorize a Production change, data import, migration, email send, or deployment.
 
 ## Completed since the initial review
+
+- [x] **10.07 — Notification verification.** A loopback worker with a disposable database and a mocked provider verified one outbox row per inquiry, concurrent replay/worker claims, and rollback of inquiry intake when the outbox insert failed. A timeout queued a retry; the retry reused its idempotency key and stored mock acceptance. Permanent rejection and a throttled fifth attempt remained terminal. Checked simulator-only addressing, escaped markup, protected links, aggregate-only responses, and exclusion of contact data and message text from provider payloads. The browser showed Queued, Retry pending, Provider accepted (not mailbox delivery), and a sanitized failure; anonymous detail access and a worker request with only a staff session were denied.
+  - Fixed the worker rejecting bodyless HTTP POSTs that Next.js exposed as empty streams. The handler now checks for actual bytes after authentication; a regression test failed before and passed after the fix. All 148 source tests, TypeScript, targeted ESLint and formatting checks passed. The local process, disposable database and mock fixtures were removed. No external email request, hosted Preview change, or Production access occurred. Live provider acceptance remains separate under 10.01 and requires explicit authorization; callback testing is not applicable.
 
 - [x] **12.08 — Dashboard regression.** Isolated ordinary staff saw the loading skeleton, four zero KPIs, five zero percentages, and the empty inquiry message. Draft creation and archiving used the actual app routes; Published and Sold browser states used database fixtures because object storage was not connected. The isolated inventory suite exercised the real publish and sell handlers with simulated media reads. The browser verified 50/50 Draft/Archived percentages, a sale still counted after archive, and separate general/vehicle inquiry changes. The final totals (2 inventory, 6 leads, 1 sold, 1 vehicle inquiry) matched a direct database read. The recent list excluded the older sixth inquiry while keeping historical vehicle context, and its row link opened the correct protected inquiry. The inventory link opened both expected records. Anonymous access was redirected; unsupported views were absent.
   - An induced database query failure showed an error without stale or zero metrics. The original boundary's reset replayed the failed result without a fresh server request. Changed only the admin retry action to reload the current URL; the browser confirmed a new request and restored metrics after the fault was cleared.

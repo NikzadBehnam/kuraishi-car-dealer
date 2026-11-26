@@ -395,7 +395,7 @@ The selected scope is **email notifications to staff only**, not automated visit
 1. Run `pnpm test` and `pnpm typecheck`. Configuration tests use synthetic values and make no network calls; they do not prove your account/key/domain are working.
 2. Confirm Resend shows the sending subdomain as verified, and the restricted key is privately configured. Do not manually send real customer content or point setup tests at the contact form expecting email yet.
 3. Report only: **domain Verified / pending**, **private test key configured / pending**, and the non-secret plan limits. No key, login, private recipient address, customer data or connection string is needed in chat.
-4. The safe staff notification template (10.02), core durable outbox/retry worker (10.04-10.05), and per-inquiry status display in the real inbox (11.01-11.04) are implemented. Proceed to synthetic verification (10.07) only after confirming an isolated test database and Resend simulator configuration. No mail should be sent directly inside inquiry acceptance as a substitute for durable delivery state.
+4. The staff template, outbox/retry worker, and protected notification status are implemented. Repeat 10.07 with an isolated test database and a mock provider. No mail should be sent directly inside inquiry acceptance. An external Resend simulator call requires separate explicit authorization.
 
 Official references: [verify a domain](https://resend.com/docs/add-a-domain), [restricted API keys](https://resend.com/docs/dashboard/api-keys/introduction), [test addresses](https://resend.com/docs/dashboard/emails/send-test-emails), [sending regions and data residency](https://resend.com/docs/dashboard/domains/regions), and [API/idempotency limits](https://resend.com/docs/api-reference/emails/send-email).
 
@@ -411,11 +411,11 @@ The user approved alert-only content, not visitor contact details or message for
    - Invalid stored values and inconsistent service/source combinations throw explicit errors rather than producing a misleading notification.
 3. Automated link tests bind the existing `/admin/leads` route to localhost or the current validated Preview origin, rejecting arbitrary/Production URLs. The alert contains no auth token, customer identifier or unsupported inquiry-detail query parameter in its link.
 4. When performing the deferred browser retest on an isolated app, confirm an anonymous visit to `/admin/leads` requires sign-in. The page now reads real inquiries and supports the separate append-only internal notes flow from 11.05-11.06; it does not add lead statuses, assignment or an automated response flow.
-5. No provider acceptance, actual send, real inbox rendering or database-backed retry behavior has been tested by these source checks. These remain 10.07; 10.01 is still partial until real staff recipient configuration and provider verification are completed.
+5. These source checks do not contact Resend. Mock acceptance, database-backed retry and staff inbox rendering were verified separately in 10.07; 10.01 remains partial.
 
 ## 14. Section 10.04-10.05 — durable outbox and bounded delivery retries
 
-The outbox and worker are implemented, but no database migration or provider call has been run. Keep `INQUIRY_EMAIL_MODE="disabled"` by default and do not inspect `.env.local`. The worker has no automatic schedule; Production delivery remains unsupported and must not be enabled.
+The outbox and worker are implemented and have passed isolated database and browser checks with mock delivery. Keep `INQUIRY_EMAIL_MODE="disabled"` by default and do not inspect `.env.local`. The worker has no automatic schedule; Production delivery remains unsupported and must not be enabled.
 
 ### Source-only verification
 
@@ -425,12 +425,12 @@ The outbox and worker are implemented, but no database migration or provider cal
 4. Review the retry policy: five maximum attempts, 1/5/30/120-minute retry delays, 2-minute lease, batch size 10, stable provider idempotency key and terminal failure after exhaustion or permanent rejection.
 5. Check worker boundaries: POST only, no request body, matching 32+ character bearer secret, isolated test configuration, no-store responses and aggregate-only output. Invalid credentials/configuration, provider bodies and customer data must not be echoed or logged.
 
-### Isolated worker database and simulator checks (still pending)
+### Isolated worker database and mock-delivery checks (10.07 passed)
 
 1. The `InquiryNotification` migration is additive and was applied to the guarded isolated test database by the 2026-11-20 inventory suite. It has not been applied to Production. Do not run any migration against the normal app database or Production.
 2. The inventory suite passed 30/30 on 2026-11-20, but it does not exercise worker delivery. Before any future `pnpm test:inventory-db` run, reconfirm that `.env.inventory-test.local` targets an isolated, empty test database and the credential rotation remains valid; the suite applies migrations and writes synthetic rows. If either safety condition is unresolved, skip it.
-3. For an end-to-end worker check, use only a disposable isolated database, synthetic inquiry data and the Resend `delivered@resend.dev` simulator. Set the test-mode prerequisites privately in the isolated local/Preview environment; never use a real visitor or staff recipient. The worker's bearer secret must be at least 32 characters and must not be shared in chat/screenshots.
-4. The authenticated empty POST to `/api/internal/inquiry-notifications` returns aggregate `claimed`, `sent`, `retried` and `failed` counts. Wrong method/body/token and disabled/Production mode must not claim or deliver rows. Confirm simulator acceptance updates the row to `sent`; use fake provider failures or an isolated DB test to verify `retry`, eventual `failed`, and stable idempotency behavior. Do not manually wait or retry against real customer data.
+3. Use a disposable isolated database, synthetic inquiries and a fail-closed mock transport that intercepts the provider request without external delivery. Verify the configured recipient is exactly `delivered@resend.dev`. Use only synthetic credentials locally; never use a real mailbox or turn on hosted Preview delivery. The worker bearer must be at least 32 characters.
+4. The authenticated bodyless POST to `/api/internal/inquiry-notifications` must return only aggregate counts, including when Next.js exposes an empty stream. Wrong method/body/token and disabled/Production mode must not claim rows. Exercise real database claims with mocked timeout, acceptance, and rejection: confirm the same key is reused, terminal rows are not claimed again, and the staff inbox never claims mailbox delivery. See [report.md](./report.md) for verified outcomes.
 5. Do not configure cron or enable Production sending as part of this test. Any schedule must run frequently enough to keep ambiguous retries inside Resend's idempotency retention window; outage/recovery beyond that window can allow duplicate delivery. Production also remains blocked on Section 09 legal approval and a future explicit decision.
 6. Per-inquiry failure status is visible in the protected inbox. Worker outcomes are sanitized; no automatic worker schedule or callback endpoint exists. Do not claim provider acceptance confirms inbox delivery.
 
@@ -526,7 +526,7 @@ Record each command/UI check as Passed, Failed, Blocked or Not run. For failures
 | Section 10.01 Resend setup                             | Partial | Domain/key scope/quotas and template ready; real recipients/provider acceptance pending        |
 | Section 10.02 privacy-minimal staff content            | Passed  | Source tests only; no provider send or browser retest                                          |
 | Section 10.04-10.05 outbox/retry core                  | Partial | Migration applied on isolated test DB; worker DB/provider schedule verification pending        |
-| Section 10.07 provider verification                    | Pending | No real provider call/email; isolated DB and simulator verification not run                    |
+| Section 10.07 provider verification                    | Passed  | Isolated DB and browser with mocked transport; no external provider call or email              |
 | Section 11.01-11.04 real protected inbox               | Partial | Isolated DB query assertions pass; deferred browser retest remains pending                     |
 | Section 11.05-11.06 append-only staff notes            | Partial | Isolated DB note assertions pass; browser retest remains pending                               |
 | Sections 13.01-13.03 inventory-only workspace search   | Partial | Isolated query assertions pass; browser verification remains pending                           |

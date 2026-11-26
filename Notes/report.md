@@ -4,7 +4,28 @@
 - **Branch / revision:** `test/backend-integration-and-release` / `466f70e`
   **Checklist reviewed:** [Checklist.md](./Checklist.md), cross-checked with the [implemented-sections test guide](./Implemented-Sections-Test-Guide.md), [README](../README.md), and [operations runbook](./Operations-and-Recovery-Runbook.md).
 
-## Executive status
+## V1 delivery milestone
+
+**2026-11-26 — Delivered and accepted for protected customer review**, not
+unrestricted public launch. The operator confirmed that the owner could open
+[www.kuraishicars.com](https://www.kuraishicars.com) through named Vercel access
+and sign in to the dashboard with a separate ordinary account. Anonymous
+requests still required Vercel authentication.
+
+| Record | Exact application SHA | Deployment |
+| --- | --- | --- |
+| Live on `www` | `152742d366d47b5d3d6dd92e5218947206cea3bb` | `dpl_GZx9SE3v7Hv5Mb3sk4S91Rut9Vyo` |
+| Protected, unassigned code rollback | `d942bf177ea3a2a77f4dd1211a3d0690a9b5c404` | `dpl_2xmgyjyxLkKH6voVwiic9HCaAvGG` |
+
+This documentation commit is not the deployed application revision. Keep both
+deployments and recovery resources unchanged; Production restore testing was
+waived, not verified. Deployment Protection stays on, indexing and sitemap
+stay suppressed, and real public inquiries and external email stay off.
+Feature development is paused pending owner feedback. The seven business/legal
+items and [separate maintenance tasks](./Operations-and-Recovery-Runbook.md#outstanding-security-maintenance)
+remain open. See the [German/English customer guide](./V1-Customer-Review-Guide.md).
+
+## Executive status at the initial review
 
 The core application is substantially implemented, but this branch is **not ready for a Production launch**. The remaining blockers are principally approved real data, legal/retention decisions, verified Production/Preview configuration, a reviewed Production migration/deployment procedure, and end-to-end release evidence. Email delivery is deliberately disabled for Production.
 
@@ -21,7 +42,9 @@ The source implementation and docs show working database-backed inventory, media
 
 ## Remaining work
 
-The list below includes **all 10 unchecked items**: seven business/legal items and three separate Production gates. Four items were closed by explicit v1 scope decisions, not by implementing deferred features.
+**Seven business/legal items remain unchecked.** The three completed
+Production gates are retained below for evidence. Four other items were closed
+by explicit V1 scope decisions, not by implementing deferred features.
 
 After each point is verified and marked complete in [Checklist.md](./Checklist.md), update this report in the same change: move the point to **Completed since the initial review**, tick it, record the verification result, and update the remaining count.
 
@@ -29,23 +52,23 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 
 - [ ] **09.05 — Inquiry evidence retention/deletion.** Obtain business/legal approval for customer-data retention and deletion. Capturing the acknowledged notice text/version and timestamp is implemented; the retention period and deletion/anonymization procedure are not approved. This also blocks **11.07**.
 - [ ] **14.01 — Truthful launch content.** Business-card details are available for protected review via owner-editable settings. Confirm them and approve final public claims before launch. Stock imagery is labeled illustrative, but its external-use policy remains unresolved.
-- [ ] **14.03 — Final legal copy.** Qualified counsel must review and replace the placeholder imprint, privacy, terms, and cookie content before Production use. See [legal-pages.ts](../src/content/de/legal-pages.ts).
+- [ ] **14.03 — Final legal copy.** Qualified counsel must review and replace the placeholder imprint, privacy, terms, and cookie content before unrestricted public launch. The authorized invite-only review must keep the pending notices visible. See [legal-pages.ts](../src/content/de/legal-pages.ts).
   - **Independent 14.08 browser check:** At `0ce4cea`, all four localized legal routes returned HTTP 200 with distinct headings and the expected shared placeholder warning. Using a synthetic settings fixture at the Prisma boundary, the imprint address and contact links matched the fixture and the footer's shared details. All six service CTAs prefilled the expected inquiry type and the contact form stated that an inquiry is not a confirmed booking. No submission was sent.
-- [ ] **16.12 — Controlled Production migration.** Review migrations, test them on an isolated branch, confirm an approved recovery point, apply through the approved Production workflow, and regenerate Prisma Client if required. This is an operational gate, not permission to modify Production now.
+- [x] **16.12 — Controlled Production migration.** The dedicated direct role applied all 12 approved migrations; all 13 ledger entries and checksums, constraints and scoped grants passed verification. See the [Production record](#main-domain-v1-readiness). Production restore testing was waived, not verified. The preflight notes below are historical evidence.
   - **Preflight (2026-11-24):** Release revision `18bf27c` contains 11 migration files not present in the deployed revision `7fdcc66`. The migration directory is unchanged from `055d5fc`, whose 11 pending migrations applied successfully on Preview `dev`. The Git comparison does not establish Production's migration history. Before any apply, verify Production migration status through the confirmed direct connection and approve a recovery point on Frankfurt `main`; the Preview recovery branch is not a Production backup. The new app requires exactly one approved `Dealer` record; do not copy the synthetic Preview row. No Production migration or recovery action was performed.
-  - **Recovery console evidence (2026-11-24):** Frankfurt `main` shows a rolling 6-hour restore history window, one existing snapshot labeled `before-better-auth-production-migration-2026-11-15` with no expiry, and no snapshot schedule. The Console prompts for an upgrade to create more snapshots. Neither the old snapshot nor the timestamp displayed in the restore picker is an approved recovery point for this release. Keep the existing snapshot and confirm a fresh, verified pre-migration recovery point before applying anything.
+  - **Recovery console evidence (2026-11-24):** Frankfurt `main` shows a rolling 6-hour restore history window, one existing snapshot labeled `before-better-auth-production-migration-2026-11-15` with no expiry, and no snapshot schedule. Preserve the existing snapshot. Under the Free-plan waiver, verify the availability and freshness of the write-frozen recovery point before applying anything; restoration remains unverified.
   - **Production read-only checks (2026-11-24):** The migration ledger shows one row, `20261113214441_init_better_auth`, marked finished and not rolled back. The other 11 release migrations are not recorded as applied. A separate catalog query returned no matches for the ten new tables in `public`. These checks do not rule out other schema drift or confirm a recovery point.
   - **Recovery branch preflight (2026-11-24):** Reviewed the proposed `main-before-v1-migration` settings in the Console: parent `main`, current data and schema, and auto-delete `Never`. No branch was created and no release window is scheduled. Confirm the rollback procedure and retention before creating the branch immediately before the approved migration. Keep the existing snapshot unchanged.
   - **Proposed rollback procedure:** Record an exact pre-migration UTC timestamp or LSN on `main` and verify it with Time Travel Assist. Use `main`'s own history as the planned in-place recovery route while that point is available; this keeps `main` a root branch. The Console requires a root restore source, and restoring a root from another branch changes its ancestry. Keep `main-before-v1-migration` unchanged as a secondary recovery copy, not an in-place restore source or a Vercel target. If history has expired, stop and agree on a separately tested recovery procedure from the copy. Before any restore, pause writes, preserve the current database state, and account for changes since the restore point. Object storage is not rolled back; verify media references separately. Recommended retention is manual removal only after release validation and owner sign-off. This procedure is not approved for Production.
   - **Isolated restore drill passed (2026-11-24):** In the disposable `TEST_PROJECT`, the synthetic row read `after-change` before the restore and `before-restore` in the historical preview at `16:20 UTC`. After the approved restore from the test branch's own history, a fresh SQL query returned `before-restore`, and Neon listed the automatically preserved pre-restore branch as ready. This verifies the test procedure, not a Production backup or a recovery route after history expires. No dealership Production or Preview changes were made.
-- [ ] **16.14 — Production smoke test.** After an approved deployment that includes the saved Production storage settings, verify `/api/health` returns `200` with `{"status":"ok"}`. This checks access to both configured buckets, not uploads or public image delivery. Also validate the deployed revision, login/staff restrictions, public listing/detail, media, settings and protected inbox using only approved test data. Verify the inquiry off-state only if it cannot disrupt a live service; no external email or callback testing is in v1.
-- [ ] **16.15 — Release and rollback evidence.** Record tested revision, migration/data/storage rollback criteria, and confirm no secrets or demo customer records entered commits.
+- [x] **16.14 — Protected Production smoke test.** The authorized read-only smoke passed, including existing ordinary-staff access and account-creation UI/route denial. Health returned `200` with `{"status":"ok"}` and checked both configured buckets, not uploads or public image delivery. No Production business records were written. See the [Production results and scope limits](#main-domain-v1-readiness).
+- [x] **16.15 — Protected release, rollback evidence and owner handoff.** The exact deployed revision and rollback criteria are recorded; the reviewed commit range contained no detected secrets or demo customer records within the scope below.
   - **Repository preflight passed at `53434be8c2e84a33576d91bd86af76a4b0e2b196`:** 148 source tests passed with none skipped; TypeScript, repository ESLint, Prisma validation and generation, and an optimized Webpack build passed. The build used an exact Git archive, dummy loopback database/storage endpoints, disabled inquiry/delivery, and mocked font responses. No hosted environment, new browser session, or database integration suite was used for this preflight.
   - **Migration and config comparison:** 11 migration files were added since the recorded baseline `7fdcc66`; the migration files, Prisma schema/config, dependency manifest/lockfile and Vercel config are unchanged from the prior isolated migration evidence at `055d5fc`. This does not establish current Production state or prove reversibility. Added missing, empty media variables to the environment template and corrected the inquiry/delivery comments; no runtime configuration changed.
   - **Git and fixture checks:** The local scan of 31,306 added text lines across 145 commits (`7fdcc66..53434be`) found only seven synthetic matches for the credential patterns checked. No committed data dumps or demo customer records were identified in the checked paths; vehicle fixture tooling/tests and the unreferenced admin fixture module do not supply runtime dealer or inventory data. This review does not cover every encoding, binary, branch, or older history and does not resolve the exposed Preview credential. Do not copy isolated data into Production.
   - **Approved as a code rollback candidate only:** `d942bf177ea3a2a77f4dd1211a3d0690a9b5c404` contains the `43f0d88` sign-in hardening and has the same Prisma schema, migrations, configuration and dependency lock as `53434be`. Its previously recorded isolated integration evidence is 30/30 inventory tests and dashboard browser verification; public and inquiry-to-inbox results remain tied to their earlier tested revisions. The sole runtime code delta is the isolated notification worker's bodyless POST fix, absent in `d942bf1`; do not use it as-is if that worker becomes essential. `7fdcc66` remains unsuitable. See the [rollback criteria](./Operations-and-Recovery-Runbook.md#release-evidence-and-rollback-decisions-1615).
   - **Rollback candidate offline rerun:** At the exact archived `d942bf1` revision, 147/147 source tests passed with none skipped; TypeScript, repository ESLint, Prisma validation and client generation passed. No database or browser test was rerun and no migration was executed. Remaining items require scope/legal decisions, external configuration, or operational authorization; none was closed by this check.
-  - **Still open:** The repository preflight and code rollback candidate were accepted, not the release. Verify a fresh recovery point separately under 16.12 and record the separately authorized 16.14 smoke results. Initial smoke verifies the inquiry off-state only if it cannot disrupt an existing live service; separate authorization is required to enable live intake. External email is excluded from v1.
+  - **Handoff complete (2026-11-26):** The operator approved the confirmed recipient, granted named Vercel access and reported that the owner verified both `www` and `/admin` through their separate ordinary app account. Independent anonymous probes still required Vercel authentication. Live intake requires separate authorization; external email remains excluded from v1.
 - [ ] **11.07 — Customer-data lifecycle.** Keep projections private and follow the approved inquiry retention policy; do not add a TTL, deletion, or anonymization rule before 09.05 is approved. Lead statuses, assignment, closure, and delete controls are separate CRM scope and are not implemented.
 
 ### Conditional consent verification
@@ -78,20 +101,20 @@ versions, not passwords, private records, or real inquiry samples.
 
 1. The checklist’s **Review-wide findings** and **Coverage register** are stale relative to later completed sections. They still describe no business API, fixture-based sitemap/search/comparison, fake settings save, fixture leads, and placeholder dashboard metrics, while later sections and current source describe database-backed implementations. Update these as current-state documentation, not as new feature work.
 2. The isolated inventory suite and the section-specific browser retests have passed for 06.10, 07.05, 08.09, and 12.08. Continue to distinguish **source test**, **isolated DB test**, **browser test**, and **Production test**.
-3. Keep pending business/legal and release gates open. Treat the four excluded/deferred items below as closed scope decisions, not shipped functionality.
+3. Keep the seven pending business/legal items open. Treat the four excluded/deferred items below as closed scope decisions, not shipped functionality.
 4. The test guide records a full-repository Prettier check finding 148 pre-existing unformatted files. Avoid mass-formatting unrelated files; decide whether that baseline is an accepted limitation or a separate cleanup task.
 
 ## Recommended closeout order
 
-1. Prepare and validate the [protected technical customer review](#protected-v1-customer-review-readiness). Preserve the approved V1 exclusions and wait for hosted authorization before setup.
+1. Keep the [delivered protected V1](#v1-delivery-milestone) unchanged during owner review. Wait for feedback before starting feature development.
 2. Use owner feedback and the questionnaire to finish business, retention and consent decisions before unrestricted public launch.
 3. Keep the verified 16.11 environment configuration unchanged unless a separate change is approved.
 4. Preserve isolated database/browser results at their tested revisions. The high-priority [Preview cutover plan](./Operations-and-Recovery-Runbook.md#coordinated-preview-database-credential-cutover) specifies an in-place `dev` owner reset, the confirmed protected Preview SHA and stale-deployment impact. The former Section 02 inventory backup was replaced locally with an ignored, value-free note under explicit approval. The proposed November 27, 21:00-23:00 CET window is not authorized: verify actual recovery clone expiry and confirm external consumers and test-clone retention. Possible Production reuse remains separate and unresolved; no database password was tested or changed. The HTTP 204 / `net::ERR_ABORTED` warning and hosted synthetic-account cleanup remain open.
-5. Complete the migration/recovery workflow (16.12), execute the approved manual deployment procedure (16.13) only after release authorization, then complete Production smoke/rollback evidence (16.14–16.15).
+5. Keep unrestricted launch and any further deployment separately authorized. Preserve the completed migration, smoke and rollback evidence (16.12–16.15).
 
 **Independent of Preview credential rotation:** 14.01, 14.03 and 14.06–14.08 can proceed locally after business/counsel decisions. 09.05 and 11.07 need an approved retention/deletion policy before implementation or testing.
 
-**Remaining-item review (2026-11-26):** Ten items remain after four v1 scope closures. Group local verification by dependency: business and legal content (14.01/14.03/14.08), consent behavior if required (14.06–14.08), and inquiry retention/privacy (09.05/11.07). The 14.08 technical results were accepted, but owner/counsel approvals remain open. The provisional Preview window and separate 16.12, 16.14 and 16.15 gates are unchanged.
+**Remaining-item review (2026-11-26):** Seven business/legal items remain after closure of 16.12, 16.14 and 16.15. Group local verification by dependency: business and legal content (14.01/14.03/14.08), consent behavior if required (14.06–14.08), and inquiry retention/privacy (09.05/11.07). The 14.08 technical results were accepted, but owner/counsel approvals remain open. The provisional Preview maintenance window remains separate.
 
 **Decorative-media implementation verified (2026-11-26):** The homepage retains an illustrative video loop and shared poster fallback; the About image remains responsive. The app serves two WebP files and an optimized MP4 locally. All 148 source tests, targeted ESLint, asset decodes and the optimized build passed. Loopback Chromium confirmed desktop/mobile playback, the poster with video blocked and with reduced motion, local image decoding, HTTP 206 byte ranges and no external page requests. The optimizer rejected the retired Unsplash origin. This does not close 14.08 or change consent policy or inventory media.
 
@@ -99,13 +122,13 @@ versions, not passwords, private records, or real inquiry samples.
 
 ## Protected V1 customer review readiness
 
-The customer-review release is for an invited dealership owner to test the
-site and admin workflows, not for public commercial launch. The seven
-owner/legal items stay unchecked and the three Production gates stay separate.
+This section records the isolated rehearsal and pre-cutover decisions.
+See the [delivery milestone](#v1-delivery-milestone) for the completed live
+handoff. The seven owner/legal items stay unchecked for public launch.
 
 | Category | Status and remaining action |
 | --- | --- |
-| Technical blockers for customer review | Core hosted smoke and the ordinary staff role passed on the initial review deployment. The homepage fix passed locally; deploy the new candidate only after approval and rerun affected hosted checks before invitation. |
+| Technical blockers for customer review | None confirmed on the protected replacement. Hosted homepage, access gates and ordinary-staff regression passed. The customer invitation still requires separate approval. |
 | Business information | Use the supplied business card for the protected review. The owner still verifies the details and supplies registration, VAT, representative, opening hours, service details and additional branding when available. Do not invent or publish those values. |
 | Legal approval | 09.05, 11.07, 14.01, 14.03 and 14.06–14.08 remain open. Protected review shows the pending legal notice; comparison, theme and authentication are unchanged. No real inquiries, optional tracking, embedded social/map widgets, or external mail are enabled. |
 | Security maintenance | Preserve the coordinated Preview cutover and provisional November 27, 21:00–23:00 CET slot. Verify clone expiry at the scheduled time and complete consumer checks; no exposed credential may be used for review. Keep the existing storage warning and synthetic-account cleanup open. |
@@ -176,9 +199,36 @@ HTTP 403 with the administrator-only error. After logout, Admin redirected
 to login and the media API returned 401. The temporary account and fixtures
 remain isolated for tracked cleanup; no temporary password was retained.
 
-**Handoff recommendation:** Do not invite yet. Obtain approval to deploy
-the exact replacement to the dedicated protected Preview, then rerun the
-homepage width/copy, hosting/indexing and ordinary-staff checks there.
+**Replacement deployment (2026-11-26):** Verified Git SHA
+`152742d366d47b5d3d6dd92e5218947206cea3bb` on
+`release/v1-customer-review`, deployed explicitly to Vercel staging as
+`dpl_EsqipZ16sP6ZtQx7TykBjNfutMDZ` after authorization, and moved only
+the protected review alias after validating the Ready deployment.
+The [generated Preview URL](https://kuraishi-v1-customer-review-qyw2iooqr-nikzad-behnams-projects.vercel.app)
+and stable origin rejected anonymous requests with Vercel Authentication.
+With hosting access, the homepage passed all nine exact widths again:
+at 321 CSS px document client and scroll widths were both 309 px, and the
+CTA ended at 169 px. The mobile menu opened, the CTA reached the catalog,
+and desktop stayed inline. Neutral copy was visible and the old claim was
+absent. Health returned 200, robots returned 200 with `Disallow: /`, and
+homepage HTML had `noindex, nofollow`. With no app session, Admin landed at
+login and the media API returned 401. No schema or environment settings
+were changed.
+
+**Ordinary staff on the replacement:** A review administrator created a
+fresh synthetic ordinary account through the app. It signed in and opened
+Dashboard, Settings, Vehicles, Media and Leads. It read the existing
+synthetic lead (notification `Disabled`) and reopened the saved draft and
+its 640-by-480 private image. The account creation route returned to
+Dashboard without exposing the form. Public-image approval, permanent
+deletion and direct download returned the expected administrator-only 403s.
+Logout redirected protected Leads to application login and media access
+returned 401. The unchanged account, Settings save, draft write and
+upload/finalization workflows retain the initial revision's acceptance
+evidence; no upload was repeated just to reproduce the warning.
+
+**Handoff recommendation:** The protected V1 is ready for customer review
+once the invitation is approved. No invitation has been sent.
 Public-copy approval, direct media downloads and permanent media deletion
 require an application administrator: use the supervised workflow in the
 [owner guide](./Implemented-Sections-Test-Guide.md#protected-v1-customer-review-acceptance),
@@ -194,6 +244,170 @@ attachment persisted, and an independent 15,368-byte object readback
 matched the synthetic PNG byte-for-byte. The cause remains unresolved.
 No storage implementation change or repeat disposable investigation was made.
 
+## Main-domain V1 readiness
+
+**2026-11-26, historical pre-cutover baseline.** The exact V1 candidate passed isolated
+review and remains pinned. The main domain is **not ready for cutover**.
+`www.kuraishicars.com` and the default Vercel hostname returned anonymous
+200; the apex returned 308 to `www`. Production project
+`kuraishi-car-dealer` (`prj_nQ4GyGpomFCQPPuEsMtHVUyC0kyD`) is linked to
+`master`; the live deployment is `dpl_DcHBBA4ZQLBqo1odQAb2JZaGV9qG`
+at `7fdcc66fdfaa09c2c0c21ef60bc7f7ba77ca02db`. Its health route returns
+404 and its robots file allows indexing and advertises a legacy sitemap
+origin. The Vercel setting is `all_except_custom_domains`; no project
+routing rules are active. No cloud configuration or data was changed.
+
+The Production database ledger has exactly one successful row,
+`20261113214441_init_better_auth`, with the pinned Git checksum. There are
+no failed or rolled-back rows and **all 12 later migrations are pending**.
+The catalog contains only the auth tables and Prisma ledger. Its auth
+column, constraint and index fingerprint matches all 89 entries in the
+fully migrated isolated regression database. All 13 rehearsal migration
+checksums match the pinned SQL after accounting for Windows line endings.
+
+Vercel's saved Production `BETTER_AUTH_URL` exactly matches `https://www.kuraishicars.com`.
+Production has no `INQUIRY_` entries or cron definitions; the legacy
+`RESEND_FROM_EMAIL` entry is unused. Neon confirms a separate storage
+branch endpoint and dedicated branch credential with `storage:read` and
+`storage:write`; the private and public bucket policies match the intended
+configuration. The write-only Vercel entries still need provenance and a
+runtime smoke test; the Neon query did not use the app's saved connection.
+Production and Preview have distinct endpoints and role update timestamps,
+but the same role name. Neither fact proves different passwords. Do not
+try the exposed password or export secrets to resolve this.
+
+`d942bf177ea3a2a77f4dd1211a3d0690a9b5c404` passed 17 targeted rollback
+tests on its exact archived source. Its schema differs from V1 only by
+four extra nullable `Dealer` columns in V1, so it remains the preferred
+code-only fallback after migration. Build and verify it against the
+migrated schema before relying on it; it does not display all business-card
+fields. The live `7fdcc66` revision is not an auth-safe fallback.
+
+| Order | Remaining step and blocker | Autonomous preparation | Separate authorization or input |
+| --- | --- | --- | --- |
+| 1 | Approved protected cutover executed on 2026-11-26. Anonymous access is no longer available. | Verified the apex, `www`, default Vercel hostname and both deployment URLs were protected before promotion. | Do not remove protection without separate public-launch approval. |
+| 2 | Production `DATABASE_URL` updated on 2026-11-26 to the pooled least-privilege runtime identity. Private pooled authentication and post-migration grant checks passed; the new value remains sensitive and Production-only. | Existing live deployment, Better Auth, storage and the legacy saved `DIRECT_URL` are unchanged. The new builds override `DIRECT_URL` at runtime with a non-secret disabled value; the migration credential was not sent to Vercel. | Do not retire the existing credential until its consumers have moved and retirement is approved. |
+| 3 | **16.12 complete (2026-11-26):** all 12 pinned migrations applied under the direct migration identity. Prisma confirmed all 13 ledger entries and checksums; no failures or rollbacks. | Verified the fresh Free-plan recovery point, empty Production media buckets, validated constraints and scoped runtime grants. Removed the temporary freeze; homepage, session endpoint and admin returned `200`. | Production restore testing was waived, not verified. Hosted V1 and rollback runtime checks, connector changes and cutover are separate. |
+| 4 | Both pinned revisions are Ready and protected: `dpl_GZx9SE3v7Hv5Mb3sk4S91Rut9Vyo` (V1, now serving `www`) and `dpl_2xmgyjyxLkKH6voVwiic9HCaAvGG` (unassigned fallback). | Health returned `200` with `{"status":"ok"}` on both. Both homepages and `/fahrzeuge` returned `200` after the approved first-run insert of one verified business-card record. | The fallback was not promoted or signed into on `www`. |
+| 5 | Vercel Authentication (All Deployments) and the two reviewed routing rules were enabled and checked before promoting V1. | Live `www` returned `noindex, nofollow`; sitemap requests with and without a query string returned `404` without XML. Logged-out HTML and API requests were gated. | Preserve these settings throughout customer review. |
+| 6 | **16.14 complete:** Production administrator sign-in, dashboard, settings, inventory, media library, inbox, public navigation and health passed. The dealership record persisted; homepage layout had no horizontal overflow in the emulated phone and desktop frames. | An existing ordinary `user` session received `200` with the expected headings on Dashboard, Settings, Vehicles, Media and Leads. Create account was absent in the opened account menu; direct navigation returned to Dashboard without the form. Inquiry intake returned the expected disabled `503`; no inquiries or queued emails existed. | No business data changed. Production had no populated detail or image to check. Direct account-action and media approval/download/deletion denials, populated detail and CRUD rely on separate isolated evidence; they were not repeated against Production. |
+| 7 | **16.15 complete:** rollback evidence and approved owner handoff recorded. Code, Postgres and media recovery are independent. | If separately approved, promote only `dpl_2xmgyjyxLkKH6voVwiic9HCaAvGG` and retain All Deployments protection and the two routing rules. No revert or older migrations. Recheck `www` health, auth, intake and indexing. | The rollback remains unassigned; public launch and credential retirement are not approved. |
+| 8 | Final handoff approved. The operator confirmed named Vercel access and successful owner sign-in on both the website and dashboard. | The [German/English owner guide](./V1-Customer-Review-Guide.md) and [named-access procedure](./Operations-and-Recovery-Runbook.md#named-owner-access-1615) are recorded. Anonymous `/`, `/admin` and `/api/health` all redirected to Vercel authentication after handoff. | Keep protections in place and the seven business/legal items open. |
+
+The [main-domain runbook](./Operations-and-Recovery-Runbook.md#protected-main-domain-v1-cutover)
+contains exact settings, commands, migration and cutover checks. The seven
+business/legal items stay open. Preserve the
+provisional November 27 Preview credential window independently; the
+Preview credential rotation and unresolved Production password non-reuse
+remain separate from the completed protected cutover. Keep the storage warning
+open without changing upload code, and track synthetic account/fixture
+cleanup independently of the release.
+
+**Recovery preparation update:** The original operator evidence supports
+independently generated Better Auth secrets and the intended storage
+credential mapping. `dev` descended from unprotected `main`, and the
+Production role update postdates the fork; this does not prove password
+non-reuse. A consumer-by-consumer replacement contingency is documented.
+The Free Neon snapshot slot is occupied and was preserved. After explicit
+approval, created and verified Ready no-compute preparation branch
+`br-snowy-base-b9rdq5rh` from Production LSN `0/1F13410`, expiring
+`2026-12-03T13:51:23Z`. No upgrade or paid resource was ordered. There is
+no application connection to the copy and no verified restore.
+The Free project lacks a verified private source path. Keep the
+retained branch no-compute and establish an available, suitable
+write-frozen point before migration; do not treat readback as proof
+of restoration.
+
+- [x] **Media recovery destination prepared and checked.** Independent
+  Frankfurt Free project `morning-fire-32011635`, root
+  `br-fancy-unit-bhvjvfzi`: both backup buckets are private and empty;
+  anonymous object and list probes returned 403. No SQL compute remains.
+  Authenticated recursive counts for the two Production source buckets
+  were each 0 objects / 0 bytes. No copy or sample restore took place and
+  expected incremental transfer/storage charges for this inventory are
+  zero. Recheck the counts at the write freeze; if nonempty, confirm
+  access, capacity, retention and cost before transfer.
+- [x] **Production role and current grants prepared.** On the verified
+  PostgreSQL 18 Production target, created `kuraishi_v1_runtime` and
+  `kuraishi_v1_migration` as `NOLOGIN`, with no elevated flags or inherited
+  memberships. The runtime can use the schema and has CRUD on the five
+  Better Auth tables but no schema creation or migration ledger access.
+  The migration role can create schema objects, read/write the required
+  ledger fields (no delete), and reference `user.id`. No credentials
+  were generated or stored. Enable the two logins only from an approved
+  secret store and operator runner; live Vercel updates and retirement
+  of the old login still need separate approval.
+- [x] **Protected routing draft tested.** Unpublished draft
+  `a1e17acb-6fdc-434e-bedb-92e859edc529` redirected anonymous home and
+  sitemap requests to Vercel Authentication. In the authenticated
+  browser, the draft home returned `200` with `noindex, nofollow`; the
+  sitemap returned `404` without XML, including with a query string.
+  This draft test used the pre-V1 deployment. After cutover approval,
+  the two reviewed rules were published and rechecked on both staged
+  revisions and on live `www`.
+- [x] **Protected builds and cutover.** Both pinned Production builds
+  passed readiness and public-route checks behind Vercel Authentication.
+  V1 was promoted to `www` after the approved protection and indexing
+  rules passed; the fallback remains unassigned.
+  Exact V1 `152742d366d47b5d3d6dd92e5218947206cea3bb` and fallback
+  `d942bf177ea3a2a77f4dd1211a3d0690a9b5c404` remain pinned. Reviewed
+  `prisma generate` and `next build` hooks on both; the Vercel project
+  has no custom install or build commands. Both used non-routable
+  build-only database settings and passed runtime readiness against
+  the migrated schema with the independent runtime identity.
+
+**Earlier credential and restore investigation:** The
+shared host passed an in-memory synthetic RNG and CurrentUser DPAPI
+check, but has no approved Production vault or restore boundary. No
+PostgreSQL 18 tools, working WSL distro, or Docker/Podman were found;
+disk encryption could not be verified. No safe Free-plan restricted
+source path for the retained copy was established. The runbook now
+includes the private `psql` prompts for activating and verifying only
+the new roles, and the exact unassigned Vercel command with non-secret
+build-only overrides. Both revisions use the pooled URL from the
+server runtime environment; the direct URL is needed only by the
+migration operator. The tested draft is unchanged. No live variables,
+roles, deployments, or recovery resources were modified in this review.
+
+**Activation and restore update:** Signed EDB 18.7 client utilities
+are now available per-user. The private activation console reached
+its password prompt following a certificate-verified, password-free
+preflight. Activation and login verification are pending operator
+entry. No PostgreSQL server or recovery data was installed locally.
+The first activation attempt hit the database's idle-in-transaction
+timeout while awaiting input. Both roles were rechecked as `NOLOGIN`.
+The next attempt reached Neon, which rejected the precomputed SCRAM
+verifier from `psql \password`. Both roles still read `NOLOGIN`.
+The private launcher now collects the new passwords before connecting
+and sends the password statements via stdin over verified TLS after
+checking the target and session logging settings. A later attempt enabled
+both roles (`LOGIN` confirmed by read-only catalog check), but the pooled runtime
+login failed authentication. The launcher stopped before testing the
+direct migration login. A verification-only retry on 2026-11-26
+passed pooled runtime authentication, direct migration authentication
+and current permission checks on Production. This does not verify
+post-migration grants or credential confidentiality. No Vercel variables
+were changed.
+**Free-plan decision (2026-11-26):** Paid infrastructure was declined
+and Production restore testing was waived for this V1 release. Neither
+the copy nor snapshot was restored. The retained branch was rechecked:
+Ready at LSN `0/1F13410`, expiring `2026-12-03T13:51:23Z`. Preserve both
+resources, recheck at migration time, refresh if stale within Free quotas,
+and recheck media before applying anything. Recovery time is unknown;
+the six-hour PITR window can expire, and recovery may lose later writes.
+This does not close 16.12 or preapprove restoration.
+
+- [x] **Free-plan synthetic migration permission rehearsal.** On
+  loopback PostgreSQL 18.7, starting with the pinned Better Auth
+  baseline and matching role grants, the scoped direct role applied
+  all 12 pending migrations in order. Prisma reported up to date; the
+  ledger had 13 successful entries. Catalog checks verified the four
+  nullable dealer columns, three media triggers and no app sequences.
+  The runtime role passed scoped table-grant and dealership-lock
+  checks; ledger, DDL and disabled inquiry-write access were denied.
+  The server was stopped. This is not a Production restore test or
+  hosted runtime verification of either pinned release.
+
 ## Consolidated V1 verification evidence
 
 These are previously completed checks, not a new suite run or a release
@@ -208,9 +422,9 @@ record the setup and coverage limits. Do not combine counts from different runs.
 | Comparison and dealership settings (07.05, 08.09) | Disposable browser/DB: comparison persistence, pruning and retry; staff settings validation, stale-write protection and propagation to public pages. | Settings used synthetic facts; comparison and theme remain unchanged pending legal review. |
 | Inquiry, inbox, dashboard and notifications (09.12, 11.08, 12.08, 10.07) | Isolated persistence and browser evidence: validations, access boundaries, authored notes, metric accuracy and retry; mock worker verified outbox integrity, idempotency, retries and failure handling. | No live inquiry or mail acceptance. External email and callbacks are excluded from V1. |
 | Legal, consent and local media (14.08 baseline) | Four routes, synthetic shared contact details and six service CTA contexts verified. Local media playback, fallback, reduced motion and absence of external decorative-media requests verified separately at `e44d26a`; 148 source tests and an optimized build passed. | Placeholders and legal classification are still open; see [implementation readiness](./Implemented-Sections-Test-Guide.md#implementation-readiness-after-legal-approval). |
-| Release and recovery preparation (16.11, 16.13, 16.15 preflight) | Environment segregation evidence, isolated recovery drill and documented manual path; offline preflight at `53434be` passed 148 source tests plus type/lint/schema/build checks. Archived `d942bf1` passed 147 source tests as a code rollback candidate. | No newly verified Production recovery point, smoke, or final release approval; 16.12, 16.14 and 16.15 remain separate. |
+| Release and recovery preparation (16.11, 16.13, 16.15 preflight) | Environment segregation evidence, isolated recovery drill and documented manual path; offline preflight at `53434be` passed 148 source tests plus type/lint/schema/build checks. Archived `d942bf1` passed 147 source tests as a code rollback candidate. | Preflight evidence only. See the [separate Production record](#main-domain-v1-readiness) for completed gates. Production restore testing was waived. |
 | Storage warning follow-up | Owner accepted the [isolated provider evidence](./Operations-and-Recovery-Runbook.md#2026-11-26-isolated-provider-trace-evidence). Tested normal upload, integrity, replacement, deletion, retry and concurrency were consistent. | Preserve the implementation. Root cause is unresolved; use the [next-occurrence protocol](./Operations-and-Recovery-Runbook.md#capture-the-next-hosted-preview-occurrence) only during authorized testing. Do not provision another lab without new evidence or a specific hypothesis. |
-| Protected customer-review candidate | Initial deployment: isolated migration rehearsal, hosted onboarding, both access gates, indexing, synthetic inquiry, inventory and media smoke, and ordinary staff authorization. Replacement candidate: verified locally at nine viewport widths, with neutral homepage copy. | Approve the replacement deployment, repeat its affected hosted checks, then obtain separate handoff approval. |
+| Protected customer-review candidate | Initial deployment: isolated migration rehearsal, hosted onboarding, synthetic inquiry, inventory and media smoke, and ordinary staff authorization. Replacement: deployed and verified at all nine viewport widths, with neutral homepage copy, both access gates, indexing controls and ordinary-staff regression. | Historical rehearsal, not the live owner handoff. Track cleanup of both synthetic staff accounts and their test records. |
 
 **Preview maintenance:** The recovery clone lookup is due only after
 **November 27, 2026, 20:27:11 CET (19:27:11 UTC)**. It has not been performed
@@ -278,5 +492,5 @@ This report does not authorize a Production change, data import, migration, emai
   - **Database and auth:** Production uses pooled and direct URLs for the same database on Frankfurt `main`; the release branch's Preview uses `dev`. The operator confirmed the intended HTTPS auth origins and independently generated auth secrets. Other Preview branches were not verified.
   - **Storage:** The operator confirmed that all six Production-only Vercel values match the dedicated Frankfurt storage project, its private and public-read buckets, and its own credential. Preview and the isolated media suite use separate targets, buckets, and credentials. Preview private upload, thumbnails, download, and deletion passed. The unused bucket pair on the original `main` was not wired into the app.
   - **Notifications:** Both inquiry mode flags are unset in Production and Preview. `RESEND_FROM_EMAIL` is unused; the app defaults to disabled delivery. Vercel and Resend showed no project/app webhooks, the operator confirmed no external schedules or other callbacks, and Vercel support reported zero cron definitions for the current Production deployment.
-  - **Runtime handoff:** The current Production deployment (`7fdcc66`, created 2026-11-16) predates the saved storage variables. It cannot verify the new settings. Both Production bucket access checks remain pending under **16.14**; no deployment or migration was performed for this verification.
+  - **Historical runtime handoff:** The then-live deployment (`7fdcc66`, created 2026-11-16) predated the saved storage variables. This preflight did not exercise them. The later [16.14 Production health check](#main-domain-v1-readiness) verified access to both configured buckets on the deployed V1.
 - [x] **16.13 — Deployment path:** approved on 2026-11-20 and recorded in the [operations runbook](./Operations-and-Recovery-Runbook.md#manual-production-deployment-1613). Verified the documented `vercel deploy --prod` command against the Vercel CLI reference and confirmed Git deployments remain disabled. No Production deployment was run.

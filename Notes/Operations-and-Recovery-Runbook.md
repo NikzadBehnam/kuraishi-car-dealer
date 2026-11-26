@@ -342,11 +342,7 @@ write to the database or buckets as part of this review.
 3. Confirm `BETTER_AUTH_SECRET` was generated separately for Production and
    Preview. Check that `BETTER_AUTH_URL` points to the exact intended HTTPS
    origin for each environment; Preview must not use the Production auth
-   origin. For the release test branch, set a branch-specific
-   `BETTER_AUTH_URL` to its stable Vercel Preview branch URL, without a
-   trailing slash. Leave the existing Production value unchanged. After a
-   fresh Preview deployment, use that exact branch URL for sign-in and
-   protected media actions, not the per-deployment URL.
+   origin.
 4. In the storage provider console, compare the effective `AWS_ENDPOINT_URL_S3`
    and `AWS_REGION` with the approved storage configuration. Check
    `MEDIA_PRIVATE_BUCKET` and `MEDIA_PUBLIC_BUCKET`: the buckets must be
@@ -391,7 +387,7 @@ deployment, and approval of this procedure does not authorize running it.
    with the authorized release account and use `vercel link` to select the
    existing approved team and project. Stop if the target or account is
    uncertain; do not create a new project or pass secrets as CLI arguments.
-3. Only when the release is authorized, run `vercel deploy --prod` from that
+3. For an unrestricted release only, when separately authorized, run `vercel deploy --prod` from that
    checkout. This may assign the Production domain as soon as the deployment
    is ready. Stop on failure; do not blindly retry or proceed to the public
    smoke test. Record the commit SHA, deployment URL or ID, operator and time,
@@ -400,6 +396,584 @@ deployment, and approval of this procedure does not authorize running it.
 4. Perform the smoke test in 16.14 and record the evidence and rollback
    decision in 16.15. If validation fails, follow the approved rollback plan.
    Rolling back application code does not restore the database or media.
+
+## Protected main-domain V1 cutover
+
+**Completed on 2026-11-26.** This section retains the approved cutover
+procedure and historical evidence, not permission to repeat it or to open
+the site to the public. Keep the existing project and DNS. The
+[delivery record](./report.md#v1-delivery-milestone) records current status.
+The exact deployed application revision is
+`152742d366d47b5d3d6dd92e5218947206cea3bb` on
+`release/v1-customer-review`; do not merge merely to deploy it.
+
+1. **Approve the cutover window and access change.** Project
+   `prj_nQ4GyGpomFCQPPuEsMtHVUyC0kyD` excluded custom domains before cutover
+   from its Vercel Authentication. Capture current aliases, access settings,
+   exceptions, route-rules version, credentials provenance and deployment
+   ID. Confirm public availability impact, named operator access and the
+   owner's expected access method on the actual `www` hostname. Turning on
+   [All Deployments protection](https://vercel.com/docs/deployment-protection)
+   also gates the existing site and other project URLs. Do not start that
+   change before the agreed window. If public access must continue
+   uninterrupted, defer the main-domain cutover and keep the isolated review
+   separate; do not expose V1 as a fallback.
+2. **Confirm effective Production settings before writes.** Reconcile
+   `DATABASE_URL` (pooled runtime) and `DIRECT_URL` (direct, used by
+   Prisma) against Frankfurt `main`, `br-damp-shape-b9jjarf6`,
+   `ep-silent-mountain-b966e9p0`, database `kuraishi-car-dealer-db`.
+   Compare provisioning provenance privately and establish that neither
+   credential uses the exposed Preview password; the same role name exists
+   on both branches. Confirm `BETTER_AUTH_URL=https://www.kuraishicars.com`
+   and an independent `BETTER_AUTH_SECRET`. Keep apex redirecting to `www`;
+   do not add generated URLs as trusted auth origins. Confirm
+   `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`,
+   `AWS_SECRET_ACCESS_KEY`, `MEDIA_PRIVATE_BUCKET` and `MEDIA_PUBLIC_BUCKET`
+   against storage project `wispy-union-42314552`, branch
+   `br-patient-heart-bgatd0h7`, with `kuraishi-production-private` and
+   `kuraishi-production-public` and a dedicated scoped credential. Keep
+   `INQUIRY_TEST_MODE` false/unset, `INQUIRY_EMAIL_MODE` disabled/unset,
+   and worker, sender and callback credentials and schedules off.
+   `RESEND_FROM_EMAIL` is unused; the exact candidate has a built-in `www`
+   canonical origin, so the legacy `NEXT_PUBLIC_SITE_URL` entry is not
+   evidence of its SEO configuration. The saved auth origin is confirmed.
+   The production branch's S3 endpoint is
+   `https://br-patient-heart-bgatd0h7.storage.c-9.eu-central-1.aws.neon.tech`,
+   region `eu-central-1`, path-style. The designated branch-scoped storage
+   credential has read/write scopes and expires `2027-02-21T09:40:31Z`.
+   Vercel database, storage and auth secrets are write-only. Use the
+   provisioning record or vault history to verify their mapping, creation
+   and independence; the Neon provider query and prior operator checks
+   do not establish which credential the next deployment will use. Do not
+   export environment files. If Production password non-reuse cannot be
+   proven, stop and seek approval for a separate remediation.
+3. **16.12: recovery and migrations.** On the verified direct target,
+   inspect migration status and compare applied checksums and schema to
+   the approved chain. The read-only Production ledger confirms exactly
+   one applied Better Auth baseline, matching the pinned Git checksum,
+   and 12 pending migrations,
+   from `20261117180000_vehicle_inventory` through
+   `20261126124000_dealer_review_business_details`. The order is auth
+   baseline, inventory and `Dealer`, media/assets/integrity/upload
+   lifecycle and vehicle links, dealership settings, inquiry tables,
+   guards/outbox/notes, then the four nullable `Dealer` fields. Apply the
+   intact chain, not selected SQL files. Stop on failed/diverged history,
+   drift, wrong target, or an unexpected pending range.
+
+   Freeze affected writers, then capture UTC and LSN and take an approved
+   retained recovery copy or encrypted custom-format logical backup over
+   the direct target. Keep it through cutover, smoke, and an agreed
+   rollback observation window beyond Neon's six-hour history horizon.
+   Propose seven days for this release only, or longer if the release is
+   not accepted by then, subject to owner approval and access/retention
+   policy. Record the branch ID, parent LSN, UTC timestamp, expiry and
+   access owner. For this Free-plan V1 release the owner waived the
+   Production restore drill. Immediately before migration, verify
+   the retained point exists, is Ready, and covers the write freeze
+   and rollback window; refresh it with a new no-compute point if
+   writes occurred or its remaining retention is insufficient. Stop
+   if quota prevents a usable point. A branch readback is not a
+   restore test. Rehearse the migration chain with synthetic data.
+   Recovery time and recoverability of the retained copy remain untested.
+
+   **2026-11-26 execution hold:** The Frankfurt `main` ledger contains
+   only the completed, checksum-matched Better Auth baseline. The
+   migration login's required schema, ledger and `user.id` reference
+   grants were confirmed. The retained copy was Ready and the manual
+   snapshot remained present. The project had seven of ten branch slots
+   in use, and both Production media buckets were empty at preflight.
+   The observed WAL position `0/1F979B8` was ahead of the retained point
+   `0/1F13410`; this does not establish which writes occurred. Capture
+   a fresh point after the freeze without replacing either retained
+   resource. The live homepage returned `200`, and its deployed source
+   still exposes a write-capable Better Auth route. A sample with no
+   other connected clients is not a write freeze. Before taking a new
+   point, verify that authentication writes are blocked on all
+   entry points that share Production and that other direct writers
+   are paused and drained. No migration or cutover was performed.
+
+   The direct login and role checks passed in the private console.
+   The operator approved blocking both `/api/auth` and `/admin` and
+   their subpaths in Production: the serving `/admin` routes can call
+   Better Auth directly. The Vercel firewall API activated the rule
+   immediately when no firewall config existed; do not use that call
+   as a draft-only operation. The rule was removed immediately and
+   its absence and the homepage and auth endpoint's `200` responses
+   were verified. No freeze or fresh recovery point was verified.
+
+   **2026-11-26 retry:** Private Prisma status confirmed the 12 pending
+   migrations. The Production-only rule denied the four auth/admin
+   probe paths on public entry points (following the apex redirect where
+   applicable). Fourteen generated hosts redirected to existing Vercel
+   Authentication; the firewall was not independently probed through
+   those authenticated sessions. The public homepage stayed available.
+   The frozen database showed no other client connections, prepared
+   transactions or enabled subscriptions. Both Production media buckets
+   remained empty. Neon readback confirmed a Ready, no-compute branch
+   `br-bitter-shadow-b9zci11r` from `main` at LSN `0/1FF4478`, with
+   parent timestamp `2026-11-26T15:48:09Z` and expiry
+   `2026-12-03T15:48:20Z`. The earlier copy and original snapshot were
+   left untouched. Production restore testing remains waived, not verified.
+
+   The private console exited before consuming the execution signal.
+   The signal was withdrawn, and readback confirmed only the completed
+   baseline and no `Dealer` or `Vehicle` tables. No migration or
+   post-migration grants ran. The temporary rule was removed and the
+   homepage, session endpoint and admin returned `200`. Before retrying,
+   verify the private runner process remains live, re-establish the
+   freeze and refresh the recovery point if it no longer covers the
+   freeze. Do not remove the earlier recovery resources.
+
+   **2026-11-26 completed execution:** The earlier process vanished
+   before claiming its signal; no process-exit event identified what
+   terminated it. An independent interactive Windows task with a
+   PID/start-time check, heartbeat, and a one-shot, short-lived
+   signal passed offline success, child failure, stale-signal and
+   replay tests before use. The task then completed with exit code 0.
+   The Production-only rule was verified as before; no other clients,
+   prepared transactions or enabled subscriptions were observed.
+   Both media buckets were empty. The previous branch was behind
+   the frozen WAL position, so a new Ready, no-compute branch
+   `br-silent-cell-b9gtcox0` was retained at LSN `0/2013680`, parent
+   timestamp `2026-11-26T15:58:31Z`, expiry `2026-12-03T15:58:40Z`.
+   Earlier branches and the original snapshot were preserved. No
+   Production restore was attempted; restoration remains waived.
+
+   Prisma deployed the exact 12 pending migrations as
+   `kuraishi_v1_migration` through the direct Frankfurt endpoint.
+   Post-deploy status passed and all 13 ledger names and checksums
+   matched the pinned chain in order. Catalog verification found
+   10 app tables, 14 foreign keys and 42 checks, no unvalidated
+   constraints, 41 app and ledger indexes, four nullable dealership
+   fields, three media triggers and no public sequences. Scoped grants
+   matched the required runtime permissions with zero mismatches;
+   future objects still require explicit grants, not broad defaults.
+   This was a catalog permission check, not a hosted V1 smoke test.
+   The temporary rule was removed and the homepage, auth session
+   endpoint and admin returned `200`. No Vercel connector, deployment,
+   domain, Preview or review-environment settings were changed.
+   Hosted candidate and rollback smoke checks remain separate.
+
+   Capture media inventory separately, including relevant object keys,
+   sizes/checksums and access policy; verify an approved retained copy or
+   independent restore path in an isolated bucket. Never treat a database
+   recovery copy as a media backup. Only after explicit
+   migration approval use the clean pinned checkout and the confirmed
+   direct credential to run `pnpm exec prisma migrate deploy`. Verify
+   `pnpm exec prisma migrate status`, schema compatibility, the four
+   nullable dealership fields, and unchanged existing records. Before
+   staging, grant application access as the new migration role, which
+   owns the new objects:
+
+   ```sql
+   GRANT SELECT, INSERT, UPDATE ON TABLE public."Dealer" TO kuraishi_v1_runtime;
+   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public."Vehicle", public."MediaUploadIntent" TO kuraishi_v1_runtime;
+   GRANT SELECT, INSERT, DELETE ON TABLE public."VehicleChange", public."VehicleMedia", public."MediaAsset" TO kuraishi_v1_runtime;
+   GRANT SELECT ON TABLE public."Inquiry" TO kuraishi_v1_runtime;
+   GRANT SELECT, INSERT ON TABLE public."InquiryNote" TO kuraishi_v1_runtime;
+   ```
+
+   Verify these grants on the pooled login, including the dealership
+   table lock; keep the inquiry write, rate-limit and delivery tables
+   inaccessible for review. The exact chain and these grants passed on
+   synthetic PostgreSQL 18.7 using the scoped direct and runtime roles.
+   The test did not use Production data or a recovery copy. The
+   migrations do not change Better Auth table definitions (89 catalog
+   entries match the migrated rehearsal). Existing code is expected to
+   keep serving, but database DDL can block briefly. Keep the write freeze
+   until checks pass. On failure stop, preserve the current ledger and
+   inspect whether DDL partially applied. Reconcile or restore only with
+   explicit approval; do not blindly retry, resolve, reset, seed or run
+   reverse SQL.
+4. **Build without moving domains.** After explicit authorization, verify
+   the clean pinned SHA, project link and Production settings. Run
+   `vercel deploy --prod --skip-domain`; confirm Ready, exact source SHA
+   evidence, Production target, and that `www` still serves the old
+   deployment. Check protected generated URL and `/api/health` where
+   possible. This URL is not the final auth origin; perform Better Auth
+   sign-in only on `www`. Do not automatically promote on a successful build.
+   If approved, stage the fallback the same way before promoting V1. Do
+   not run its older migration bundle.
+
+   Build safety (both pinned revisions): the install hook is
+   `prisma generate`, the build hook is `next build`, and the verified
+   project has no custom install/build override. Public data layouts and
+   the sitemap opt out of static rendering. As a second safeguard,
+   override both `DATABASE_URL` and `DIRECT_URL` with loopback-only
+   placeholder URLs via `--build-env` (not runtime `--env`); verify the
+   effective override in a build without a Production connection.
+   Never run a migration hook during install, build or deployment.
+   Do not bind a new review build to the potentially shared owner login.
+
+   From each clean checkout, after the runtime connector is approved:
+
+   ```powershell
+   $buildDb = 'postgresql://build_only:unused@127.0.0.1:1/build_only?connect_timeout=2'
+   vercel deploy --prod --skip-domain --project prj_nQ4GyGpomFCQPPuEsMtHVUyC0kyD --build-env "DATABASE_URL=$buildDb" --build-env "DIRECT_URL=$buildDb" --yes
+   ```
+
+   Vercel CLI 67 documents separate build (`--build-env`) and runtime
+   (`--env`) inputs. Use only `--build-env` for the dummy URLs. Both
+   revisions read server-side `process.env.DATABASE_URL` for Prisma at
+   runtime and use `DIRECT_URL` only in Prisma CLI config. Neither
+   revision inlines these values through `next.config` or `NEXT_PUBLIC_`.
+   Keep the real migration connector in the operator vault, not in the
+   new deployments. Removing the legacy saved `DIRECT_URL` requires
+   separate approval and a consumer check. Verify after staging:
+   current alias unchanged, generated URL gated, `/api/health` succeeds
+   behind the gate with the actual pooled connector, and inquiry intake
+   returns the disabled response. Do not use CLI `--verify`: it can
+   create an automation bypass secret. This is a configuration review,
+   not evidence of provider runtime separation on a deployed build.
+
+   **2026-11-26 staging evidence:** Both exact revisions are Ready
+   and unassigned. The approved pooled `DATABASE_URL` passed private
+   authentication and hosted readiness on both builds; the real
+   migration credential was not sent to Vercel. New deployments
+   override the legacy runtime `DIRECT_URL` with a disabled non-secret
+   value without changing the saved variable. An authorized first-run
+   insert initialized one Production dealership record. The protected
+   homepage, catalog and health checks returned `200` on both builds;
+   real inquiry intake returned the expected `503`. After approval,
+   enabled All Deployments protection, published the two reviewed
+   indexing rules, and verified them before promoting
+   `dpl_GZx9SE3v7Hv5Mb3sk4S91Rut9Vyo`. The `www` administrator login,
+   public and admin reads, `/api/health`, intake off-state, noindex and
+   sitemap suppression passed. The fallback deployment is
+   `dpl_2xmgyjyxLkKH6voVwiic9HCaAvGG`, unassigned and protected.
+   If rollback is approved, promote that exact deployment with the
+   protection and routing rules left on; do not run its migrations.
+   Recheck `www` sign-in after promotion. After separate handoff
+   approval, grant named Vercel access for `www` without a bypass link,
+   provision a separate app account with the approved role, and deliver
+   initial credentials through the operator's approved private channel.
+   The owner first signs into Vercel and then signs into `/admin` on
+   `www`. Verify both layers using the owner's account after handoff.
+5. **Protect, then promote.** In the approved window, enable All
+   Deployments and verify logged-out requests cannot reach app HTML or APIs
+   via `www`, apex (including redirect target), default hostname or
+   generated URLs. Review exceptions and bypass grants. Publish approved
+   temporary [project routing rules](https://vercel.com/docs/cli/routes)
+   covering every host serving V1: a host-agnostic `/:path*` header rule
+   sets `X-Robots-Tag: noindex, nofollow`, and an exact `/sitemap.xml` rule
+   returns a 404 with no sitemap body. Snapshot the prior rules before
+   publishing. Do not rely on Production's `robots.txt` to block indexing.
+   Auth is the primary access control. The exact Production build
+   normally permits indexing and publishes a sitemap; Preview behavior
+   does not carry over. Check authenticated page headers as well as clean
+   browser access; if controls cannot be verified, do not proceed. Only
+   after domain-cutover approval use `vercel promote <verified-deployment>`.
+   Recheck aliases, HTTPS, access and indexing immediately; keep protection
+   in place on failure.
+
+   From the verified Production project link, check
+   `vercel routes list --production` and `vercel routes list --diff`
+   before touching the draft. Stop if it contains unrelated edits. After
+   authorization to stage the rules, use these commands (staging only):
+
+   ```powershell
+   vercel routes add "V1 review noindex" --src "^/.*$" --src-syntax regex --set-response-header "X-Robots-Tag=noindex, nofollow" --yes
+   vercel routes add "V1 review sitemap off" --src "/sitemap.xml" --src-syntax equals --action set-status --status 404 --set-response-header "X-Robots-Tag=noindex, nofollow" --yes
+   vercel routes list --diff --expand
+   ```
+
+   Check for a usable sitemap on `/sitemap.xml`, with a query string, and
+   through normalized path variants. Verify the review header is effective
+   on app responses, including HTML that still contains the original
+   indexable metadata. If the edge rules are insufficient, stop and
+   prepare a separately verified revision; do not promote the pinned builds.
+
+   Draft `a1e17acb-6fdc-434e-bedb-92e859edc529` is staged, not
+   published. Its authenticated hostname returned `200` with the
+   review header at `/`, and `404` without XML at `/sitemap.xml` with
+   and without a query string. Anonymous requests redirected to the
+   hosting gate. This tested the draft over the existing deployment;
+   the same controls still need verification on both pinned builds.
+
+6. **16.14: internal Production smoke.** Verify revision, access gates,
+   `/api/health` = `200` and `{"status":"ok"}`, app log-in/logout and
+   staff scope on `www`, catalog/detail status, settings and inbox. Confirm
+   no real inquiry intake: an approved payload-free `POST /api/inquiries`
+   inside hosting auth returns 503 without creating a row; confirm no
+   delivery or callbacks. Do not re-enable intake for a test. With separate
+   authority to write the approved business card, use Admin Settings to
+   create or reconcile exactly one dealership record. Read back the legal
+   name, brand, legal form, activity, address, all three telephones as
+   phones, email and website; check Contact, footer, About, Impressum and
+   vCard where applicable. Do not copy any review DB rows, accounts or
+   media; omit unprovided business/legal details. Readiness is not a full
+   media test: any private upload/public-copy smoke needs separately
+   authorized disposable fixtures and cleanup. Public-read objects are
+   outside Vercel protection; use no personal data in fixtures.
+7. **16.15: release record or rollback.** Record revision/ID, alias mapping,
+   recovery reference and expiry, migration ledger outcome, ordered smoke
+   evidence, operator and go/no-go decision. On failure suspend handoff;
+   restore the approved, schema-compatible and auth-safe deployment while
+   keeping the gate closed, or leave access gated and roll forward.
+   `7fdcc66` is the current availability baseline, not an auth-safe
+   rollback. `d942bf1` includes credential-form hardening and passed 17
+   focused tests on its archived source. Its Prisma schema only lacks
+   the four nullable fields; no down-migration is needed or intended.
+   Stage it with `--prod --skip-domain` only after approval and verify
+   readiness using current credentials and the migrated schema. Do not
+   use its missing business-card fields or older copy as accepted owner
+   review. Do not revert the database for a code
+   rollback; restore it only under separate approval after accounting for
+   intervening writes. Restore media independently and reconcile references.
+   Restore prior public access only with a separate decision and only after
+   verifying that no unapproved V1 content can be served.
+8. **Owner access.** Follow the [named owner access procedure](#named-owner-access-1615).
+
+### Named owner access (16.15)
+
+**16.14 verification, 2026-11-26:** On live deployment
+`dpl_GZx9SE3v7Hv5Mb3sk4S91Rut9Vyo`, an existing ordinary staff account
+authenticated and opened Dashboard, Settings, Vehicles, Media and Leads.
+Create account was absent from its account menu, and directly opening the
+account creation URL returned to Dashboard. Business data was not changed.
+Production had no vehicle or media object; populated detail, media CRUD
+and direct action-denial checks remain isolated evidence. The code-only
+fallback `dpl_2xmgyjyxLkKH6voVwiic9HCaAvGG` remains protected and unassigned;
+do not roll back schema or storage as part of a code rollback. Production
+restore testing was waived, not verified.
+
+**Provisioning, 2026-11-26:** The operator confirmed successful creation
+of a separate ordinary owner account in the Production form. No invitation
+was sent or hosting access granted during provisioning.
+
+**Approved handoff, 2026-11-26:** The operator approved the confirmed
+recipient, confirmed granting only the matching named Vercel request, and
+reported that the owner signed into the protected website and the app
+dashboard. Independent unauthenticated probes of `/`, `/admin` and
+`/api/health` returned `302` to Vercel authentication. Task 16.15 is closed
+for protected review, not for public launch.
+
+1. Confirm the recipient's name, app sign-in email, and Vercel identity if
+   different. Privately sign in as the existing app administrator. Use
+   **Create account** at `/admin/accounts/new` to provision a new ordinary
+   account for that owner. Use a unique initial password entered privately;
+   never copy an old account, share the administrator password, or elevate
+   the owner for media approval.
+2. Obtain final handoff approval before contacting the owner or granting
+   access. Ask the owner to sign in to their own Vercel account, open
+   `https://www.kuraishicars.com` and choose **Request Access** if prompted.
+   In Vercel, open the project's **Settings → Deployment Protection →
+   Requests** (or the deployment **Share** dialog), verify the requester
+   against the approved identity, and approve only that named request. Check
+   it under **Access**. See [Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication).
+   Do not grant a paid seat, team membership, or a shared bypass link.
+3. Give the owner the [German/English guide](./V1-Customer-Review-Guide.md)
+   and deliver the unique app credential through the approved private channel.
+   Verify that the owner can load `www` using their named Vercel access and
+   reach Dashboard with their separate app account. Verify a signed-out
+   browser still cannot access `www`. Leave indexing, sitemap, inquiries and
+   external email disabled. Record the result without credentials; keep
+   16.15 open until approval and both access checks are recorded.
+
+### Recovery resource proposal and acceptance (16.12)
+
+The Frankfurt Free project has six of ten branch slots in use and its
+only manual snapshot slot is occupied by `snap-royal-surf-b976qnpq`
+(2026-11-15, no expiry). Do not remove it. Propose a seven-day,
+no-compute branch named `main-before-v1-migration`, taken immediately
+before migration while affected writes are frozen. Explicitly set project
+`twilight-bread-36837209`, parent `br-damp-shape-b9jjarf6`, approved UTC/LSN
+and expiry; omit endpoints. Verify the returned parent, point, expiry
+and empty endpoint list. Do not mount the retained copy into Vercel,
+development or customer review. Recheck storage and compute allowance
+immediately before creation. The estimate is $0 incremental Neon plan
+charge within current Free quotas; a branch uses a slot, shared data can
+consume storage allowance, and a verifier consumes compute allowance.
+No plan upgrade, paid destination or quota expansion is approved.
+
+**Approved preparation copy (2026-11-26):**
+`main-before-v1-migration-preparation` (`br-snowy-base-b9rdq5rh`) is Ready
+in `twilight-bread-36837209`, with parent `br-damp-shape-b9jjarf6` at LSN
+`0/1F13410` (`2026-11-26T13:51:22Z`). Neon reported zero computes and
+expiry `2026-12-03T13:51:23Z`. The existing snapshot was not changed.
+This confirms creation and isolation from SQL endpoints, not successful
+restoration or a final write-frozen rollback point. Do not attach a
+compute to this branch. Refresh and verify the cutover point if data
+changes or the copy will expire before the release window ends.
+
+Restore into a second, disposable verifier, not the retained source or
+Production. An unprotected parent can copy role passwords. Do not attach
+a network-accessible compute where inherited credentials could grant
+access. Prove that the chosen isolation control is effective before the
+verifier can accept connections; otherwise use a custom-format encrypted
+logical dump in an approved restricted vault and restore to a private,
+network-isolated Postgres instance with fresh credentials, no restored
+login roles and no application linkage. Use the same major version, compare
+the expected database, ledger, auth schema fingerprint, aggregate counts
+and approved grants, then run the pinned chain on the verifier and
+measure recovery time. Record results only, not rows, credential hashes or
+object identifiers that contain personal data. Remove the verifier at the
+approved time. If the migration is delayed or writes resume, take and
+verify a fresh point in the authorized window; do not treat an older
+practice backup as the cutover recovery point.
+
+**Restore verification waived for this V1 release (2026-11-26):** The
+owner declined paid infrastructure. The Free project has no
+verified private network or IP allowlist for a verifier. Neon documents
+those controls on Scale, and does not guarantee that an inherited
+password can be replaced before a first reachable endpoint in this
+setup. Do not expose a clone to test that assumption. The current agent
+host is not an approved Production-data restore destination. The
+no-upgrade path needs an approved operator-controlled, network-isolated
+PostgreSQL 18 runner with an encrypted volume/vault and private
+credential injection. From the retained point, use an access-restricted
+source path before any export; a new live dump instead verifies a new
+point, not this exact copy. Restore with `pg_restore --single-transaction
+--exit-on-error --no-owner --no-privileges`; apply audited grants
+separately. Record only pass/fail, aggregate counts and elapsed time.
+Do not treat the fresh media project as a database verifier.
+
+Retain the original no-compute branch and manual snapshot. The
+scope change does not authorize exposing a clone, using real data on
+the shared host, or proceeding without a usable recovery point. If a
+rollback is needed, stop writers, preserve the current ledger and
+data, and seek separate restore authorization. The six-hour Free
+history may expire before diagnosis; recovering from the retained
+copy after that may take longer, must use an approved restricted
+path, and can lose writes made after its LSN. A successful synthetic
+rehearsal does not reduce this uncertainty about the actual copy.
+
+Object storage is separate. Neon can store a versioning configuration
+without enforcing object versions. Use a distinct private, access-
+restricted destination in the approved region for both source buckets
+if objects exist. Capture a private manifest of sizes, strong checksums,
+content types and original access levels, and verify an independent
+restore sample and its database references in isolation. If a safe
+read-only inventory proves both buckets empty, record the counts and
+policy instead of copying nonexistent objects. Do not clone a public-read
+bucket into another public bucket.
+
+**Media recovery preparation (2026-11-26):** Both Production source
+buckets were listed recursively with authenticated read-only access;
+`kuraishi-production-private` and `kuraishi-production-public` each
+contained **0 objects / 0 bytes**. The private destination is the
+independent Frankfurt Free project `morning-fire-32011635`, root
+`br-fancy-unit-bhvjvfzi`, with no Production parent. Buckets
+`kuraishi-recovery-private-source` and `kuraishi-recovery-public-source`
+both read back as private and empty. Unauthenticated listing and object
+GET probes returned HTTP 403 for both. The unused SQL endpoint was
+removed; no compute endpoints remain. Provider-created default
+credentials are scoped to this branch; no secret values were retrieved,
+and no backup transfer credential was issued.
+
+Expected incremental storage and transfer charges for the observed
+empty inventory are zero; no objects were copied or restored. Recheck
+source totals after uploads are frozen. If nonempty, confirm effective
+destination access (including project principals), encryption, capacity,
+retention, and cost before transfer. Use short-lived, separate
+source-read and destination-write access; verify the destination with
+signed checksums and an isolated restore test before relying on it.
+
+### Production credential replacement contingency
+
+The prior operator records attest to independently generated Better Auth
+secrets and the saved Production storage mapping; current Vercel metadata
+shows separate Production-only entries. Preserve those credentials unless
+records are stale or evidence establishes reuse, exposure, or expiry.
+Neon shows `dev` descends from the unprotected `main` and the Production
+role was updated after the fork. This supports but does not prove password
+non-reuse: hold release unless trusted records prove it or a separately
+authorized replacement resolves it. Never test the exposed password.
+
+| Credential | Known consumers and interruption | Separately authorized replacement and recovery |
+| --- | --- | --- |
+| `DATABASE_URL`, `DIRECT_URL` | Current and historical Production deployments retain their runtime env; Prisma migrations/backup tools use the direct connector. Check operator vaults, DB clients, jobs and external CI as well. A reset of the serving identity can drop connections and break deployed login. | Prefer a fresh least-privilege pooled runtime login and a separate direct migration/backup identity, with grants verified against the migrated schema and app flows. Stage fresh Production values and both protected candidate/fallback deployments before moving traffic. Preserve schema ownership; after consumer cutover revoke the superseded login or rotate its credential, not its owned objects. If overlap is unsafe or infeasible, use a separately approved short maintenance cutover with a ready build/recovery plan. Never restore the exposed password. |
+| `BETTER_AUTH_SECRET` | Session cookies and auth state are tied to the deployment secret. Pinned app config reads one secret; a change can force reauthentication. | If required, use a newly generated independent secret on both protected deployment candidates. Plan operator/owner re-login and explicit session revocation if exposure is suspected; verify no mixed-secret traffic and recheck staff access. Do not restore a suspected secret. |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Production media handlers/readiness, outstanding upload intents or signed reads, and approved backup tools. Older builds retain their original key; key expiry/revocation can interrupt access. | If required, stage a fresh read/write credential on only the dedicated storage branch, keep the same bucket policies, verify access and a scoped synthetic workflow, then retire the prior key after approved overlap. Freeze uploads and account for unexpired grants and incomplete intents; do not change bucket access as a workaround. |
+
+No automatic scope expansion to the legacy Preview, review project or
+recovery clones. Record exact consumers and old/new deployment IDs. If a
+new deployment fails, keep access gated and use the hardened fallback
+built with the current credentials, not an old artifact with stale
+secrets. Scope/discovery evidence is not runtime authentication evidence.
+
+On the verified Production `main` PostgreSQL 18 target, created
+`kuraishi_v1_runtime` and `kuraishi_v1_migration` with `NOLOGIN` and
+verified their current schema and table grants. Neither role belongs
+to `neon_superuser` or another role. The direct role can create its own
+tables, types, indexes and trigger functions; it has only the required
+ledger DML and `REFERENCES (id)` on the existing `user` table for the
+pinned migrations. Do not transfer ownership of existing auth tables
+or grant the current owner's role. Use separate restricted backup access
+for an export; the DDL login does not have read access to the auth data.
+The pooler role has no DDL or ledger
+access. No existing or pinned migration-created sequences need grants.
+For future app objects, grant operations explicitly when the migration
+creates them; do not give defaults that expose every future table.
+Catalog readback also identified existing database-level `PUBLIC`
+`CONNECT` and `TEMP` privileges on the app and `postgres` databases.
+Those are not grants to either role on application objects; do not alter
+shared `PUBLIC` privileges as part of this credential cutover.
+
+Activate each login with an independently generated secret held in the
+approved operator vault, then verify pooled and direct authentication
+and negative privileges. First rehearse the 12 migrations under the
+direct role on the migrated-schema verification path: compare owners and
+ledger, apply per-table runtime grants for inventory, settings, media and
+staff inbox, and test actual app workflows. Keep disabled inquiry intake
+and delivery writes out of this grant set. If a later migration needs
+ownership of an existing auth object, obtain a separate scoped grant or
+owner-executed change instead of extending runtime privileges.
+
+Separately approve the Production Vercel connector updates, traffic
+cutover and retirement of the superseded login. Confirm current and
+historical Vercel deployments, Prisma/backup operators, external CI,
+scheduled jobs and operator vault clients. The database activity sample
+showed only the current owner name; it cannot establish that no external
+or intermittent consumers exist. Keep the owner credential untouched
+until those consumers and rollback builds are accounted for. There is
+no confirmed reason to rotate Better Auth or storage credentials now.
+
+#### Secure local activation of the two new roles
+
+Use an operator-controlled workstation with PostgreSQL 18 `psql` and
+an approved password manager. Generate two independent random
+passwords of at least 32 characters in the manager and save them in
+separate runtime and migration entries. On the shared agent host a
+synthetic 256-bit RNG and Windows DPAPI CurrentUser round trip passed,
+but that is not approval for storing real Production secrets. Do not
+export a connection string with `neon env pull` or obtain a password
+from a connector that returns it into the tool transcript.
+
+The signed EDB 18.7 portable `psql`, `pg_dump` and `pg_restore` clients
+were installed per-user and their versions verified. No server service
+was installed. The native activation launcher verifies the endpoint
+and role state, opens hidden prompts, then checks the two passwords
+against the pooled and direct endpoints with separate sessions.
+Hostname-verified TLS was preflighted with a trusted CA bundle; no
+password was sent by automation.
+
+The Neon control plane rejects the precomputed SCRAM verifier produced
+by `psql \password`. Use the private launcher instead: it collects
+the two new passwords with no-echo prompts before connecting, then
+prompts for the existing Production owner password from the approved
+vault (never the exposed Preview password). The new passwords are
+passed to `psql` through stdin and sent to the verified direct
+hostname `ep-silent-mountain-b966e9p0.c-7.eu-central-1.aws.neon.tech`
+over hostname-verified TLS. They are not written to a file, command
+line or transcript. The launcher checks session statement logging is
+disabled and both target roles are `NOLOGIN` before setting their
+passwords. It enables the two logins only after both password changes
+succeed. It does not change the owner credential. On failure, recheck
+both role states before retrying.
+
+Retest using `psql -X -W` with the same database and TLS options: the
+runtime role uses `ep-silent-mountain-b966e9p0-pooler.c-7.eu-central-1.aws.neon.tech`;
+the migration role uses the direct hostname above. Report only
+authentication success, role, database and catalog privilege checks,
+not connection strings or query data. Confirm runtime schema `USAGE`
+but not `CREATE`, auth CRUD, and no ledger access; confirm migration
+schema `CREATE`, ledger `SELECT`/`INSERT`/`UPDATE` but not `DELETE`, and
+`REFERENCES` on `user.id`. No Vercel changes are needed for activation.
+After separate Vercel approval, transfer only the pooled URL to the
+sensitive Production `DATABASE_URL` via a trusted vault-to-stdin pipe
+or the private dashboard. Never pass a secret through CLI `--value`,
+`--env`, or `--build-env`, or write a temporary plaintext `.env` file.
 
 ## Protected customer-review deployment
 
@@ -521,6 +1095,17 @@ app noindex/robots, the responsive homepage and neutral copy, and ordinary
 staff sign-in, allowed workflows, administrator denials and logout before
 requesting separate permission to invite the owner.
 
+Executed on 2026-11-26 for `152742d366d47b5d3d6dd92e5218947206cea3bb`.
+Ready staging deployment `dpl_EsqipZ16sP6ZtQx7TykBjNfutMDZ` now serves
+the protected review alias. The prior Ready deployment,
+`dpl_ESRoRqatdodL9hdA2UeLhSxnb7ia`, remains the rollback target.
+The project retained all-URL Vercel Authentication. No migration,
+environment variable change or customer invitation was performed.
+Hosted homepage and ordinary-staff regression passed on the replacement.
+Both synthetic ordinary staff accounts were signed out after testing;
+include them and their fixtures in review-only cleanup. Do not reuse
+temporary test accounts for the owner.
+
 ## Release evidence and rollback decisions (16.15)
 
 Before deploying, record the exact candidate SHA, validation results,
@@ -531,7 +1116,7 @@ and who verifies each outcome. Do not include secrets or customer records.
 | Area | Stop or recover when | Evidence and recovery boundary |
 | --- | --- | --- |
 | Application | Auth, health, or required smoke checks fail | Confirm the failing revision and choose the approved compatible code rollback or a reviewed forward fix. Recheck auth, health, and the affected flow after recovery. |
-| Database schema | Migration fails, the ledger disagrees with the approved range, or validation shows incompatible schema | Stop before deploying the new code. Preserve current state and reconcile the migration ledger. Restore only under 16.12 from an approved verified recovery point after accounting for later writes. Do not run reverse SQL blindly. |
+| Database schema | Migration fails, the ledger disagrees with the approved range, or validation shows incompatible schema | Stop before deploying the new code. Preserve current state and reconcile the migration ledger. Restore only with separate approval under 16.12 after accounting for later writes. The Free-plan V1 recovery point is checked for availability, not restore-tested. Do not run reverse SQL blindly. |
 | Imported data | Counts, ownership, or data quality do not match the approved handoff | Pause further writes/imports, preserve the current state, and reconcile only the affected rows against the approved source and existing audit history. Do not reload test fixtures or overwrite newer customer entries. |
 | Media storage | Objects are inaccessible, missing, or disagree with their database references | Freeze affected media changes and compare records with the approved bucket and object inventory. Recover only the affected objects and verify their access policy and references. A database restore does not restore storage. |
 
@@ -572,7 +1157,7 @@ schema restore or changes to data or storage.
   or outbox row and that a failed note save leaves the authored note history
   unchanged. Remove only the disposable database after verification. This does
   not authorize enabling hosted intake, test-provider delivery, or Production
-  changes; 16.12 remains a separate Production migration and recovery gate.
+  changes; see the completed 16.12 Production migration and recovery record.
 
 - **08.09 verification:** Use a disposable non-Production database and synthetic
   staff. A failed settings save must show an error and leave the persisted
@@ -593,8 +1178,17 @@ schema restore or changes to data or storage.
 
 ### Outstanding security maintenance
 
+These tasks are separate from accepted protected V1 delivery. A docs-only
+push is not a deployment. Do not change the live revision or rollback
+deployment unless a confirmed requirement or separately authorized security
+maintenance requires it.
+
 - **High priority: exposed Preview database credential rotation.** Follow the
   coordinated cutover below. It has not been authorized or performed.
+- **Old Production credential retirement:** Map and move remaining consumers
+  and obtain separate revocation approval. The deployed V1 uses the new
+  pooled runtime identity; do not test the exposed Preview password against
+  Production or place the migration credential in runtime.
 - **Synthetic account cleanup:** After the remaining browser checks, identify
   the exact temporary Preview staff and recovery accounts and their references.
   With operator approval, revoke their sessions and disable the credentials
@@ -602,10 +1196,17 @@ schema restore or changes to data or storage.
   for authorized Preview access. The earlier recovery revoked the synthetic
   administrator's old sessions; final account cleanup is still pending.
 
-- Section 09.05: legal/business approval for inquiry retention and deletion.
-- Sections 16.11-16.12 and 16.14-16.15: Production environment separation,
-  migration/recovery point, execution of the approved deployment procedure,
-  smoke test, and rollback evidence.
+- **Intermittent storage upload warning:** Keep the
+  [next-occurrence protocol](#capture-the-next-hosted-preview-occurrence);
+  do not change upload code without a confirmed defect.
+- **Recovery expiration and retention:** Preserve existing snapshots and
+  branches; verify recorded expiry and availability before relying on them.
+  Review retention separately before any deletion or recreation. Production
+  restore testing remains waived, not verified.
+- **Unrestricted public launch:** Wait for the seven
+  [business and legal decisions](./report.md#remaining-work) and separate
+  launch approval. Until then keep Deployment Protection, indexing and
+  sitemap suppression, and disabled real inquiry intake and external email.
 
 ### Coordinated Preview database credential cutover
 

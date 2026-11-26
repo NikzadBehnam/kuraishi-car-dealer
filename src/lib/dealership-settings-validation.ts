@@ -72,10 +72,14 @@ const phone = z
 export const dealershipSettingsFieldsSchema = z.strictObject({
   name: publicText("Legal name", 200),
   shortName: publicText("Short name", 100),
+  legalForm: optionalText(publicText("Legal form", 100)),
+  businessActivity: optionalText(publicText("Business activity", 160)),
   tagline: publicText("Tagline", 160),
   websiteUrl: secureHttpsUrl("Website URL"),
   description,
   phone,
+  phone2: optionalText(phone),
+  phone3: optionalText(phone),
   email: z
     .string()
     .trim()
@@ -87,6 +91,15 @@ export const dealershipSettingsFieldsSchema = z.strictObject({
   country: publicText("Country", 120),
   mapUrl,
 });
+
+function optionalText(schema: z.ZodType<string, string>) {
+  return z
+    .string()
+    .trim()
+    .pipe(z.union([z.literal(""), schema]))
+    .nullable()
+    .optional();
+}
 
 export const saveDealershipSettingsSchema =
   dealershipSettingsFieldsSchema.extend({

@@ -89,22 +89,26 @@ enum InquiryNotificationStatus {
 }
 
 model Dealer {
-  id          String    @id @default(cuid())
-  name        String
-  shortName   String    @default("Kuraishi") @db.VarChar(100)
-  tagline     String    @default("Ihr Fahrzeug. Ihre Entscheidung.") @db.VarChar(160)
-  websiteUrl  String    @default("https://www.kuraishi-autohandel.at") @db.VarChar(2048)
-  description String    @default("Geprüfte Gebrauchtwagen, transparente Angebote und persönliche Beratung in Wien.") @db.Text
-  phone       String    @default("+43 664 123 45 67") @db.VarChar(32)
-  email       String    @default("office@kuraishi-autohandel.at") @db.VarChar(254)
-  street      String    @default("Treustraße 57/4/3") @db.VarChar(255)
-  postalCode  String    @default("1200") @db.VarChar(32)
-  city        String    @default("Wien") @db.VarChar(120)
-  country     String    @default("Österreich") @db.VarChar(120)
-  mapUrl      String    @default("https://maps.google.com/?q=Treustraße+57%2F4%2F3%2C+1200+Wien") @db.VarChar(2048)
-  version     Int       @default(1)
-  updatedAt   DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
-  vehicles    Vehicle[]
+  id               String    @id @default(cuid())
+  name             String
+  shortName        String    @default("Kuraishi") @db.VarChar(100)
+  tagline          String    @default("Ihr Fahrzeug. Ihre Entscheidung.") @db.VarChar(160)
+  websiteUrl       String    @default("https://www.kuraishi-autohandel.at") @db.VarChar(2048)
+  description      String    @default("Geprüfte Gebrauchtwagen, transparente Angebote und persönliche Beratung in Wien.") @db.Text
+  phone            String    @default("+43 664 123 45 67") @db.VarChar(32)
+  phone2           String?   @db.VarChar(32)
+  phone3           String?   @db.VarChar(32)
+  legalForm        String?   @db.VarChar(100)
+  businessActivity String?   @db.VarChar(160)
+  email            String    @default("office@kuraishi-autohandel.at") @db.VarChar(254)
+  street           String    @default("Treustraße 57/4/3") @db.VarChar(255)
+  postalCode       String    @default("1200") @db.VarChar(32)
+  city             String    @default("Wien") @db.VarChar(120)
+  country          String    @default("Österreich") @db.VarChar(120)
+  mapUrl           String    @default("https://maps.google.com/?q=Treustraße+57%2F4%2F3%2C+1200+Wien") @db.VarChar(2048)
+  version          Int       @default(1)
+  updatedAt        DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
+  vehicles         Vehicle[]
 }
 
 model Vehicle {

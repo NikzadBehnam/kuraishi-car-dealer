@@ -86,6 +86,15 @@ pnpm test:vehicle-media
 pnpm test:media-storage
 ```
 
+For the separate HTTP 204 diagnostic, do not repoint these existing
+environment files. The [isolated provider trace](./Operations-and-Recovery-Runbook.md#2026-11-26-isolated-provider-trace-evidence)
+used an expiring schema-only Frankfurt branch, dedicated buckets, and
+process-only credentials. On Windows, use Node 22 and loopback Next dev with
+Webpack; the local runner needed `WS_NO_BUFFER_UTIL=1` and
+`WS_NO_UTF_8_VALIDATE=1` to avoid optional native WebSocket bindings. These
+are local runner settings, not app or deployment changes. Use Chrome CDP and
+Firefox WebDriver BiDi with fresh profiles; capture only allowlisted timings.
+
 The inventory migration/query suite was run on 2026-11-20 against the guarded isolated test target: **30 tests passed** (6 migration, 24 query). The suite applied pending migrations to that test target and cleaned up its synthetic rows. For any future rerun, reconfirm that the credential and target are isolated and empty:
 
 ```powershell
@@ -324,7 +333,7 @@ Intake is off by default and code-blocked in Production. Isolated development/Ve
 3. **Default-off and general inquiry**
    - With the flag unset/false, confirm the contact page shows unavailable intake and disabled submission; direct POST returns 503. Production must remain disabled even if the flag is true.
    - On enabled isolated intake, confirm Beratung is the default and phone/date are optional. Clear a selected date; select a Saturday/Sunday and confirm it is allowed. Invalid or past Vienna dates must be rejected.
-   - Submit only synthetic details with consent. Confirm a pending state and success only after acceptance, with request-not-booking wording. Through an authorized database inspection on the isolated target, confirm one Inquiry contains the service/source, normalized fields, current notice text/version and server acknowledgement timestamp.
+   - Submit only synthetic details with consent and an address such as `review@example.invalid`. Confirm a pending state and success only after acceptance, with request-not-booking wording. Through an authorized database inspection on the isolated target, confirm one Inquiry contains the service/source, normalized fields, current notice text/version and server acknowledgement timestamp.
    - Repeat for each service, spacing tests into separate 15-minute windows as necessary. The Section 11 inbox now reads database inquiries, but this intake check still verifies persistence independently; do not use a page render as a substitute for DB assertions.
 4. **Vehicle and service context**
    - Follow a Published vehicle contact link and confirm its current title/link is displayed. Submit and verify the saved ID/title/slug snapshots match that vehicle, not client-supplied values.
@@ -521,6 +530,38 @@ The account menu shows Create account only for role `admin`. The page redirects 
 
 Record each command/UI check as Passed, Failed, Blocked or Not run. For failures, include only the command/check name and a redacted expected-versus-actual result. Never include environment values, passwords, session cookies, customer data or unredacted connection errors.
 
+## Protected V1 customer-review acceptance
+
+1. Use the exact authorized revision and target from the [review deployment
+   sequence](./Operations-and-Recovery-Runbook.md#protected-customer-review-deployment).
+   Verify that an invited reviewer can open the site and independently sign
+   into the protected admin workspace. An uninvited browser must fail the
+   hosting access gate; an invited browser without a staff session must not
+   have access to staff data. Verify Preview noindex and robots protections.
+2. In admin Settings, enter the card's legal name **Kuraishi Autohandel e.U.**,
+   short name **KURAISHI**, legal form **Eingetragenes Einzelunternehmen
+   (e.U.)**, activity **Gebrauchtwagen An- und Verkauf**, address and website
+   as supplied, and the card's email and three telephone numbers in order.
+   The third is a phone, not a fax. Where the required tagline and description
+   lack owner copy, use the confirmed activity rather than adding claims.
+   Review the address-derived map link before saving. Do not import these
+   settings into Production or expose them outside protected review.
+3. Verify Settings saves and refreshes; Contact, footer, vCard QR and
+   Impressum use the saved numbers and contact details. Test clearing an
+   optional phone using a synthetic record before entering official values.
+   Check About for the stored identity and activity and its metadata for the
+   stored name. Verify canonical origin remains unchanged and check the pending
+   legal notices without entering unconfirmed registration, VAT or opening hours.
+4. On mobile and desktop, run a focused customer smoke: view the homepage,
+   search and use existing catalog controls, open a listing and comparison,
+   create/edit/publish/archive a synthetic draft with an approved test image,
+   then replace and remove it using the permitted lifecycle. Verify image
+   readback and dashboard totals. For inquiries use invented values and an
+   `example.invalid` address; check that a deliverable address is rejected,
+   the synthetic submission reaches the protected inbox and delivery remains
+   disabled. Do not repeat the prior mock worker or storage diagnostic
+   absent a relevant change or a new signal.
+
 ## 21. Section 14.08 — browser storage and external request inventory
 
 This is a technical inventory of the current application, not a legal
@@ -548,6 +589,38 @@ if needed. If a preference system is approved, use a fresh isolated browser
 and check actual direct, proxied and CSS resource requests when unset, denied,
 allowed and withdrawn, including after reload. Legal copy and required runtime
 behavior remain open under 14.03 and 14.06–14.08.
+
+### Technical handoff for German legal drafting
+
+This is a description of V1 and of implemented but disabled workflows, not
+legal copy or approval. Keep the V1 baseline: no analytics, advertising
+trackers, marketing cookies, embedded third-party maps or social widgets.
+Keep decorative media and fonts app-served, preserve theme and comparison
+pending legal review, keep staff authentication functional, and leave external
+email delivery and provider callbacks disabled.
+
+| Drafting topic | Confirmed application behavior | Facts or decisions still needed |
+| --- | --- | --- |
+| **Impressum and shared contact details** | Public pages share database-managed dealership settings. Static legal content is placeholder-only. Maps and social profiles are click-out links, not embeds. | Owner confirms legal identity, address, approved public contacts and links; counsel decides required disclosures. |
+| **Datenschutz: hosting and recipients** | Vercel hosts the application and protects Preview. Neon-hosted Postgres stores app and staff-auth data. Neon Object Storage stores media bytes; Postgres holds metadata and references. Only approved public media is served from the public bucket; staff staging and private access use short-lived signed requests. Direct media requests reach the storage provider; optimized requests may go through the app host. The verified Frankfurt database target is Preview, not evidence of Production location. Resend is historical/isolated-test only, not a V1 delivery channel. | Operator supplies approved deployment regions, processor arrangements, subprocessors, transfers, logging and backup settings. Counsel determines disclosures; repository configuration alone does not establish provider retention or residency. |
+| **Datenschutz: inquiry data and evidence** | Intake is disabled by default and blocked in Production. In isolated mode, accepted submissions can persist name, email, optional phone, message, service/source, optional requested date, vehicle reference/snapshot, submission key/hash, exact notice text/version and server acknowledgement timestamp. The protected inbox serves staff; authored notes and internal notification status can be linked. The acknowledgement is not marketing consent and does not store raw IP or user-agent. | Owner describes actual inquiry handling and other copies. Counsel approves wording, purposes, legal bases, retention and deletion before live intake. |
+| **Datenschutz: abuse prevention and sessions** | Isolated Vercel intake processes a trusted forwarded IP to derive a keyed rate-limit identifier; a separate keyed payload fingerprint supports safe retries. The 15-minute quota window is not a deletion guarantee: expired quota rows are swept in bounded batches on subsequent accepted submissions. Better Auth uses staff email/password with public sign-up disabled; session records can contain IP and user-agent, separate from inquiry evidence. Remembered and session-only cookie behavior is listed above. | Confirm deployment-side logging and retention independently. Counsel classifies session and abuse-prevention processing and decides applicable disclosures and retention. |
+| **Datenschutz: lifecycle and recovery** | No automated inquiry TTL, staff deletion control or anonymization workflow exists. Database-level deletion cascades to notes and linked notification metadata, not copies outside Postgres. Expired staging upload cleanup is bounded; there is no automatic expiration of finalized unused media. Postgres recovery does not restore object storage. | Owner identifies accountable roles, copies/exports and request handling. Counsel approves retention clocks, holds, deletion or anonymization, minimal audit records and treatment after restore. |
+| **AGB and inquiry acknowledgement** | Service links retain the requested service; a form submission is an inquiry, not booking confirmation, and feedback is on screen. No external acknowledgements or callbacks run in V1. | Owner describes the actual appointment and transaction process. Counsel decides whether and how terms apply and supplies exact German copy, links and effective versions. |
+| **Cookie-Einstellungen and runtime preferences** | See the mechanism table above: theme and comparison use first-party browser storage with no app-set TTL; form editing uses page memory; ordinary browser cache and autofill are browser-managed. No app preference UI or consent record exists. Local decorative media makes no runtime Unsplash/Pexels requests. | Counsel approves the resource-by-resource rules, disclosures and any required UI, persistence and withdrawal effects. No controls or technical defaults have been approved merely by documenting the baseline. |
+
+Use the [business and legal questionnaire](./report.md#business-and-legal-questionnaire)
+for owner and counsel responses. Obtain page-specific German versions and
+sign-off before the final 14.08 acceptance retest.
+
+### Implementation readiness after legal approval
+
+| Approved input | Smallest implementation path | Acceptance evidence |
+| --- | --- | --- |
+| **14.01 / 14.03:** Owner-approved facts and claims; counsel-approved German text for all four routes, with versions/effective dates and exact acknowledgement wording/links. | Use existing shared settings and static content. Replace the legal placeholders with page-specific copy and update the versioned inquiry notice if approved. No CMS, real customer import, or intake enablement is implied. | Compare the four pages against the approved versions, verify matching public contacts, and retest all six CTA contexts and the not-a-booking disclosure. |
+| **14.06 / 14.07:** Signed resource-by-resource rule and preference requirements, or documented no-UI/no-gating decision. | Preserve the current V1 baseline. If controls are required, gate the actual approved resource and storage read/write paths before they run; implement reopening and withdrawal only as approved. Do not gate necessary staff authentication. | With a fresh browser, test unset, deny, allow, reopen, change, withdraw and refresh where applicable. Inspect actual requests and storage, not merely the toggle. Otherwise verify that only approved resources load. |
+| **09.05 / 11.07:** Approved retention clock, exceptions and holds, deletion/anonymization authority, scope and restore procedure. | Keep current evidence capture and protected projections. Implement only the approved operational workflow; no assumed TTL, CRM controls or live intake change. | In a disposable synthetic environment, verify deadlines, holds, role checks, linked notes/notification handling, repeat execution and restore handling according to the policy. |
+| **14.08:** Owner and counsel acceptance of the final facts, copy, and consent behavior. | Record the exact tested revision, approved document versions, and reviewer. | Run one combined isolated acceptance pass after the applicable decisions are implemented. Keep 14.08 open until the approved inputs and results match. |
 
 ### Decorative media: source, license and isolated retest
 

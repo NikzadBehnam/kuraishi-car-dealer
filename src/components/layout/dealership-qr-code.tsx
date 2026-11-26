@@ -3,7 +3,7 @@
 import { QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
-import { siteConfig } from "@/config/site.config";
+import { getDealershipPhones } from "@/lib/dealership-phones";
 import type { PublicDealershipDTO } from "@/types/dealership-settings";
 
 function getQrValue(settings: PublicDealershipDTO) {
@@ -12,9 +12,7 @@ function getQrValue(settings: PublicDealershipDTO) {
     "VERSION:3.0",
     `FN:${settings.name}`,
     `ORG:${settings.name}`,
-    ...[settings.phone, ...siteConfig.contact.additionalPhones].map(
-      (phone) => `TEL:${phone.replace(/\s/g, "")}`,
-    ),
+    ...getDealershipPhones(settings).map(({ number }) => `TEL:${number}`),
     `EMAIL:${settings.email}`,
     `ADR:;;${settings.street};${settings.city};;${settings.postalCode};${settings.country}`,
     `URL:${settings.websiteUrl}`,
@@ -41,7 +39,7 @@ export function DealershipQrCode({
             level="M"
             bgColor="#ffffff"
             fgColor="#10213b"
-            title="Kontaktdaten von Kuraishi Autohandel"
+            title={`Kontaktdaten von ${settings.name}`}
           />
           <span className="footer-qr-scan" aria-hidden="true" />
         </div>

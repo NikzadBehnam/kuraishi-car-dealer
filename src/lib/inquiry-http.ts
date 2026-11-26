@@ -126,6 +126,15 @@ export async function handleInquiryRequest(
       );
     }
     const input = inquirySubmissionSchema.parse(await readBoundedJson(request));
+    if (!input.fields.email.toLowerCase().endsWith(".invalid")) {
+      return response(
+        {
+          error:
+            "Verwenden Sie im Testmodus eine fiktive E-Mail-Adresse, z. B. test@example.invalid.",
+        },
+        400,
+      );
+    }
     const hash = (value: string) =>
       createHmac("sha256", secret).update(value).digest("hex");
     const clientHash = hash(`client\0${address}`);

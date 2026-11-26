@@ -127,7 +127,13 @@ export function ContactForm({
         >
           {formContent.unavailable}
         </p>
-      ) : null}
+      ) : (
+        <p className="text-muted-foreground rounded-xl border p-4 text-sm">
+          Nur für Testanfragen. Verwenden Sie fiktive Angaben und eine
+          E-Mail-Adresse wie test@example.invalid. Geben Sie keine echten
+          personenbezogenen Daten ein.
+        </p>
+      )}
       {contextError ? (
         <div
           role="alert"

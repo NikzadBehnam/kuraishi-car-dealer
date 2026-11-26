@@ -1984,6 +1984,10 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       ...fields,
       name: "Updated query test dealership",
       websiteUrl: "https://business.example",
+      phone2: "+43 1 555 0102",
+      phone3: "+43 1 555 0103",
+      legalForm: "Synthetic legal form",
+      businessActivity: "Synthetic business activity",
       expectedVersion: version,
     });
     assert.equal(saved.ok, true);
@@ -2000,6 +2004,13 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       await dealershipSettings.getPublicDealershipSettings();
     assert.equal(refreshedPublicSettings.name, saved.settings.name);
     assert.equal(refreshedPublicSettings.websiteUrl, saved.settings.websiteUrl);
+    assert.equal(refreshedPublicSettings.phone2, "+43 1 555 0102");
+    assert.equal(refreshedPublicSettings.phone3, "+43 1 555 0103");
+    assert.equal(refreshedPublicSettings.legalForm, "Synthetic legal form");
+    assert.equal(
+      refreshedPublicSettings.businessActivity,
+      "Synthetic business activity",
+    );
 
     const stale = await dealershipSettings.saveDealershipSettings({
       ...fields,
@@ -2010,12 +2021,26 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       assert.equal(stale.kind, "conflict");
     }
 
+    const { phone3, legalForm, businessActivity, ...currentFields } =
+      refreshedPublicSettings;
+    const cleared = await dealershipSettings.saveDealershipSettings({
+      ...currentFields,
+      phone2: "",
+      expectedVersion: saved.settings.version,
+    });
+    assert.ok(cleared.ok);
+    const afterClear = await dealershipSettings.getPublicDealershipSettings();
+    assert.equal(afterClear.phone2, null);
+    assert.equal(afterClear.phone3, phone3);
+    assert.equal(afterClear.legalForm, legalForm);
+    assert.equal(afterClear.businessActivity, businessActivity);
+
     const failure = new Error("Settings database unavailable.");
     databaseFailure = failure;
     await assert.rejects(
       dealershipSettings.saveDealershipSettings({
         ...fields,
-        expectedVersion: saved.settings.version,
+        expectedVersion: cleared.settings.version,
       }),
       (error) => error === failure,
     );

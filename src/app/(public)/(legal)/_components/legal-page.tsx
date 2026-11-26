@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { legalContent } from "@/content/de/legal-pages";
+import { getDealershipPhones } from "@/lib/dealership-phones";
 import type { PublicDealershipDTO } from "@/types/dealership-settings";
 
 export function LegalPage({
@@ -31,13 +32,19 @@ export function LegalPage({
           {dealership ? (
             <address className="mt-8 grid gap-2 not-italic">
               <strong>{dealership.name}</strong>
+              {dealership.legalForm && <span>{dealership.legalForm}</span>}
+              {dealership.businessActivity && (
+                <span>{dealership.businessActivity}</span>
+              )}
               <span>
                 {dealership.street}, {dealership.postalCode} {dealership.city},{" "}
                 {dealership.country}
               </span>
-              <a href={`tel:${dealership.phone.replace(/[^\d+]/g, "")}`}>
-                {dealership.phone}
-              </a>
+              {getDealershipPhones(dealership).map(({ label, number }) => (
+                <a key={number} href={`tel:${number}`}>
+                  {label}
+                </a>
+              ))}
               <a href={`mailto:${dealership.email}`}>{dealership.email}</a>
               <a href={dealership.websiteUrl} target="_blank" rel="noreferrer">
                 {dealership.websiteUrl}

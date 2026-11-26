@@ -63,6 +63,19 @@ Plan-dependent history and snapshot settings must be confirmed in the Console.
 - The 06.10 hosted retest reproduced it on two more synthetic image POSTs.
   Both returned 204, finalized, and rendered in the gallery. This is another
   observation, not a diagnosis; keep the browser/control/provider comparison open.
+- **2026-11-26 loopback controls:** Fresh Chrome 158 and Edge 158 profiles both
+  reported `Network.loadingFinished` for same-origin and cross-origin
+  multipart POSTs returning a bodyless HTTP 204, including explicit response
+  reads and a connection-close variant. A cross-origin 200 control also
+  finished. The local receiver checked the synthetic multipart payload and
+  the successful requests reached a stub completion endpoint. Explicit
+  aborts before headers and after headers on a streaming 200 control both
+  produced `net::ERR_ABORTED`; neither reached completion. Both browsers use
+  Chromium, and loopback HTTP does not reproduce the provider, TLS, or
+  hosted application conditions. A bare 204 and leaving its body unread were
+  not sufficient to reproduce the warning. No client or storage change was made.
+- **Next diagnostic step:** Follow the isolated provider-level protocol below.
+  Do not retry uploads or change the response handling based only on the warning.
 - There is no automatic time-based deletion for unused `MediaAsset` records
   and no bucket-wide orphan purge. An unused asset may have been intentionally
   finalized for later attachment. Review each candidate in the protected media
@@ -73,6 +86,135 @@ Plan-dependent history and snapshot settings must be confirmed in the Console.
   capabilities and coordinate recovery of database references with the
   corresponding media objects. No bucket versioning or backup schedule is
   confirmed here.
+
+### Isolated provider-level upload trace (authorization required)
+
+1. **Approve the exact target and write scope first.** Prefer an existing
+   disposable non-Production Neon Object Storage bucket with an isolated,
+   already-configured app/database if exercising finalization. Record the
+   verified project, branch, bucket, permitted test keys and expiry, test
+   window, and cleanup owner. Obtain explicit authorization before any hosted
+   writes or resource changes, including synthetic objects. If no approved
+   target exists, stop; provisioning a new target requires separate approval.
+   Do not use the stable Preview credential-cutover environment, alter CORS or
+   permissions, deploy, or run migrations.
+2. **Compare like for like.** Use a tiny synthetic image, fresh Chrome and
+   Firefox profiles, one independent key per case, and the same approved app
+   origin and bucket. Run the signed multipart POST with a minimal Fetch
+   client and, if already available on the authorized isolated target, the
+   existing upload-and-finalize flow in both browsers. Do not use network
+   interception, forced aborts, or automatic retries. If finalization cannot
+   be exercised, report transport and object verification separately. Do not
+   repeat the completed loopback controls unless the setup reveals a specific
+   need for another control.
+3. **Record an allowlisted timeline, not a raw trace.** Give each case a
+   synthetic label. Record UTC start and relative timings for browser send,
+   response headers, Fetch resolution/rejection and terminal network event.
+   Include browser version, HTTP protocol, redirect count, status, cancellation
+   flag or error, and response-framing header names/values where available and
+   safe. Use Chrome CDP and Firefox Network Monitor or WebDriver BiDi; record
+   unavailable fields rather than inferring them. Correlate with provider
+   receive/response UTC timestamps, status, duration and a provider request
+   ID if available. Keep the ID only in restricted notes or use a consistent
+   alias for sharing. Do not enable new logging without approval. Record any
+   clock or timing uncertainty. Do not save raw HAR files, URLs, query strings,
+   object keys, cookies, headers carrying credentials, signing fields, or
+   payloads.
+4. **Verify independently and clean up.** Record finalization status when
+   tested, then verify object readback, byte count and image decoding using
+   authorized access. Report a 204 plus a later cancellation separately from
+   failed finalization or missing bytes. If provider timing is unavailable,
+   say so and leave the cause open. Use the existing guarded app cleanup for
+   app-created intent/assets and delete only individually authorized,
+   test-owned transport objects. Verify absence and document any pending
+   cleanup. Leave credential maintenance and Production gates untouched.
+
+#### 2026-11-26 isolated provider trace evidence
+
+- **Isolation:** Frankfurt project `twilight-bread-36837209`; completed run on
+   schema-only root `br-tiny-salad-b94e31it`, compute `ep-floral-snow-b99gylwq`.
+   Verified all 16 public tables empty and no inherited buckets before
+   seeding. Used new `storage204-cfe6081e-private` and
+   `storage204-cfe6081e-public` buckets, a dedicated branch-only database role
+   and an expiring `storage:read`/`storage:write` credential. Secrets went
+   directly from CLI subprocess output held in memory into the isolated runner.
+   The app ran from a tracked-source copy with no checkout env files, no
+   migrations, inquiry test mode off, and email disabled.
+- **Actual UI:** Chrome 158 and Firefox 137 each uploaded an original and
+   replacement via the Media tab. All four signed multipart requests were
+   HTTP/2 204 with no redirects. Chrome reported `loadingFinished`; Firefox
+   reported `responseCompleted`. Each produced one asset row, decoded in
+   the UI, matched the original SHA-256 on independent S3 readback, and left
+   no staging object. In both browsers, saving the replacement left it as the
+   only draft attachment; deleting the detached original removed its row
+   and object.
+
+| UI case | Browser POST start UTC | Browser headers after start | Nearby provider POST UTC | Provider duration |
+| --- | --- | ---: | --- | ---: |
+| Chrome original | 10:57:56.954 | 299 ms | 10:57:57 | 47 ms |
+| Chrome replacement | 10:58:01.551 | 87 ms | 10:58:01 | 54 ms |
+| Firefox original | 10:58:38.906 | 484 ms | 10:58:39 | 64 ms |
+| Firefox replacement | 10:58:40.761 | 106 ms | 10:58:40 | 73 ms |
+
+- **Negative and concurrency controls:** Completing an intent with no
+   uploaded object returned 409. Canceling a staged upload succeeded; a
+   subsequent completion returned 409 and no canceled object remained.
+   Simultaneous completion requests returned 200 and 409 in each browser;
+   a repeat completion then returned the same asset. No duplicate asset
+   rows, missing final objects, or orphan objects were found in the final
+   database-to-bucket reconciliation. An absent object and explicit app
+   cancellation are not equivalent to a mid-transfer network interruption.
+- **Limits:** The provider returned 70 records, including seven visible
+   POST 204 records for eight successful browser POSTs. The table pairs
+   isolated UI events by UTC window and status, not a shared request ID;
+   provider timestamps are second-resolution. One POST was not independently
+   correlated. The recurring hosted `net::ERR_ABORTED` warning did not
+   reproduce, so its root cause and effect when it occurs remain unknown.
+   No application defect was established and no speculative change was made.
+   If it recurs on a separately authorized target, capture both terminal
+   events, the provider request correlation if available, and independent
+   readback before deciding whether it affected a write.
+- **Cleanup:** Verified synthetic rows gone, both buckets empty before
+   removal, the storage credential revoked, and the disposable branch absent
+   after deletion (removing its compute and database role). The loopback app,
+   copied checkout, and browser profiles were removed. The cutover environment
+   and historical branches were not modified.
+
+#### Capture the next hosted Preview occurrence
+
+This is a capture procedure for the next **authorized** hosted Preview
+workflow, not permission to start a new run or change Preview. Do not repeat
+the completed disposable comparison unless new evidence establishes a
+specific hypothesis to test.
+
+1. **Before the upload:** Confirm the deployed SHA, protected Preview
+    target and isolated private storage scope without recording secret values.
+    Use one approved synthetic image and a short case label. Record UTC,
+    app route, browser build, DevTools/interception state, and whether a
+    navigation, reload, or cancellation was expected. Start a narrow network
+    capture before selection; do not enable new provider logging or export a HAR.
+2. **At the warning:** Tie the 204 and terminal network event to the *same*
+    browser request in memory. Record POST count, protocol, redirects, header
+    and terminal timing, cancellation flag, exact network error, and observed
+    UI/Fetch outcome where available without changing the app. Capture the
+    completion request status separately. Note whether page navigation or
+    cancellation preceded the event; do not infer cause from event order
+    alone or re-upload just to clear the warning.
+3. **Correlate and verify:** Query only the authorized Preview storage bucket
+    and a narrow UTC window for POST status, provider timestamp and duration.
+    If a provider request ID is visible and matchable, keep a case-local
+    alias; otherwise mark the match timing-based or unavailable. Record
+    clock precision and distinguish a provider POST from later HEAD, GET,
+    copy or DELETE operations. Independently verify whether the final asset
+    was recorded once, the retrieved bytes match the synthetic file, the
+    image decodes, and staging cleanup completed or is explicitly pending.
+4. **Report the outcome:** Preserve the allowlisted timeline and verified
+    effects only. Exclude signed URLs, raw object keys, request bodies,
+    IPs, cookies, credentials and signing fields. Classify the result as
+    confirmed write/readback failure, successful write with unresolved trace
+    warning, or inconclusive. Keep the warning open unless evidence explains
+    the original occurrence. If the record and object disagree, stop test
+    writes and use the existing guarded reconciliation/cleanup flow.
 
 Implementation references:
 [upload cleanup](../src/lib/media-uploads.ts) and
@@ -258,6 +400,47 @@ deployment, and approval of this procedure does not authorize running it.
 4. Perform the smoke test in 16.14 and record the evidence and rollback
    decision in 16.15. If validation fails, follow the approved rollback plan.
    Rolling back application code does not restore the database or media.
+
+## Protected customer-review deployment
+
+This is a non-Production readiness procedure, not deployment authorization.
+Use a dedicated Vercel Preview target with named reviewer access, fresh
+branch-scoped database/storage/auth credentials, separate private/public
+buckets and synthetic inventory/inquiries only. Do not use the stable
+credential-cutover Preview target or its exposed credential. No unrestricted
+visitor access, real inquiry intake, external delivery or callbacks.
+Published test images may be visible through direct storage URLs even when
+the app is protected; never upload private or real inventory media for review.
+
+1. Record the exact candidate revision and authorized target. Before writes,
+   verify the branch's pooled/direct hosts, buckets and credentials against
+   the explicit review allowlist; ensure Production and legacy Preview are
+   excluded. Verify review credentials are scoped to review resources and
+   the protected alias is the    exact Better Auth origin. Do not perform
+   isolation tests by writing to Production. Confirm the protection and
+   noindex policy can be checked without weakening access.
+2. After separate hosted authorization, apply the migrations only to the
+   verified review database. The review settings migration adds four nullable
+   columns without copying customer data or backfilling business details.
+   Generate the client and confirm the ledger/schema before serving the
+   matching code. Check compatibility of the nominated review rollback
+   revision with the migrated schema; earlier rollback evidence does not
+   cover this migration. Record the exact SHA and manual non-Production deployment
+   result; do not promote it or attach the Production domain.
+3. Keep `INQUIRY_EMAIL_MODE=disabled`; enable `INQUIRY_TEST_MODE` and a
+   review-only hash secret only under Deployment Protection if synthetic
+   inquiry testing is authorized. Bootstrap named review access and staff
+   accounts through approved channels, not a shared password. Enter the
+   supplied card through versioned Settings, not a migration or seed.
+4. Follow the [focused owner acceptance checks](./Implemented-Sections-Test-Guide.md#protected-v1-customer-review-acceptance).
+   Record smoke results and cleanup ownership before inviting the customer.
+   Share the protected URL, account setup instructions and acceptance guide
+   through approved channels. Ask for feedback by workflow; do not request
+   screenshots containing credentials or personal inquiry data.
+   If review validation fails, withhold the invitation; disable the review
+   target or return to an approved review revision without touching
+   Production or undoing unrelated Preview settings. Keep the credential
+   cutover, synthetic account cleanup and Production gates separate.
 
 ## Release evidence and rollback decisions (16.15)
 

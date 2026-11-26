@@ -70,6 +70,21 @@ describe("inquiry HTTP boundary", () => {
     }
   });
 
+  it("rejects deliverable addresses before persistence in inquiry test mode", async () => {
+    const result = await handleInquiryRequest(
+      request(
+        JSON.stringify({
+          ...input,
+          fields: { ...input.fields, email: "reviewer@example.com" },
+        }),
+      ),
+      async () => assert.fail("A non-test address must not reach persistence."),
+      localEnv,
+    );
+    assert.equal(result.status, 400);
+    assert.match((await result.json()).error, /example\.invalid/);
+  });
+
   it("requires a trusted origin, JSON, consent, an empty honeypot and strict fields", async () => {
     const accept = async () =>
       assert.fail("Invalid requests must not reach persistence.");

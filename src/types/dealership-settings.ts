@@ -5,6 +5,10 @@ export interface PublicDealershipDTO {
   websiteUrl: string;
   description: string;
   phone: string;
+  phone2: string | null;
+  phone3: string | null;
+  legalForm: string | null;
+  businessActivity: string | null;
   email: string;
   street: string;
   postalCode: string;

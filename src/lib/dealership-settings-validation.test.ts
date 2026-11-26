@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { getDealershipPhones } from "./dealership-phones.ts";
 import {
   dealershipSettingsFieldsSchema,
   saveDealershipSettingsSchema,
@@ -85,6 +86,57 @@ describe("dealership settings validation", () => {
         tagline: "x".repeat(161),
       }).success,
       false,
+    );
+  });
+
+  it("accepts optional business details, blank input and stored null values", () => {
+    const settings = dealershipSettingsFieldsSchema.parse({
+      ...validSettings,
+      phone2: "  +43 (1) 555-0101  ",
+      phone3: " ",
+      legalForm: "  Eingetragenes Einzelunternehmen (e.U.)  ",
+      businessActivity: "  Gebrauchtwagen An- und Verkauf  ",
+    });
+    assert.equal(settings.phone2, "+43 (1) 555-0101");
+    assert.equal(settings.phone3, "");
+    assert.equal(settings.legalForm, "Eingetragenes Einzelunternehmen (e.U.)");
+    assert.equal(settings.businessActivity, "Gebrauchtwagen An- und Verkauf");
+    assert.equal(
+      saveDealershipSettingsSchema.parse({
+        ...settings,
+        phone3: null,
+        expectedVersion: 1,
+      }).phone3,
+      null,
+    );
+    assert.equal(
+      dealershipSettingsFieldsSchema.safeParse({
+        ...validSettings,
+        phone3: "not a telephone",
+      }).success,
+      false,
+    );
+  });
+
+  it("presents only distinct configured numbers in contact order", () => {
+    assert.deepEqual(
+      getDealershipPhones({
+        phone: "+43 (1) 555-0101",
+        phone2: "+4315550101",
+        phone3: "+43 1 555 0102",
+      }),
+      [
+        { label: "+43 (1) 555-0101", number: "+4315550101" },
+        { label: "+43 1 555 0102", number: "+4315550102" },
+      ],
+    );
+    assert.equal(
+      getDealershipPhones({
+        phone: "+43 1 555 0101",
+        phone2: null,
+        phone3: null,
+      }).length,
+      1,
     );
   });
 });

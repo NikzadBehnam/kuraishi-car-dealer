@@ -5,6 +5,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { DealershipQrCode } from "@/components/layout/dealership-qr-code";
 import { routes } from "@/config/routes.config";
 import { siteConfig } from "@/config/site.config";
+import { getDealershipPhones } from "@/lib/dealership-phones";
 import type { PublicDealershipDTO } from "@/types/dealership-settings";
 
 const vehicleLinks = [
@@ -66,17 +67,11 @@ export function SiteFooter({ settings }: { settings: PublicDealershipDTO }) {
                 </ContactLink>
               </div>
               <div className="grid content-start gap-3">
-                {[settings.phone, ...siteConfig.contact.additionalPhones].map(
-                  (phone) => (
-                    <ContactLink
-                      key={phone}
-                      href={`tel:${phone.replace(/\s/g, "")}`}
-                      icon={Phone}
-                    >
-                      {phone}
-                    </ContactLink>
-                  ),
-                )}
+                {getDealershipPhones(settings).map(({ label, number }) => (
+                  <ContactLink key={number} href={`tel:${number}`} icon={Phone}>
+                    {label}
+                  </ContactLink>
+                ))}
               </div>
             </address>
           </section>

@@ -23,6 +23,10 @@ export const publicDealershipSelect = {
   websiteUrl: true,
   description: true,
   phone: true,
+  phone2: true,
+  phone3: true,
+  legalForm: true,
+  businessActivity: true,
   email: true,
   street: true,
   postalCode: true,
@@ -84,6 +88,10 @@ export function serializePublicDealership(
     websiteUrl: row.websiteUrl,
     description: row.description,
     phone: row.phone,
+    phone2: row.phone2,
+    phone3: row.phone3,
+    legalForm: row.legalForm,
+    businessActivity: row.businessActivity,
     email: row.email,
     street: row.street,
     postalCode: row.postalCode,
@@ -174,7 +182,23 @@ export async function saveDealershipSettings(
     };
   }
 
-  const { expectedVersion, ...changes } = parsed.data;
+  const {
+    expectedVersion,
+    phone2,
+    phone3,
+    legalForm,
+    businessActivity,
+    ...fields
+  } = parsed.data;
+  const changes = {
+    ...fields,
+    ...(phone2 !== undefined && { phone2: phone2 || null }),
+    ...(phone3 !== undefined && { phone3: phone3 || null }),
+    ...(legalForm !== undefined && { legalForm: legalForm || null }),
+    ...(businessActivity !== undefined && {
+      businessActivity: businessActivity || null,
+    }),
+  };
   if (expectedVersion === null) {
     const result = await prisma.$transaction(
       async (tx): Promise<DealershipSettingsSaveResult> => {

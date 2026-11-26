@@ -1,6 +1,6 @@
 export const legalContent = {
   notice:
-    "Dieser Inhalt ist ausschließlich ein Platzhalter für die UI-Entwicklung. Vor dem Produktivbetrieb muss er durch eine qualifizierte Rechtsberatung geprüft und vollständig ersetzt werden.",
+    "Diese rechtlichen Informationen sind noch nicht vollständig. Die endgültigen Texte und Pflichtangaben stehen zur Prüfung aus.",
   sectionTitle: "Angaben und Geltungsbereich",
   body: "Die konkreten Pflichtangaben und rechtlichen Bestimmungen werden vor dem Produktivbetrieb ergänzt.",
 };

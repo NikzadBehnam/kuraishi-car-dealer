@@ -27,10 +27,14 @@ function formValues(
   return {
     name: settings?.name ?? "",
     shortName: settings?.shortName ?? "",
+    legalForm: settings?.legalForm ?? "",
+    businessActivity: settings?.businessActivity ?? "",
     tagline: settings?.tagline ?? "",
     websiteUrl: settings?.websiteUrl ?? "",
     description: settings?.description ?? "",
     phone: settings?.phone ?? "",
+    phone2: settings?.phone2 ?? "",
+    phone3: settings?.phone3 ?? "",
     email: settings?.email ?? "",
     street: settings?.street ?? "",
     postalCode: settings?.postalCode ?? "",
@@ -85,6 +89,8 @@ export function SettingsPanel({
               [
                 "name",
                 "shortName",
+                "legalForm",
+                "businessActivity",
                 "tagline",
                 "websiteUrl",
                 "description",
@@ -191,6 +197,30 @@ export function SettingsPanel({
                     }
                   />
                 </Field>
+                {(
+                  [
+                    ["legalForm", "Legal form"],
+                    ["businessActivity", "Business activity"],
+                  ] as const
+                ).map(([field, label]) => (
+                  <Field
+                    key={field}
+                    id={field}
+                    label={`${label} (optional)`}
+                    error={fieldErrors[field]}
+                  >
+                    <Input
+                      id={field}
+                      name={field}
+                      value={values[field] ?? ""}
+                      onChange={updateField(field)}
+                      aria-invalid={Boolean(fieldErrors[field])}
+                      aria-describedby={
+                        fieldErrors[field] ? `${field}-error` : undefined
+                      }
+                    />
+                  </Field>
+                ))}
                 <Field id="tagline" label="Tagline" error={fieldErrors.tagline}>
                   <Input
                     id="tagline"
@@ -272,6 +302,31 @@ export function SettingsPanel({
                     }
                   />
                 </Field>
+                {(
+                  [
+                    ["phone2", "Phone 2"],
+                    ["phone3", "Phone 3"],
+                  ] as const
+                ).map(([field, label]) => (
+                  <Field
+                    key={field}
+                    id={field}
+                    label={`${label} (optional)`}
+                    error={fieldErrors[field]}
+                  >
+                    <Input
+                      id={field}
+                      name={field}
+                      type="tel"
+                      value={values[field] ?? ""}
+                      onChange={updateField(field)}
+                      aria-invalid={Boolean(fieldErrors[field])}
+                      aria-describedby={
+                        fieldErrors[field] ? `${field}-error` : undefined
+                      }
+                    />
+                  </Field>
+                ))}
                 <Field id="email" label="Email" error={fieldErrors.email}>
                   <Input
                     id="email"

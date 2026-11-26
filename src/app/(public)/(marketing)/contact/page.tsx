@@ -4,6 +4,7 @@ import { ContactForm } from "./_components/contact-form";
 import { Card } from "@/components/ui/card";
 import { publicRoutes } from "@/config/routes.config";
 import { getPublicDealershipSettings } from "@/lib/dealership-settings";
+import { getDealershipPhones } from "@/lib/dealership-phones";
 import { createPublicMetadata } from "@/lib/metadata";
 import { getPublicVehicleForInquiry } from "@/lib/inventory-queries";
 import {
@@ -65,10 +66,12 @@ export default async function ContactPage({
               {settings.street}, {settings.postalCode} {settings.city},{" "}
               {settings.country}
             </p>
-            <p className="flex gap-2">
-              <Phone className="size-5" />
-              {settings.phone}
-            </p>
+            {getDealershipPhones(settings).map(({ label, number }) => (
+              <p key={number} className="flex gap-2">
+                <Phone className="size-5" aria-hidden="true" />
+                <a href={`tel:${number}`}>{label}</a>
+              </p>
+            ))}
             <p className="flex gap-2">
               <Mail className="size-5" />
               <a href={`mailto:${settings.email}`}>{settings.email}</a>

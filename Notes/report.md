@@ -28,7 +28,7 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 ### Release gates and decisions
 
 - [ ] **09.05 — Inquiry evidence retention/deletion.** Obtain business/legal approval for customer-data retention and deletion. Capturing the acknowledged notice text/version and timestamp is implemented; the retention period and deletion/anonymization procedure are not approved. This also blocks **11.07**.
-- [ ] **14.01 — Truthful launch content.** Confirm legal business identity/contact details and approved public claims. The legal identity is still placeholder-only; stock imagery is labeled illustrative, but its external-use policy remains unresolved.
+- [ ] **14.01 — Truthful launch content.** Business-card details are available for protected review via owner-editable settings. Confirm them and approve final public claims before launch. Stock imagery is labeled illustrative, but its external-use policy remains unresolved.
 - [ ] **14.03 — Final legal copy.** Qualified counsel must review and replace the placeholder imprint, privacy, terms, and cookie content before Production use. See [legal-pages.ts](../src/content/de/legal-pages.ts).
   - **Independent 14.08 browser check:** At `0ce4cea`, all four localized legal routes returned HTTP 200 with distinct headings and the expected shared placeholder warning. Using a synthetic settings fixture at the Prisma boundary, the imprint address and contact links matched the fixture and the footer's shared details. All six service CTAs prefilled the expected inquiry type and the contact form stated that an inquiry is not a confirmed booking. No submission was sent.
 - [ ] **16.12 — Controlled Production migration.** Review migrations, test them on an isolated branch, confirm an approved recovery point, apply through the approved Production workflow, and regenerate Prisma Client if required. This is an operational gate, not permission to modify Production now.
@@ -58,8 +58,10 @@ After each point is verified and marked complete in [Checklist.md](./Checklist.m
 ## Business and legal questionnaire
 
 The dealership owner supplies and approves public business facts; qualified
-counsel supplies or approves the legal decisions and text. Mark unanswered or
-inapplicable fields explicitly. Provide approved public details and document
+counsel supplies or approves the legal decisions and text. The
+[technical handoff for German legal drafting](./Implemented-Sections-Test-Guide.md#technical-handoff-for-german-legal-drafting)
+prepopulates the confirmed processing, provider, session and lifecycle facts.
+Mark unanswered or inapplicable fields explicitly. Provide approved public details and document
 versions, not passwords, private records, or real inquiry samples.
 
 | Checklist | Questions to resolve |
@@ -81,8 +83,8 @@ versions, not passwords, private records, or real inquiry samples.
 
 ## Recommended closeout order
 
-1. Preserve the approved v1 exclusions below and use the questionnaire to resolve the outstanding consent decision.
-2. Complete counsel/business decisions (09.05, 14.01, 14.03).
+1. Prepare and validate the [protected technical customer review](#protected-v1-customer-review-readiness). Preserve the approved V1 exclusions and wait for hosted authorization before setup.
+2. Use owner feedback and the questionnaire to finish business, retention and consent decisions before unrestricted public launch.
 3. Keep the verified 16.11 environment configuration unchanged unless a separate change is approved.
 4. Preserve isolated database/browser results at their tested revisions. The high-priority [Preview cutover plan](./Operations-and-Recovery-Runbook.md#coordinated-preview-database-credential-cutover) specifies an in-place `dev` owner reset, the confirmed protected Preview SHA and stale-deployment impact. The former Section 02 inventory backup was replaced locally with an ignored, value-free note under explicit approval. The proposed November 27, 21:00-23:00 CET window is not authorized: verify actual recovery clone expiry and confirm external consumers and test-clone retention. Possible Production reuse remains separate and unresolved; no database password was tested or changed. The HTTP 204 / `net::ERR_ABORTED` warning and hosted synthetic-account cleanup remain open.
 5. Complete the migration/recovery workflow (16.12), execute the approved manual deployment procedure (16.13) only after release authorization, then complete Production smoke/rollback evidence (16.14–16.15).
@@ -92,6 +94,58 @@ versions, not passwords, private records, or real inquiry samples.
 **Remaining-item review (2026-11-26):** Ten items remain after four v1 scope closures. Group local verification by dependency: business and legal content (14.01/14.03/14.08), consent behavior if required (14.06–14.08), and inquiry retention/privacy (09.05/11.07). The 14.08 technical results were accepted, but owner/counsel approvals remain open. The provisional Preview window and separate 16.12, 16.14 and 16.15 gates are unchanged.
 
 **Decorative-media implementation verified (2026-11-26):** The homepage retains an illustrative video loop and shared poster fallback; the About image remains responsive. The app serves two WebP files and an optimized MP4 locally. All 148 source tests, targeted ESLint, asset decodes and the optimized build passed. Loopback Chromium confirmed desktop/mobile playback, the poster with video blocked and with reduced motion, local image decoding, HTTP 206 byte ranges and no external page requests. The optimizer rejected the retired Unsplash origin. This does not close 14.08 or change consent policy or inventory media.
+
+**Storage warning investigation (2026-11-26, still open):** Installed Neon CLI 9.10.0 and standalone Firefox 137; existing CLI authentication had access to the authorized Frankfurt project. The [isolated provider trace](./Operations-and-Recovery-Runbook.md#2026-11-26-isolated-provider-trace-evidence) exercised actual signed multipart uploads in Chrome and Firefox. Normal HTTP/2 204 completion, independent byte integrity, replacement/deletion, cancellation, and duplicate completion recovery passed. Provider timings partly correlated; the hosted `net::ERR_ABORTED` warning did not reproduce. Root cause remains open. All 14 targeted source tests passed, with none skipped. No application changes were made. Temporary buckets, credentials, branches and local test artifacts were cleaned up; no Preview or Production resources were changed.
+
+## Protected V1 customer review readiness
+
+The customer-review release is for an invited dealership owner to test the
+site and admin workflows, not for public commercial launch. The seven
+owner/legal items stay unchecked and the three Production gates stay separate.
+
+| Category | Status and remaining action |
+| --- | --- |
+| Technical blockers for customer review | The current hosted Preview evidence is from an older revision. The candidate adds editable legal form, activity and two optional phone fields, replaces static secondary phone rendering, and restricts test inquiry submissions to `.invalid` email addresses. The additive migration has no backfill or business records. Before inviting the owner, apply it only to an authorized isolated review database, validate save/clear and rendering, and complete the exact-revision protected smoke and isolation checks below. |
+| Business information | Use the supplied business card for the protected review. The owner still verifies the details and supplies registration, VAT, representative, opening hours, service details and additional branding when available. Do not invent or publish those values. |
+| Legal approval | 09.05, 11.07, 14.01, 14.03 and 14.06–14.08 remain open. Protected review shows the pending legal notice; comparison, theme and authentication are unchanged. No real inquiries, optional tracking, embedded social/map widgets, or external mail are enabled. |
+| Security maintenance | Preserve the coordinated Preview cutover and provisional November 27, 21:00–23:00 CET slot. Verify clone expiry at the scheduled time and complete consumer checks; no exposed credential may be used for review. Keep the existing storage warning and synthetic-account cleanup open. |
+| Final public launch | Obtain applicable owner and legal approvals, clean up review accounts and records, and separately authorize 16.12 recovery/migration, 16.14 Production smoke and 16.15 final evidence. No Production operation is authorized by review approval. |
+
+Use the [review deployment sequence](./Operations-and-Recovery-Runbook.md#protected-customer-review-deployment)
+and [owner acceptance guide](./Implemented-Sections-Test-Guide.md#protected-v1-customer-review-acceptance).
+
+**Candidate verification:** 151 source tests passed, with none skipped.
+TypeScript, changed-file ESLint and Prettier, Prisma schema validation and
+client generation, and an isolated optimized Webpack build passed. The build
+used a dummy loopback database URL and mocked font responses. No migration
+was applied; the database-backed settings regression and exact-revision
+browser acceptance are still pending. No new runtime defect was confirmed.
+The previously observed hosted storage warning remains unresolved.
+
+## Consolidated V1 verification evidence
+
+These are previously completed checks, not a new suite run or a release
+sign-off. Results apply only to the tested revision and environment; the
+detailed milestones and [test guide](./Implemented-Sections-Test-Guide.md)
+record the setup and coverage limits. Do not combine counts from different runs.
+
+| Area | Evidence already available | Limit |
+| --- | --- | --- |
+| Staff authentication, first-run settings, and vehicle CRUD (13.07, 16.06) | Isolated browser/DB: pre-hydration credential safety, role checks and sign-in, synthetic dealership creation and versioned updates, draft and media CRUD. | Customer data entry and legal identity are not verified; hosted synthetic account cleanup remains separate. |
+| Inventory, media, detail and public freshness (03.14, 06.10, 15.09) | Isolated inventory and vehicle-media suites (30/30 each in 06.10); protected Preview `192b842`: staff access, publish/update visibility, image replacement, canonical and robots metadata, hard 404s and sitemap eligibility. | Preview-only, not Production smoke evidence. |
+| Comparison and dealership settings (07.05, 08.09) | Disposable browser/DB: comparison persistence, pruning and retry; staff settings validation, stale-write protection and propagation to public pages. | Settings used synthetic facts; comparison and theme remain unchanged pending legal review. |
+| Inquiry, inbox, dashboard and notifications (09.12, 11.08, 12.08, 10.07) | Isolated persistence and browser evidence: validations, access boundaries, authored notes, metric accuracy and retry; mock worker verified outbox integrity, idempotency, retries and failure handling. | No live inquiry or mail acceptance. External email and callbacks are excluded from V1. |
+| Legal, consent and local media (14.08 baseline) | Four routes, synthetic shared contact details and six service CTA contexts verified. Local media playback, fallback, reduced motion and absence of external decorative-media requests verified separately at `e44d26a`; 148 source tests and an optimized build passed. | Placeholders and legal classification are still open; see [implementation readiness](./Implemented-Sections-Test-Guide.md#implementation-readiness-after-legal-approval). |
+| Release and recovery preparation (16.11, 16.13, 16.15 preflight) | Environment segregation evidence, isolated recovery drill and documented manual path; offline preflight at `53434be` passed 148 source tests plus type/lint/schema/build checks. Archived `d942bf1` passed 147 source tests as a code rollback candidate. | No newly verified Production recovery point, smoke, or final release approval; 16.12, 16.14 and 16.15 remain separate. |
+| Storage warning follow-up | Owner accepted the [isolated provider evidence](./Operations-and-Recovery-Runbook.md#2026-11-26-isolated-provider-trace-evidence). Tested normal upload, integrity, replacement, deletion, retry and concurrency were consistent. | Preserve the implementation. Root cause is unresolved; use the [next-occurrence protocol](./Operations-and-Recovery-Runbook.md#capture-the-next-hosted-preview-occurrence) only during authorized testing. Do not provision another lab without new evidence or a specific hypothesis. |
+| Protected customer-review candidate | Optional business-card fields use the existing settings write/read flow; shared contacts replace fixed secondary contact numbers. The synthetic inquiry safeguard rejects deliverable email at the server boundary. | Exact-revision review migration, browser save/readback and protected smoke remain distinct from the accepted historical evidence. |
+
+**Preview maintenance:** The recovery clone lookup is due only after
+**November 27, 2026, 20:27:11 CET (19:27:11 UTC)**. It has not been performed
+for this update. A confirmed not-found result, the remaining consumer and
+test-clone retention checks, and explicit cutover authorization are still
+required. The **21:00–23:00 CET** window remains provisional. Synthetic
+account cleanup requires separate identification and approval.
 
 This report does not authorize a Production change, data import, migration, email send, or deployment.
 

@@ -5,9 +5,10 @@ import { getPublicDealershipSettings } from "@/lib/dealership-settings";
 import { createPublicMetadata } from "@/lib/metadata";
 
 export async function generateMetadata() {
+  const { name } = await getPublicDealershipSettings();
   return createPublicMetadata(
     "Über uns",
-    "Informationen zu Kuraishi und den veröffentlichten Fahrzeugangeboten.",
+    `Informationen zu ${name} und den veröffentlichten Fahrzeugangeboten.`,
     publicRoutes.about,
   );
 }
@@ -17,14 +18,15 @@ export default async function AboutPage() {
     <>
       <PageHeader
         title="Über uns"
-        description="Informationen zu Kuraishi und den veröffentlichten Fahrzeugangeboten."
+        description={`Informationen zu ${settings.name} und den veröffentlichten Fahrzeugangeboten.`}
         breadcrumb="Über uns"
       />
       <div className="site-container grid gap-8 py-10 lg:grid-cols-2">
         <div>
           <p className="eyebrow">{settings.name}</p>
           <h2 className="section-title mt-3">
-            Fahrzeugangebote und Kontaktmöglichkeiten.
+            {settings.businessActivity ??
+              "Fahrzeugangebote und Kontaktmöglichkeiten."}
           </h2>
           <p className="text-muted-foreground mt-5 leading-7">
             Auf dieser Website finden Sie die veröffentlichten Fahrzeugangebote.

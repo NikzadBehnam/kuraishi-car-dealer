@@ -1,0 +1,5 @@
+ALTER TABLE "Dealer"
+  ADD COLUMN "phone2" VARCHAR(32),
+  ADD COLUMN "phone3" VARCHAR(32),
+  ADD COLUMN "legalForm" VARCHAR(100),
+  ADD COLUMN "businessActivity" VARCHAR(160);

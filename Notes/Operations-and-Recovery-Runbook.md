@@ -94,6 +94,13 @@ Implementation references:
 
 ## Inquiry notification reconciliation
 
+V1 staff handle customer inquiries in the protected admin inbox. Keep
+`INQUIRY_EMAIL_MODE` unset or `disabled`; do not provision external callbacks,
+schedule sends or enable staff or visitor delivery. Preserve the existing
+internal outbox and authorization safeguards and the visitor's on-screen
+feedback. Mock checks are sufficient for v1; the isolated simulator procedure
+below is retained for separately authorized testing, not as a release step.
+
 - Inquiry acceptance is durable independently of notification delivery. The
   outbox uses bounded retries and idempotency keys; the protected inbox shows
   each notification's status and sanitized failure code.

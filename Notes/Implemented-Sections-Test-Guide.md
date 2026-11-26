@@ -11,7 +11,7 @@ This guide covers the integrated work across the implemented section branches, i
 - Section 07.01-07.04: anonymous live comparison selection and rendering against current eligible inventory.
 - Section 08.01-08.08: persisted dealership settings, validated admin editing, shared public business data and the approved initial-data migration.
 - Section 09.01-09.04 and 09.06-09.11: inquiry persistence, shared validation, guarded isolated-test intake, retries and vehicle/service context; Production remains disabled.
-- Section 10.01 (partial): Resend staff-only provider selection, disabled/default and isolated simulator-only configuration.
+- Section 10.01 (out of scope for v1): external staff delivery stays disabled. Historical Resend preparation and isolated-only safeguards remain; staff use the protected admin inbox.
 - Section 10.02: privacy-minimal HTML/plain-text staff alert content with escaped snapshots and a protected inbox link.
 - Section 10.04-10.05: durable outbox, bounded retries, Resend simulator adapter and test-only worker endpoint; no automatic schedule or Production delivery.
 - Section 11.01-11.04: protected database-backed inquiry inbox, server-side search and pagination, selected detail, historical vehicle context, contact links, and per-inquiry notification status/failure display.
@@ -228,7 +228,7 @@ Use the isolated non-Production app/database and test media bucket. Create or ed
    - Confirm 12 results per page and accurate page/total indicators.
    - Navigate forward/back; links must retain `q`, and a fresh search must return to page 1.
    - Open a page link directly and verify the same results. Try a valid but beyond-last page and use the provided link back to page 1.
-   - No public filter or user-selected sort controls should appear; those remain the unapproved optional 05.07 scope.
+   - Verify the existing catalog filtering and sorting are unchanged. Extra 05.07 controls are excluded from v1 and are a potential v2 enhancement.
 6. **Cross-section propagation**
    - Publish, feature, reserve/release, sell and archive test vehicles through the admin workflow. Reload homepage and catalog after each change.
    - Verify eligible published/featured stock appears, Reserved listing cards show their status, Sold/Archived/Draft stock is excluded from discovery, and no redeploy is needed.
@@ -341,9 +341,16 @@ Intake is off by default and code-blocked in Production. Isolated development/Ve
 
 Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. The isolated DB suite has passed; the browser checks above remain deferred. Use the completion record below to track them.
 
-## 12. Section 10.01 — Resend account and DNS setup (partial implementation)
+## 12. Section 10.01 — Historical Resend setup (out of scope for v1)
 
-The selected scope is **email notifications to staff only**, not automated visitor replies. The 10.01 setup step prepares configuration and privacy-minimal content; it does not send anything or validate credentials against Resend. The isolated-test worker was added later under 10.04-10.05. Guided setup on 2026-11-19 confirmed the corrected domain as Verified, the development key's restricted scope, and current quotas. The user reports saving the key privately; its value/API validity was not checked. Real recipients and provider acceptance testing remain pending, so Section 10.01 stays open. Do not purchase a paid plan or change Production settings just to follow this guide.
+V1 uses the **protected admin inbox**, not external staff email. Keep
+`INQUIRY_EMAIL_MODE` unset or `disabled`. Visitor acknowledgement emails
+(10.03) are deferred to v2; preserve on-screen feedback. Provider callbacks
+(10.06) are excluded from v1; preserve the protected internal worker and outbox.
+Use mocks for the 10.07 retest. The setup below is historical reference only,
+not a v1 test or permission to configure a provider or send email. Domain,
+restricted key scope and quotas were reviewed; live recipients and provider
+acceptance were not verified.
 
 ### A. Create the account and sending domain
 
@@ -414,7 +421,7 @@ The user approved alert-only content, not visitor contact details or message for
    - Invalid stored values and inconsistent service/source combinations throw explicit errors rather than producing a misleading notification.
 3. Automated link tests bind the existing `/admin/leads` route to localhost or the current validated Preview origin, rejecting arbitrary/Production URLs. The alert contains no auth token, customer identifier or unsupported inquiry-detail query parameter in its link.
 4. When performing the deferred browser retest on an isolated app, confirm an anonymous visit to `/admin/leads` requires sign-in. The page now reads real inquiries and supports the separate append-only internal notes flow from 11.05-11.06; it does not add lead statuses, assignment or an automated response flow.
-5. These source checks do not contact Resend. Mock acceptance, database-backed retry and staff inbox rendering were verified separately in 10.07; 10.01 remains partial.
+5. These source checks do not contact Resend. Mock acceptance, database-backed retry and staff inbox rendering were verified separately in 10.07; live provider readiness is excluded from v1 under 10.01.
 
 ## 14. Section 10.04-10.05 — durable outbox and bounded delivery retries
 
@@ -598,7 +605,7 @@ synthetic service configuration without contacting hosted resources.
 | Section 07 live comparison workflow                    | Partial | DB/query assertions pass; browser storage/workflow retest pending                              |
 | Section 08 dealership settings workflow                | Partial | Isolated DB assertions pass; combined browser retest pending                                   |
 | Section 09 guarded inquiry intake                      | Partial | Isolated migration/query suite 30/30 on 2026-11-20; browser retest pending; Production blocked |
-| Section 10.01 Resend setup                             | Partial | Domain/key scope/quotas and template ready; real recipients/provider acceptance pending        |
+| Sections 10.01 / 10.03 / 10.06 external delivery and callbacks | Out of scope for v1 | Staff use the admin inbox; visitor email is deferred to v2; no external callbacks. |
 | Section 10.02 privacy-minimal staff content            | Passed  | Source tests only; no provider send or browser retest                                          |
 | Section 10.04-10.05 outbox/retry core                  | Partial | Migration applied on isolated test DB; worker DB/provider schedule verification pending        |
 | Section 10.07 provider verification                    | Passed  | Isolated DB and browser with mocked transport; no external provider call or email              |

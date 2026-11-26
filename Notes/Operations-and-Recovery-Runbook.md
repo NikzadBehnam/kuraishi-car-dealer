@@ -312,6 +312,14 @@ schema restore or changes to data or storage.
   The isolated browser retest passed; this does not change the Preview credential
   cutover plan or resolve the storage upload warning.
 
+- **14.08 verification:** Use loopback with synthetic settings and intercept
+  external image/video requests. The current localized legal routes, imprint
+  contact wiring and all six service CTAs passed; the legal bodies are still
+  placeholders and optional media loads are not preference-gated. This is not
+  legal sign-off. Wait for approved copy and a consent/media decision before
+  marking the milestone complete. No Preview credential or hosted change is
+  needed for the isolated retest.
+
 ### Outstanding security maintenance
 
 - **High priority: exposed Preview database credential rotation.** Follow the

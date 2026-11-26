@@ -339,7 +339,7 @@ schema restore or changes to data or storage.
 | --- | --- |
 | Vercel Preview | The operator verified on 2026-11-26 that the stable alias serves READY deployment `dpl_Cp5YBb9rnypuU95dSF9Lga76KKb1` at `192b842d3f2d618ea692c85307a8fe77ee4a4d7c`. This is the confirmed like-for-like redeploy revision. `DATABASE_URL` (pooled runtime, including Better Auth) and `DIRECT_URL` (direct Prisma tooling) are sensitive, Preview-only, and scoped to `test/backend-integration-and-release`. Recheck for drift at the maintenance window. Older deployments retain their original environment values. |
 | Local development | Checked `.env.local` and the current shell: the active file uses different endpoint and role names; the shell had no applicable URL override. Check separately saved Preview overrides on other workstations. Do not change unrelated local settings. |
-| Database tests | The active `.env.inventory-test.local` and `.env.media-test.local` do not target `dev` or any of the three known clones below. The ignored `.env.inventory-test.local.txt` backup points to the Section 02 clone with the affected role name, but its expected-host setting does not match that compute. It is not an active test consumer. Do not activate it or point tests at hosted `dev`; the operator should retire the stale backup under the approved cleanup scope. |
+| Database tests | The active `.env.inventory-test.local` and `.env.media-test.local` do not target `dev` or any of the three known clones below. The ignored `.env.inventory-test.local.txt` backup formerly pointed to the Section 02 clone with the affected role name. No tracked script or running command referenced it. With operator approval, it was replaced with a value-free retirement note on 2026-11-26. This does not erase any external copies or revoke a password. Do not activate this file or point tests at hosted `dev`. |
 | Recovery and other integrations | The isolated staff recovery helper takes the `dev` direct URL via secure input. Check operator vault entries, saved database clients, CI secrets, scheduled jobs and other integrations for both endpoint forms. No additional active consumer is confirmed. The previous staff password reset did not change this Postgres role. |
 
 **Inventory checked on 2026-11-26:** GitHub reports zero Actions workflows;
@@ -377,14 +377,18 @@ project variables are updated. Inventory the branch's Preview-only deployment
 IDs, generated URLs and aliases in Vercel before the window; classify
 unverified deployments as potentially affected, not as rollback options.
 
+**Provisional window:** 2026-11-27, 21:00-23:00 CET (Europe/Rome).
+The designated maintenance owner has not authorized the cutover. The window
+depends on verified recovery clone removal and completion of the external
+consumer checks. Only the `dev` credential reset, branch-specific Vercel
+updates and protected Preview redeploy are proposed. Historical test branch
+retirement and Production are not authorized.
+
 1. **Confirm scope and preflight.** Check remaining consumer and retention
    findings, verify recovery clone expiry, and confirm the maintenance owner,
    window and explicit `dev`-only cutover authorization. Clone or stale-file
-   cleanup requires its own approval. For `.env.inventory-test.local.txt`,
-   confirm the exact ignored path and lack of an active reader; if needed,
-   retain only a value-free record of its purpose and retire the original
-   through the approved local disposal process, including any vault or sync
-   copies. Do not modify the active test config. Separately escalate possible
+   cleanup requires its own approval. Check for any vault or sync copies of
+   the retired local backup; do not modify active test config. Separately escalate possible
    Production reuse to its owner. Recheck the Preview source SHA, target,
    branch variable scopes and Deployment Protection; stop if anything drifted
    or the operator cannot perform a source-backed redeploy. Pause Preview

@@ -37,7 +37,7 @@ export default async function AboutPage() {
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
-            src="https://images.unsplash.com/photo-1727893344848-2ec8eba4bacd?auto=format&fit=crop&w=1200&q=82"
+            src="/images/decorative/showroom.webp"
             alt="Symbolbild eines Showrooms"
           />
         </div>

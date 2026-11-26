@@ -24,6 +24,7 @@ export async function generateMetadata() {
   );
 }
 export const dynamic = "force-dynamic";
+const heroPoster = "/images/decorative/hero-poster.webp";
 
 export default async function HomePage() {
   const featuredVehicles = await getFeaturedVehicles({ limit: 8 });
@@ -35,7 +36,8 @@ export default async function HomePage() {
     <>
       <section className="hero-shell relative isolate flex min-h-[calc(100svh-var(--header-height))] overflow-hidden">
         <div
-          className="hero-poster absolute inset-0 -z-30 bg-cover bg-center"
+          className="absolute inset-0 -z-30 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroPoster})` }}
           aria-hidden="true"
         />
         <video
@@ -45,11 +47,11 @@ export default async function HomePage() {
           loop
           playsInline
           preload="metadata"
-          poster="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2000&q=82"
+          poster={heroPoster}
           aria-hidden="true"
         >
           <source
-            src="https://videos.pexels.com/video-files/5309381/5309381-hd_1920_1080_25fps.mp4"
+            src="/videos/decorative/hero-drive.mp4"
             type="video/mp4"
           />
         </video>
@@ -163,6 +165,23 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      <p className="site-container text-muted-foreground pb-4 text-xs">
+        Symbolvideo und Standbild:{" "}
+        <a
+          className="underline"
+          href="https://commons.wikimedia.org/wiki/File:2025-08-15_Monterey_Ferrari_F80.webm"
+        >
+          Ferrari F80 in Monterey - VictorDoesCars
+        </a>
+        {" · "}
+        <a
+          className="underline"
+          href="https://creativecommons.org/licenses/by/4.0/"
+        >
+          CC BY 4.0
+        </a>
+        {" · "}stumm, neu kodiert; Standbild aus dem Video.
+      </p>
     </>
   );
 }

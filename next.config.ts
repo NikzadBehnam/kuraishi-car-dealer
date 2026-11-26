@@ -51,10 +51,7 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      ...(publicMediaPattern ? [publicMediaPattern] : []),
-    ],
+    remotePatterns: publicMediaPattern ? [publicMediaPattern] : [],
   },
   async headers() {
     return [

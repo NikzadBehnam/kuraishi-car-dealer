@@ -529,9 +529,7 @@ cannot be inferred from an observed request.
 | Theme `localStorage` (`theme`) | Theme selection; no identity or contact fields. | No application TTL; persists until changed or site data is cleared. | Required to remember the selected theme, not to browse. First-party storage; read on page initialization and written on theme selection, independent of consent. | If preference storage needs approval, gate reads/writes before initialization. |
 | Vehicle comparison `localStorage` (`kuraishi-comparison`) | Selected vehicle IDs and their order; not contact data. The app separately queries current eligible listings. | No time-based TTL; removed when cleared or pruned, or when site data is cleared. | Required for persistence of a requested comparison, not for general browsing. First-party storage; read on initialization and written on use or repair, independent of consent. | If persistence needs approval, gate reads, writes and repair without blocking core inventory browsing. |
 | In-memory form/navigation state and ordinary browser cache | Inquiry fields and retry/idempotency metadata stay in page memory before submission; the browser may independently cache requested resources or offer autofill. No application `sessionStorage`, IndexedDB, Cache Storage or service-worker registration was found. | Page/component lifetime for application form state; browser-managed cache and autofill have no app-set retention. | Form state is needed to edit and retry; it is not sent until submission to the same-origin inquiry API, currently disabled outside isolated test mode. | Not a substitute for inquiry privacy acknowledgement; gate initiating a resource request if required, not the browser cache alone. |
-| Locally hosted media and bundled fonts | Tracked PNG/WebP assets (including branding) and app-served Next font files. Contact QR is rendered in-app, not via a QR service. | Browser/cache headers control delivered copies. Next fetches Google font resources at build time; this does not send a visitor font request to Google. | Used for rendering; delivered by the app host. Assets can load on entry without a choice. | No third-party browser request to gate for these assets. |
-| Remote Unsplash imagery | Home backdrop/poster can request Unsplash directly; the About image uses the app's Next image optimizer, which can fetch Unsplash from the server on cache miss. Demo vehicle fixtures also contain Unsplash URLs but are not a public inventory source. | Browser and optimizer cache behavior and provider retention vary; no application retention guarantee. | Decorative, not required for browsing. Direct requests can disclose visitor IP and ordinary request headers; an optimizer fetch exposes server network metadata and image URL to Unsplash rather than a direct visitor request. Loads can start before a choice. | If subject to approval, gate or replace all sources: CSS background, poster, image markup and optimizer-triggering requests. Hiding an already-loaded image is insufficient. |
-| Remote Pexels hero video | Home hero video source requested directly by the browser. | Browser/provider-managed cache and retention; not set by the app. | Decorative, not required for browsing. Pexels can receive visitor IP and ordinary request headers. Loads before a choice on the current homepage. | If subject to approval, do not attach the video source or preload until allowed; remove it and prevent future requests after withdrawal. |
+| Locally hosted media and bundled fonts | Tracked PNG/WebP assets (including branding, homepage poster and showroom), homepage MP4, and app-served Next fonts. About uses the same-origin Next optimizer with a local input. Contact QR is rendered in-app. | Browser/cache headers control delivered copies. Next fetches Google font resources at build time, not from visitor browsers. | Decorative media is not required for browsing and can load on entry without a choice. The app host receives requests; Unsplash and Pexels receive no runtime request for these assets. The source and CC license links are click-only outbound links. | No third-party media request to gate here. Local delivery is not a legal decision for other storage or providers. |
 | Approved vehicle media and staff object storage | Public vehicle media uses configured object URLs, including where proxied by the image optimizer. Staff browsers can upload files using signed POST fields and request authorized signed thumbnails/downloads. The storage provider receives requested object identifiers, network/request metadata and upload bytes; direct browser access exposes the client's IP. | Signed upload and private read URLs last five minutes; upload intent lasts 15 minutes. Those are access/intent limits, not object retention. Cache and object lifecycle are separate. | Needed for inventory imagery or explicit staff media operations. Public images can load before a choice; private operations require staff authorization. The storage service is distinct from Unsplash and Pexels. | Gate the actual public request path if required by the approved policy. Do not remove staff authorization or expose private storage. |
 | Maps, social and dealership website links | Plain outbound navigation to Google Maps, social profiles or the configured dealership website; no iframe/embed in these paths. External destinations can receive the visitor IP, referrer where allowed, and link parameters such as map query. | Destination/browser-managed; the app does not set a duration. | Optional navigation initiated by a click, not automatic tracking or an embed. Phone and mail links invoke the visitor's handler. | No automatic resource to gate in these link paths; reassess if replaced by embeds or preloads. |
 | Backend services | Postgres for app data and staff auth; object storage for media operations. The isolated notification transport can send privacy-minimal staff alerts to Resend's simulator when explicitly configured, not visitor contact details or message; the current live delivery path is disabled. | Server-side records, provider retention and log settings are separate from browser storage. Pending retention policy is not implied by this inventory. | Backend calls do not load provider scripts in the user's browser. Resend is not contacted on page load. | Verify configured server-side mode separately; do not implement a browser toggle for it. |
@@ -544,44 +542,49 @@ and check actual direct, proxied and CSS resource requests when unset, denied,
 allowed and withdrawn, including after reload. Legal copy and required runtime
 behavior remain open under 14.03 and 14.06–14.08.
 
-### Feasibility: serve decorative stock media from the application origin
+### Decorative media: source, license and isolated retest
 
-Technically feasible without a database, storage-provider, or consent change.
-Prefer dealership-owned media with permission for web publication. Otherwise
-select individually verified stock assets and record the source page, creator,
-asset ID, applicable license, permitted commercial use and any attribution or
-release requirements. A CDN URL is not proof of permission to redistribute an
-asset. The specific current assets were not cleared or downloaded in this review.
-The [Unsplash download license](https://unsplash.com/license) generally allows
-commercial use, but the [Unsplash API guidelines](https://help.unsplash.com/en/articles/2511245-unsplash-api-guidelines)
-require hotlinking for API uses. No Unsplash API client was found in the app;
-confirm the acquisition route rather than copying CDN URLs. The
-[Pexels license](https://www.pexels.com/license/) generally permits website use
-but restricts uses such as implying endorsement. Check identifiable people,
-brands and property separately. Do not depict illustrative stock as the
-dealership, its premises, or actual inventory.
+The approved local implementation changes neither inventory storage nor consent.
+These are illustrative stock assets, not dealership premises, actual inventory
+or an endorsement.
 
-| Surface | Minimum change after approval |
-| --- | --- |
-| Homepage hero | Put an approved compressed poster and, if motion is retained, a short optimized video under `public/images/` and `public/videos/`. Update both the `poster` and video source in the [homepage](../src/app/(public)/(marketing)/page.tsx) and the CSS `.hero-poster` backdrop in [globals.css](../src/app/globals.css). Use the same poster for both paths; retain the fallback, muted/inline playback and reduced-motion behavior. A static poster is the lowest-bandwidth option if approved. |
-| About image | Update the [About page](../src/app/(public)/(marketing)/about-us/page.tsx) `Image` source to a local asset; keep its responsive sizes and truthful alt text. |
-| Image allowlist and fixtures | Once runtime call sites are local, remove only the Unsplash allowlist entry in [next.config.ts](../next.config.ts), after checking no intended consumer remains. Leave the configured vehicle-media origin intact. [Vehicle demo fixtures](../src/data/vehicles.ts) are referenced by a source test and an unreferenced admin fixture, not by runtime inventory; do not broaden the change to fixture cleanup. |
+| Local asset | Source and permission | Optimization and use |
+| --- | --- | --- |
+| [Hero video](../public/videos/decorative/hero-drive.mp4) and [poster](../public/images/decorative/hero-poster.webp) | [Ferrari F80 at Monterey](https://commons.wikimedia.org/wiki/File:2025-08-15_Monterey_Ferrari_F80.webm), VictorDoesCars, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Allows adaptation and commercial redistribution with attribution, license link and indication of changes; the homepage credits both outputs. | 5.9-second 1280-wide H.264 MP4, 1,475,701 bytes, down from a 3,736,712-byte source; removed audio, resized, re-encoded with fast start. The 48,470-byte WebP still was extracted from the source at 1.4 seconds. The [homepage](../src/app/(public)/(marketing)/page.tsx) shares that still between the video poster and backdrop. |
+| [Showroom image](../public/images/decorative/showroom.webp) | [Blue sports car in a showroom](https://unsplash.com/photos/a-blue-sports-car-parked-in-a-showroom-with-a-white-wall-PT8Y2S7xZlU), Julian Stollmeier, [Unsplash License](https://unsplash.com/license). Downloaded the image linked by its photo page, not via an API integration. The license permits commercial redistribution in this use; credit is appreciated, not required. | 1280-wide WebP, 101,606 bytes, down from the 540,656-byte download; [About](../src/app/(public)/(marketing)/about-us/page.tsx) retains responsive Next Image sizing and the illustrative alt text. |
 
-This removes direct browser requests and the About optimizer's upstream fetch
-to the stock providers, reducing outside availability dependencies and
-disclosure of visitor network metadata to those providers. It does not remove
-the app host's traffic metadata, the separate inventory object-storage path, or
-any remaining legal or consent obligations. Bundling video increases repository
-and deployment payload and shifts delivery bandwidth to the app host. Check
-encoded size, caching and byte-range playback before choosing video over a
-poster; an autoplay or metadata preload can still incur transfer on mobile.
+The previous Unsplash poster and About image references used asset keys
+`1503376780353-7e6692767b70` and `1727893344848-2ec8eba4bacd`; their original
+photo pages were not confirmed, and neither file was copied. The previous
+[Pexels video by Taryn Elliott](https://www.pexels.com/video/luxury-sports-cars-passing-on-the-street-5309381/)
+was not copied: the [Pexels terms](https://www.pexels.com/terms-of-service/)
+restrict substantially unchanged standalone redistribution. For future choices,
+retain attribution and confirm permissions for people, marks and property;
+[Unsplash API uses](https://help.unsplash.com/en/articles/2511245-unsplash-api-guidelines)
+have separate hotlink requirements.
 
-After approval, verify on a loopback build with a fresh browser: no
-Unsplash/Pexels requests on first load, reload or navigation, including direct
-requests, image optimizer URLs and CSS; local image/video requests succeed;
-mobile and desktop rendering, static fallback and reduced motion still work;
-and approved inventory images remain unaffected. Compare first-load bytes with
-the current behavior. No media or consent behavior was changed in this review.
+The Unsplash runtime optimizer entry was removed from
+[next.config.ts](../next.config.ts); the configured inventory media rule
+remains. Unsplash URLs in [demo fixtures](../src/data/vehicles.ts) do not
+feed runtime inventory. HTTP delivery bandwidth shifts to the app host; this
+does not settle consent for browser storage or inventory provider requests.
+
+Retest in a fresh loopback browser on an optimized build: no stock-provider
+requests on load or navigation, including external optimizer inputs and CSS;
+desktop and mobile autoplay/loop; local responsive About image; readable
+credit; poster when video fails or motion is reduced; and an HTTP 206 response
+for an MP4 byte range. The isolated fixture substitutes public dealership
+settings and empty featured inventory, so it does not claim live storage
+verification.
+
+Verification passed: 148 source tests with none skipped, targeted ESLint,
+all three asset decodes, and the optimized Webpack build with TypeScript.
+Chromium on the loopback build passed at 1440 px and 390 px, including active
+muted playback, responsive showroom decoding, credit links, poster fallback
+with the video request blocked, reduced motion, and the HTTP 206 byte range.
+No external browser requests were observed, and a direct attempt to optimize
+an Unsplash URL returned HTTP 400. The build used mocked font responses and
+synthetic service configuration without contacting hosted resources.
 
 | Area                                                   | Result  | Notes                                                                                          |
 | ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------- |

@@ -253,9 +253,6 @@ textarea.control {
   box-shadow: 0 0 0.55rem var(--accent);
   animation: footer-qr-scan 3.4s ease-in-out infinite;
 }
-.hero-poster {
-  background-image: url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2000&q=82");
-}
 .hero-video {
   animation: hero-video-settle 1.2s var(--ease-out) both;
 }

@@ -312,13 +312,15 @@ schema restore or changes to data or storage.
   The isolated browser retest passed; this does not change the Preview credential
   cutover plan or resolve the storage upload warning.
 
-- **14.08 verification:** Use loopback with synthetic settings and intercept
-  external image/video requests. The current localized legal routes, imprint
-  contact wiring and all six service CTAs passed; the legal bodies are still
-  placeholders and optional media loads are not preference-gated. This is not
-  legal sign-off. Wait for approved copy and a consent/media decision before
-  marking the milestone complete. No Preview credential or hosted change is
-  needed for the isolated retest.
+- **14.08 verification:** Use loopback with synthetic settings and fail on
+  external decorative image/video requests. The homepage and About assets
+  ship with the app; validate video, poster fallback, attribution and the
+  responsive image after a code change. See the [media source and retest guide](./Implemented-Sections-Test-Guide.md#decorative-media-source-license-and-isolated-retest).
+  Recover a broken decorative asset with a known-good local file and its
+  matching credit; do not restore remote hotlinks, change inventory media
+  storage or alter consent behavior as a recovery measure. Legal copy and
+  consent remain separate approvals. No Preview credential or hosted change
+  is needed for the isolated retest.
 
 ### Outstanding security maintenance
 

@@ -47,7 +47,7 @@ Run `pnpm test` for source tests. The inventory and media database suites use is
 - `package.json`: dependencies and scripts.
 - `pnpm-lock.yaml`: dependency lockfile.
 - `pnpm-workspace.yaml`: pnpm build settings for native dependencies such as `sharp`.
-- `next.config.ts`: Next image remote pattern for Unsplash.
+- `next.config.ts`: Next image remote pattern for the configured public inventory-media bucket.
 - `tsconfig.json`: strict TypeScript, App Router settings, `@/*` alias to `src/*`.
 - `eslint.config.mjs`: Next core web vitals + TypeScript ESLint config, ignores `.next`, `dist`, `outputs`, `work`.
 - `postcss.config.mjs`: Tailwind v4 PostCSS plugin.
@@ -364,11 +364,11 @@ Public assets:
 - `public/images/brand/kuraishi-full-light.png`
 - `public/images/brand/kuraishi-full-dark.png`
 - `public/images/vehicle-types/*.webp`: wagon, transporter, suv, sedan, minivan, coupe, convertible, compact.
+- `public/images/decorative/` and `public/videos/decorative/`: locally served homepage and About media. See the [media sources and license record](Notes/Implemented-Sections-Test-Guide.md#decorative-media-source-license-and-isolated-retest) before replacing them.
 
 Remote assets:
 
-- Vehicle images and some page imagery are Unsplash URLs.
-- Home hero video is a remote Pexels MP4 in the page markup.
+- Live inventory uses approved public objects from configured storage. Unsplash URLs in development fixtures do not serve runtime inventory.
 
 ## 15. Tests
 

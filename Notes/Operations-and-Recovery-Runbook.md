@@ -342,6 +342,15 @@ schema restore or changes to data or storage.
 | Database tests | The active `.env.inventory-test.local` and `.env.media-test.local` do not target `dev` or any of the three known clones below. The ignored `.env.inventory-test.local.txt` backup points to the Section 02 clone with the affected role name, but its expected-host setting does not match that compute. It is not an active test consumer. Do not activate it or point tests at hosted `dev`; the operator should retire the stale backup under the approved cleanup scope. |
 | Recovery and other integrations | The isolated staff recovery helper takes the `dev` direct URL via secure input. Check operator vault entries, saved database clients, CI secrets, scheduled jobs and other integrations for both endpoint forms. No additional active consumer is confirmed. The previous staff password reset did not change this Postgres role. |
 
+**Inventory checked on 2026-11-26:** GitHub reports zero Actions workflows;
+no tracked CI or saved-client configuration references the affected computes.
+The current shell has no database URL or PostgreSQL service override, and
+standard current-user PostgreSQL, pgAdmin and DBeaver profile paths were not
+present. This does not cover custom profile paths, other workstations,
+external CI, scheduled jobs, or operator vaults. Search those privately by
+project, role and both hostname forms. Report only owner, target and whether
+the entry is active, stale or absent.
+
 **Cross-branch exposure:** [Neon branch creation](https://neon.com/docs/manage/branches)
 can copy role passwords from an unprotected parent. Read-only metadata confirms
 the three branches below are direct `dev` clones in the Frankfurt project and
@@ -354,48 +363,57 @@ for the Production owner; do not inspect or connect to Production here.
 
 | Frankfurt clone | Evidence of need and recommended disposition |
 | --- | --- |
-| `dev-before-preview-migrations` (`br-sparkling-smoke-b9eadwya`) | Pre-migration recovery copy. Scheduled expiry: 2026-11-27 19:27:11 UTC. Verify expiry actually completed before treating it as removed. If it must be retained or the cutover precedes expiry, obtain separate approval to contain its credential without losing needed recovery data. |
+| `dev-before-preview-migrations` (`br-sparkling-smoke-b9eadwya`) | Pre-migration recovery copy. Still `ready` on 2026-11-26. Leave its scheduled expiry unchanged (2026-11-27 19:27:11 UTC). After that time, query the exact branch ID within the Frankfurt project; only a confirmed not-found result with valid Neon access proves removal. If it still exists or the lookup is inconclusive, stop and investigate rather than deleting it. |
 | `test-section02-inventory-20261117` (`br-billowing-field-b9ay9qjo`) | Original Section 02 integration target, still named in historical retest instructions. No active local file points to it; the stale backup does. Compute last active 2026-11-18; no expiry reported. Confirm no outside consumer or retained evidence is needed, then retire it under explicit approval; otherwise rotate its login separately. |
 | `test-section03-media-20261118` (`br-autumn-lab-b9at740a`) | No active local media config or tracked dependency on this exact Frankfurt compute was found. Compute last active 2026-11-18; no expiry reported. Confirm no external consumer or recovery need before approving retirement; otherwise rotate its login separately. Identify the branch by project and ID, not name alone. |
 
-1. **Approve scope and window.** Finish the inventory of other workstations,
-   operator vaults, saved database clients, CI and jobs. Confirm a disposition
-   for each clone and the stale backup, and escalate possible Production reuse
-   separately without treating a Preview change as remediation. Record the
-   maintenance owner and window and obtain explicit authorization for the
-   `dev` changes, Preview-only redeploy/alias cutover, and any separate clone
-   action. Do not assume approval of one covers the others.
-   Record the current URLs and a protected fallback revision. Pause writes and
-   jobs during any traffic swap. If active misuse is suspected, escalate for
-   immediate authorized revocation instead of prolonging parallel access.
-2. **Stage if practical.** Prefer a short overlap with a new, scoped Preview
-   login if it can perform required runtime operations without unnecessary
-   privileges. Preserve ownership and validate the direct tooling role
-   separately without running migrations; do not remove or reassign the owner
-   role. If grants or ownership make this unsuitable, use a coordinated
-   in-place reset of `dev`'s owner password. [Neon's role reset](https://neon.com/docs/reference/api/branches/reset-project-branch-role-password)
-   drops compute connections; wait for its operations to finish. Expect the
-   existing deployment, local clients and direct tooling using the old secret
-   to fail until refreshed. Keep any overlap short and time-bounded.
-3. **Update and verify.** Store new URLs only in the approved secret stores;
-   update both branch-scoped Preview variables and only confirmed local or
-   integration consumers. Preserve SSL options, connection types and all
-   other environment settings. [Vercel changes apply only to new deployments](https://vercel.com/docs/environment-variables/managing-environment-variables).
-   Verify Deployment Protection and the exact revision on the generated URL
-   and branch alias. Open fresh pooled and direct connections and check the
-   expected database/role and migration ledger read-only. Behind protection,
-   check `/api/health`, synthetic staff sign-in and anonymous access denial,
-   and create/edit/read/delete a disposable never-published draft. Confirm
-   inquiry and email delivery are off. Restart affected clients and verify
-   their fresh connections. Don't run migrations or send email.
-4. **Revoke and close.** For a staged cutover, invalidate the old owner
-   password as soon as the replacement is verified. Verify the provider's
-   reset operation completed on the expected branch and the replacement works
-   on fresh pooled and direct connections. Do not use the exposed password
-   to probe either endpoint. Ensure old sessions cannot continue using access;
-   retire or mark stale Preview deployments as unavailable under the approved
-   scope. Record timestamps, revision, URL disposition, clone outcomes and
-   sanitized results, not secret values.
+**Deployment impact:** The current deployment `dpl_Cp5YBb9rnypuU95dSF9Lga76KKb1`
+and its generated `2zz6z030c` URL will lose database-backed functionality
+once the old password is invalidated. The stable alias will be affected until
+it serves the replacement. Earlier Preview `8mnnfsrxg` (`82ed1e8`) predates the
+confirmed overrides; its effective DB credential is unknown. Every other
+deployment with the same old `dev` credential will be affected, even after the
+project variables are updated. Inventory the branch's Preview-only deployment
+IDs, generated URLs and aliases in Vercel before the window; classify
+unverified deployments as potentially affected, not as rollback options.
+
+1. **Confirm scope and preflight.** Check remaining consumer and retention
+   findings, verify recovery clone expiry, and confirm the maintenance owner,
+   window and explicit `dev`-only cutover authorization. Clone or stale-file
+   cleanup requires its own approval. For `.env.inventory-test.local.txt`,
+   confirm the exact ignored path and lack of an active reader; if needed,
+   retain only a value-free record of its purpose and retire the original
+   through the approved local disposal process, including any vault or sync
+   copies. Do not modify the active test config. Separately escalate possible
+   Production reuse to its owner. Recheck the Preview source SHA, target,
+   branch variable scopes and Deployment Protection; stop if anything drifted
+   or the operator cannot perform a source-backed redeploy. Pause Preview
+   writes and any confirmed jobs. Allow time for a build and retest during the outage.
+2. **Reset in place on Frankfurt `dev`.** Preserve the branch, database and
+   owner/permissions. Reset only `kuraishi-car-dealer-db_owner` through the
+   approved secret-handling interface, never through chat or command logs.
+   [Neon's role reset](https://neon.com/docs/reference/api/branches/reset-project-branch-role-password)
+   drops compute connections. Wait for the reset operation to finish and open
+   fresh pooled and direct connections using the replacement. Confirm the
+   database, role and migration ledger read-only. Do not probe with the old password.
+3. **Update and redeploy.** Store the fresh pooled URL in `DATABASE_URL` and
+   direct URL in `DIRECT_URL`, as sensitive Preview-only overrides on
+   `test/backend-integration-and-release`. Preserve TLS options and leave
+   other settings unchanged. Update only confirmed consumers. Create a new
+   protected Preview build from the exact confirmed SHA using current
+   branch-scoped variables; do not reuse prebuilt output or accidentally build
+   the latest branch tip. [Vercel changes apply only to new deployments](https://vercel.com/docs/environment-variables/managing-environment-variables).
+   Verify the generated URL before moving the alias if the workflow allows;
+   if it auto-assigns the alias, keep the maintenance window open and verify
+   both immediately. No Production target or promotion.
+4. **Verify and reopen.** Record the new deployment ID and SHA. Confirm both
+   URLs enforce Vercel Authentication. Behind it, check `/api/health` returns
+   `200 {"status":"ok"}`, synthetic staff can sign in, and no app session
+   means no staff API access. Create, edit, read and delete a disposable
+   never-published synthetic draft. Verify inquiry and email delivery stay off.
+   Restart affected clients, confirm fresh connections and retire or mark
+   stale deployments under the approved scope. Record sanitized results and
+   reopen only after checks pass. No migrations or email sends.
 5. **Recover forward if checks fail.** Keep Preview protected and writes
    paused. Fix the new settings/grants or issue a fresh unexposed owner
    password on `dev`, update all affected settings, and re-verify. Use a

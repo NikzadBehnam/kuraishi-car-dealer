@@ -337,29 +337,34 @@ schema restore or changes to data or storage.
 
 | Consumer | Evidence and cutover requirement |
 | --- | --- |
-| Vercel Preview | Branch-specific `DATABASE_URL` (pooled runtime, including Better Auth) and `DIRECT_URL` (direct Prisma tooling) for `test/backend-integration-and-release`. Proposed like-for-like redeploy: `192b842d3f2d618ea692c85307a8fe77ee4a4d7c`, the last browser-verified protected revision, deployment `dpl_Cp5YBb9rnypuU95dSF9Lga76KKb1`. Both known URLs still redirect unauthenticated health requests to Vercel. That does not identify today's alias target: confirm its deployment ID/SHA and check Preview-only variable scopes in Vercel before cutover. Older deployments retain their original environment values. |
+| Vercel Preview | The operator verified on 2026-11-26 that the stable alias serves READY deployment `dpl_Cp5YBb9rnypuU95dSF9Lga76KKb1` at `192b842d3f2d618ea692c85307a8fe77ee4a4d7c`. This is the confirmed like-for-like redeploy revision. `DATABASE_URL` (pooled runtime, including Better Auth) and `DIRECT_URL` (direct Prisma tooling) are sensitive, Preview-only, and scoped to `test/backend-integration-and-release`. Recheck for drift at the maintenance window. Older deployments retain their original environment values. |
 | Local development | Checked `.env.local` and the current shell: the active file uses different endpoint and role names; the shell had no applicable URL override. Check separately saved Preview overrides on other workstations. Do not change unrelated local settings. |
-| Database tests | `.env.inventory-test.local` and `.env.media-test.local` use other endpoints and role names. One ignored `.env.inventory-test.local.txt` backup has the same role name at an endpoint different from both `dev` and its known recovery clone; its password was not compared. Confirm that endpoint's provenance privately; do not activate the backup or point tests at hosted `dev`. |
+| Database tests | The active `.env.inventory-test.local` and `.env.media-test.local` do not target `dev` or any of the three known clones below. The ignored `.env.inventory-test.local.txt` backup points to the Section 02 clone with the affected role name, but its expected-host setting does not match that compute. It is not an active test consumer. Do not activate it or point tests at hosted `dev`; the operator should retire the stale backup under the approved cleanup scope. |
 | Recovery and other integrations | The isolated staff recovery helper takes the `dev` direct URL via secure input. Check operator vault entries, saved database clients, CI secrets, scheduled jobs and other integrations for both endpoint forms. No additional active consumer is confirmed. The previous staff password reset did not change this Postgres role. |
 
-**Cross-branch status is unresolved.** [Neon branch creation](https://neon.com/docs/manage/branches)
-can copy role passwords from a parent unless protection regenerates them.
-Check the source branch and recovery/child clones that existed during the
-credential's lifetime, using branch lineage and private operator records.
-For explicitly scoped non-Production endpoints only, the operator can verify
-unclear cases with a fresh, secure authentication check without printing the
-secret. A shared role name is not proof of reuse. Do not test any Production
-endpoint; if reuse there cannot be ruled out, escalate it as a separate security
-decision. Rotating `dev` does not prove that copies on other branches are revoked. Read-only metadata
-confirmed that `dev-before-preview-migrations` (`br-sparkling-smoke-b9eadwya`)
-was cloned from `dev`, has the same password role with the same update
-timestamp, and is scheduled to expire on 2026-11-27 at 19:27 UTC. Treat it as
-potentially sharing the exposed password until expiry is confirmed or its
-access is separately resolved. No password was tested and expiry was not changed.
+**Cross-branch exposure:** [Neon branch creation](https://neon.com/docs/manage/branches)
+can copy role passwords from an unprotected parent. Read-only metadata confirms
+the three branches below are direct `dev` clones in the Frankfurt project and
+have the same password role and role-update timestamp as `dev`. Treat all
+three as potentially sharing the exposed password. Metadata does not establish
+current password equality, and the exposed password must not be tested against
+any database. A `dev` reset does not revoke a password still present on a clone.
+Possible Production reuse remains unresolved and is a separate security decision
+for the Production owner; do not inspect or connect to Production here.
 
-1. **Approve scope and window.** Confirm the consumer inventory, clone/reuse
-   findings, maintenance owner and window, exact protected Preview revision,
-   and separate permission for a Preview-only redeployment/alias cutover.
+| Frankfurt clone | Evidence of need and recommended disposition |
+| --- | --- |
+| `dev-before-preview-migrations` (`br-sparkling-smoke-b9eadwya`) | Pre-migration recovery copy. Scheduled expiry: 2026-11-27 19:27:11 UTC. Verify expiry actually completed before treating it as removed. If it must be retained or the cutover precedes expiry, obtain separate approval to contain its credential without losing needed recovery data. |
+| `test-section02-inventory-20261117` (`br-billowing-field-b9ay9qjo`) | Original Section 02 integration target, still named in historical retest instructions. No active local file points to it; the stale backup does. Compute last active 2026-11-18; no expiry reported. Confirm no outside consumer or retained evidence is needed, then retire it under explicit approval; otherwise rotate its login separately. |
+| `test-section03-media-20261118` (`br-autumn-lab-b9at740a`) | No active local media config or tracked dependency on this exact Frankfurt compute was found. Compute last active 2026-11-18; no expiry reported. Confirm no external consumer or recovery need before approving retirement; otherwise rotate its login separately. Identify the branch by project and ID, not name alone. |
+
+1. **Approve scope and window.** Finish the inventory of other workstations,
+   operator vaults, saved database clients, CI and jobs. Confirm a disposition
+   for each clone and the stale backup, and escalate possible Production reuse
+   separately without treating a Preview change as remediation. Record the
+   maintenance owner and window and obtain explicit authorization for the
+   `dev` changes, Preview-only redeploy/alias cutover, and any separate clone
+   action. Do not assume approval of one covers the others.
    Record the current URLs and a protected fallback revision. Pause writes and
    jobs during any traffic swap. If active misuse is suspected, escalate for
    immediate authorized revocation instead of prolonging parallel access.
@@ -384,12 +389,12 @@ access is separately resolved. No password was tested and expiry was not changed
    inquiry and email delivery are off. Restart affected clients and verify
    their fresh connections. Don't run migrations or send email.
 4. **Revoke and close.** For a staged cutover, invalidate the old owner
-   password as soon as the replacement is verified. For either path, confirm
-   from fresh connections that the old password is rejected on both `dev`
-   endpoint forms and the replacement still works; a network or TLS failure
-   is not evidence of rejection. Ensure old sessions cannot continue using
-   access; retire or mark stale Preview deployments as unavailable under
-   the approved scope. Record timestamps, revision, URL disposition and
+   password as soon as the replacement is verified. Verify the provider's
+   reset operation completed on the expected branch and the replacement works
+   on fresh pooled and direct connections. Do not use the exposed password
+   to probe either endpoint. Ensure old sessions cannot continue using access;
+   retire or mark stale Preview deployments as unavailable under the approved
+   scope. Record timestamps, revision, URL disposition, clone outcomes and
    sanitized results, not secret values.
 5. **Recover forward if checks fail.** Keep Preview protected and writes
    paused. Fix the new settings/grants or issue a fresh unexposed owner

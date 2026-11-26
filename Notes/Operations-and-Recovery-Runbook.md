@@ -276,7 +276,7 @@ and verify protected inbox access separately. Enabling live intake requires
 separate authorization. Neither a repository build nor test-mode provider
 acceptance is Production release evidence.
 
-Recommended code rollback candidate, pending approval:
+Approved code rollback candidate (approval does not authorize deployment):
 `d942bf177ea3a2a77f4dd1211a3d0690a9b5c404`. It includes the credential-form
 hardening (`43f0d88`) and dashboard retry fix, and its Prisma schema,
 migrations, configuration and dependency lock match the preflight candidate
@@ -337,9 +337,9 @@ schema restore or changes to data or storage.
 
 | Consumer | Evidence and cutover requirement |
 | --- | --- |
-| Vercel Preview | Branch-specific `DATABASE_URL` (pooled runtime, including Better Auth) and `DIRECT_URL` (direct Prisma tooling) for `test/backend-integration-and-release`. Inventory the branch alias and generated deployment URLs; older deployments retain their original environment values. |
+| Vercel Preview | Branch-specific `DATABASE_URL` (pooled runtime, including Better Auth) and `DIRECT_URL` (direct Prisma tooling) for `test/backend-integration-and-release`. Proposed like-for-like redeploy: `192b842d3f2d618ea692c85307a8fe77ee4a4d7c`, the last browser-verified protected revision, deployment `dpl_Cp5YBb9rnypuU95dSF9Lga76KKb1`. Both known URLs still redirect unauthenticated health requests to Vercel. That does not identify today's alias target: confirm its deployment ID/SHA and check Preview-only variable scopes in Vercel before cutover. Older deployments retain their original environment values. |
 | Local development | Checked `.env.local` and the current shell: the active file uses different endpoint and role names; the shell had no applicable URL override. Check separately saved Preview overrides on other workstations. Do not change unrelated local settings. |
-| Database tests | `.env.inventory-test.local` and `.env.media-test.local` use other endpoints and role names. One ignored `.env.inventory-test.local.txt` backup has the same role name at a different endpoint; its password was not compared. Confirm that endpoint's provenance privately; do not activate the backup or point tests at hosted `dev`. |
+| Database tests | `.env.inventory-test.local` and `.env.media-test.local` use other endpoints and role names. One ignored `.env.inventory-test.local.txt` backup has the same role name at an endpoint different from both `dev` and its known recovery clone; its password was not compared. Confirm that endpoint's provenance privately; do not activate the backup or point tests at hosted `dev`. |
 | Recovery and other integrations | The isolated staff recovery helper takes the `dev` direct URL via secure input. Check operator vault entries, saved database clients, CI secrets, scheduled jobs and other integrations for both endpoint forms. No additional active consumer is confirmed. The previous staff password reset did not change this Postgres role. |
 
 **Cross-branch status is unresolved.** [Neon branch creation](https://neon.com/docs/manage/branches)
@@ -350,7 +350,12 @@ For explicitly scoped non-Production endpoints only, the operator can verify
 unclear cases with a fresh, secure authentication check without printing the
 secret. A shared role name is not proof of reuse. Do not test any Production
 endpoint; if reuse there cannot be ruled out, escalate it as a separate security
-decision. Rotating `dev` does not prove that copies on other branches are revoked.
+decision. Rotating `dev` does not prove that copies on other branches are revoked. Read-only metadata
+confirmed that `dev-before-preview-migrations` (`br-sparkling-smoke-b9eadwya`)
+was cloned from `dev`, has the same password role with the same update
+timestamp, and is scheduled to expire on 2026-11-27 at 19:27 UTC. Treat it as
+potentially sharing the exposed password until expiry is confirmed or its
+access is separately resolved. No password was tested and expiry was not changed.
 
 1. **Approve scope and window.** Confirm the consumer inventory, clone/reuse
    findings, maintenance owner and window, exact protected Preview revision,

@@ -232,8 +232,10 @@ deployment, and approval of this procedure does not authorize running it.
 1. Before deploying, obtain explicit release approval for the candidate commit.
    Verify the Production/Preview configuration (16.11), complete the approved
    migration and recovery steps (16.12), and confirm the remaining launch gates
-   for the agreed scope. Record the current Production deployment as the code
-   rollback candidate and confirm it is compatible with the planned schema.
+   for the agreed scope. Record the current deployment and separately select an
+   auth-safe rollback target compatible with the planned schema. The recorded
+   `7fdcc66` baseline predates the sign-in hardening; do not treat it as an
+   automatic rollback target.
 2. Use a clean checkout of the exact approved commit. Record the full SHA
    (`git rev-parse HEAD`) and confirm there are no local changes or local
    environment files in the release checkout. From the project root, sign in
@@ -249,6 +251,27 @@ deployment, and approval of this procedure does not authorize running it.
 4. Perform the smoke test in 16.14 and record the evidence and rollback
    decision in 16.15. If validation fails, follow the approved rollback plan.
    Rolling back application code does not restore the database or media.
+
+## Release evidence and rollback decisions (16.15)
+
+Before deploying, record the exact candidate SHA, validation results,
+approved rollback target, applicable migration range, and approved recovery
+point from 16.12. Record who decides whether to stop, roll forward, or recover,
+and who verifies each outcome. Do not include secrets or customer records.
+
+| Area | Stop or recover when | Evidence and recovery boundary |
+| --- | --- | --- |
+| Application | Auth, health, or required smoke checks fail | Confirm the failing revision and choose the approved compatible code rollback or a reviewed forward fix. Recheck auth, health, and the affected flow after recovery. |
+| Database schema | Migration fails, the ledger disagrees with the approved range, or validation shows incompatible schema | Stop before deploying the new code. Preserve current state and reconcile the migration ledger. Restore only under 16.12 from an approved verified recovery point after accounting for later writes. Do not run reverse SQL blindly. |
+| Imported data | Counts, ownership, or data quality do not match the approved handoff | Pause further writes/imports, preserve the current state, and reconcile only the affected rows against the approved source and existing audit history. Do not reload test fixtures or overwrite newer customer entries. |
+| Media storage | Objects are inaccessible, missing, or disagree with their database references | Freeze affected media changes and compare records with the approved bucket and object inventory. Recover only the affected objects and verify their access policy and references. A database restore does not restore storage. |
+
+After an authorized deployment, record the exact deployment ID and revision,
+operator/time, 16.14 results, and any recovery decision and retest. The current
+code cannot accept Production inquiries in isolated test mode; approve an
+off-state smoke check if intake is out of v1, or resolve the legal and
+implementation gates before promising live intake. Neither a repository
+build nor test-mode provider acceptance is Production release evidence.
 
 ## Open operational gates
 

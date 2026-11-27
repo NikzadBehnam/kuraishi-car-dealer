@@ -4,8 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, BadgeCheck, Eye, LoaderCircle, Save } from "lucide-react";
-import { useState } from "react";
-import { Controller, useForm, type DefaultValues } from "react-hook-form";
+import { useRef, useState } from "react";
+import {
+  Controller,
+  useForm,
+  useWatch,
+  type DefaultValues,
+  type SubmitErrorHandler,
+} from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -48,6 +54,9 @@ const createVehicleResponseSchema = z.strictObject({
 });
 const publishVehicleResponseSchema = createVehicleResponseSchema.extend({
   created: z.boolean(),
+});
+const updateVehicleResponseSchema = createVehicleResponseSchema.extend({
+  withdrawn: z.boolean(),
 });
 
 async function readApiResponse<T extends z.ZodType>(
@@ -132,7 +141,10 @@ export function VehicleForm({
     defaultValues: vehicle ? toFormValues(vehicle) : defaultValues,
   });
 
-  const [confirmInspectionPassed, setConfirmInspectionPassed] = useState(false);
+  const [tab, setTab] = useState("basics");
+  const requestInFlight = useRef(false);
+  const [navigating, setNavigating] = useState(false);
+  const inspectionStatus = useWatch({ control, name: "inspectionStatus" });
   const photos = useVehiclePhotos(
     vehicle?.id,
     vehicle?.photoIds ?? [],
@@ -146,8 +158,17 @@ export function VehicleForm({
   );
   const isUploading = photos.progress !== null;
 
-  const submit = async (values: VehicleFormValues) => {
-    if (isUploading) return;
+  const busy = isSubmitting || isUploading || navigating;
+  const showValidationError: SubmitErrorHandler<VehicleFormValues> = (
+    issues,
+  ) => {
+    toast.error(
+      Object.values(issues).find(({ message }) => message)?.message ??
+        "Check the highlighted vehicle fields.",
+    );
+  };
+  const submit = async (values: VehicleFormValues, preview = false) => {
+    if (requestInFlight.current || isUploading) return;
     const payload =
       mode === "create"
         ? toCreateVehicleDraftPayload(values)
@@ -159,19 +180,37 @@ export function VehicleForm({
       return;
     }
 
+    requestInFlight.current = true;
     try {
       const response = await fetch("/api/admin/vehicles", {
         method: mode === "create" ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      await readApiResponse(response, createVehicleResponseSchema);
+      const result = await readApiResponse(
+        response,
+        mode === "create"
+          ? createVehicleResponseSchema
+          : updateVehicleResponseSchema,
+      );
       photos.markSaved();
       toast.success(
-        mode === "create" ? "Vehicle draft saved." : "Vehicle updated.",
+        "withdrawn" in result && result.withdrawn
+          ? "Vehicle saved as a draft and removed from public listings."
+          : mode === "create"
+            ? "Vehicle draft saved."
+            : "Vehicle updated.",
       );
-      router.push(adminRoutes.vehicles);
+      setNavigating(true);
+      if (preview) {
+        window.location.assign(
+          `${adminRoutes.vehicles}/${encodeURIComponent(result.vehicleId)}/preview`,
+        );
+      } else {
+        router.push(adminRoutes.vehicles);
+      }
     } catch (error) {
+      requestInFlight.current = false;
       toast.error(
         error instanceof Error
           ? error.message
@@ -183,11 +222,10 @@ export function VehicleForm({
   const canPublish = mode === "create" || vehicle?.status === "draft";
 
   const publish = async (values: VehicleFormValues) => {
-    if (isUploading) return;
-    if (!confirmInspectionPassed) {
-      toast.error(
-        "Confirm that the vehicle passed inspection before publishing.",
-      );
+    if (requestInFlight.current || isUploading) return;
+    if (values.inspectionStatus !== "passed") {
+      setTab("publishing");
+      toast.error("Set Inspection to Passed before publishing.");
       return;
     }
     if (mode === "edit" && (!vehicle || vehicle.status !== "draft")) {
@@ -199,12 +237,9 @@ export function VehicleForm({
       mode === "edit" && vehicle
         ? { vehicleId: vehicle.id, expectedVersion: vehicle.version }
         : undefined;
-    const payload = toPublishVehiclePayload(
-      values,
-      confirmInspectionPassed,
-      target,
-    );
+    const payload = toPublishVehiclePayload(values, target);
 
+    requestInFlight.current = true;
     try {
       const response = await fetch("/api/admin/vehicles/publish", {
         method: "POST",
@@ -217,8 +252,10 @@ export function VehicleForm({
       );
       photos.markSaved();
       toast.success(result.created ? "Vehicle published." : "Draft published.");
+      setNavigating(true);
       router.push(adminRoutes.vehicles);
     } catch (error) {
+      requestInFlight.current = false;
       toast.error(
         error instanceof Error ? error.message : "Could not publish vehicle.",
       );
@@ -228,7 +265,12 @@ export function VehicleForm({
   const title = mode === "create" ? "Add vehicle" : "Edit vehicle";
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="grid min-w-0 gap-4">
+    <form
+      onSubmit={(event) =>
+        handleSubmit((values) => submit(values), showValidationError)(event)
+      }
+      className="grid min-w-0 gap-4"
+    >
       <Card className="min-w-0 rounded-[var(--radius-sm)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
@@ -257,8 +299,8 @@ export function VehicleForm({
               {mode === "create"
                 ? "Save an incomplete draft, or publish a complete listing with at least one photo."
                 : vehicle?.status === "draft"
-                  ? "Save draft changes, or publish the complete listing after confirming inspection."
-                  : "Saving updates vehicle details and images without changing its lifecycle state."}
+                  ? "Save draft changes, or publish the complete listing once Inspection is set to Passed."
+                  : "Update vehicle details, photos, and applicable publishing settings."}
             </p>
           </div>
           <div className="grid w-full gap-2 sm:w-auto sm:grid-flow-col">
@@ -277,24 +319,32 @@ export function VehicleForm({
                   Preview saved version
                 </Link>
               </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-                disabled
-                title="Save a draft before previewing it."
-              >
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-[var(--radius-sm)] sm:w-auto"
+              disabled={busy}
+              onClick={(event) =>
+                handleSubmit(
+                  (values) => submit(values, true),
+                  showValidationError,
+                )(event)
+              }
+            >
+              {isSubmitting || navigating ? (
+                <LoaderCircle className="animate-spin" />
+              ) : (
                 <Eye />
-                Save draft to preview
-              </Button>
-            )}
+              )}
+              Save and preview
+            </Button>
             {mode === "create" && (
               <Button
                 type="submit"
                 variant="outline"
                 className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-                disabled={isSubmitting || isUploading}
+                disabled={busy}
               >
                 <Save />
                 Save draft
@@ -305,7 +355,7 @@ export function VehicleForm({
                 type="submit"
                 variant="accent"
                 className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-                disabled={isSubmitting || isUploading}
+                disabled={busy}
               >
                 {isSubmitting ? (
                   <LoaderCircle className="animate-spin" />
@@ -320,8 +370,10 @@ export function VehicleForm({
                 type="button"
                 variant="accent"
                 className="w-full rounded-[var(--radius-sm)] sm:w-auto"
-                disabled={isSubmitting || isUploading}
-                onClick={handleSubmit(publish)}
+                disabled={busy}
+                onClick={(event) =>
+                  handleSubmit(publish, showValidationError)(event)
+                }
               >
                 {isSubmitting ? (
                   <LoaderCircle className="animate-spin" />
@@ -335,7 +387,7 @@ export function VehicleForm({
         </div>
       </Card>
 
-      <Tabs defaultValue="basics" className="min-w-0">
+      <Tabs value={tab} onValueChange={setTab} className="min-w-0">
         <div className="bg-surface min-w-0 rounded-[var(--radius-sm)] border p-2">
           <TabsList className="flex h-auto min-h-0 w-full flex-wrap items-stretch justify-start gap-1 bg-transparent p-0">
             <TabsTrigger className={formTabClassName} value="basics">
@@ -572,10 +624,7 @@ export function VehicleForm({
             title="Photos"
             description="Add, reorder, or remove photos. The first photo is the cover. Changes are saved with the vehicle."
           >
-            <VehiclePhotosField
-              field={photos}
-              disabled={isSubmitting || isUploading}
-            />
+            <VehiclePhotosField field={photos} disabled={busy} />
           </Panel>
         </TabsContent>
 
@@ -585,7 +634,7 @@ export function VehicleForm({
             description={
               canPublish
                 ? "Publishing is a separate action from saving a draft and enforces a complete listing, a passed inspection, and at least one photo."
-                : "Lifecycle state and quality gates are managed separately; saving vehicle details does not change them."
+                : "Use the vehicle list for status changes. Changing inspection can withdraw a public listing."
             }
           >
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
@@ -608,7 +657,7 @@ export function VehicleForm({
                 name="inspectionStatus"
                 control={control}
                 error={errors.inspectionStatus?.message}
-                disabled
+                disabled={busy}
                 items={[
                   ["pending", "Pending"],
                   ["in_progress", "In progress"],
@@ -621,10 +670,21 @@ export function VehicleForm({
                 name="isFeatured"
                 render={({ field }) => (
                   <CheckboxField
-                    label="Featured vehicle"
-                    description="Show this vehicle in highlighted admin and public sections."
+                    label={
+                      canPublish ? "Feature on publish" : "Featured vehicle"
+                    }
+                    description={
+                      canPublish
+                        ? "Save this choice with the draft. It takes effect only after publication."
+                        : "Show this vehicle in featured sections while it is published."
+                    }
                     checked={field.value}
-                    disabled
+                    disabled={
+                      busy ||
+                      (!canPublish && vehicle?.status !== "published") ||
+                      (vehicle?.status === "published" &&
+                        inspectionStatus !== "passed")
+                    }
                     onCheckedChange={(checked) =>
                       field.onChange(checked === true)
                     }
@@ -647,15 +707,14 @@ export function VehicleForm({
                 )}
               />
             </div>
-            {canPublish && (
-              <CheckboxField
-                label="I confirm the vehicle passed inspection"
-                description="The server records the inspection as passed only when this publish action succeeds. Saving a draft does not change its inspection status."
-                checked={confirmInspectionPassed}
-                disabled={isSubmitting || isUploading}
-                onCheckedChange={setConfirmInspectionPassed}
-              />
-            )}
+            {(vehicle?.status === "published" ||
+              vehicle?.status === "reserved") &&
+              inspectionStatus !== "passed" && (
+                <p role="status" className="mt-4 text-sm">
+                  Saving this inspection status moves the vehicle to Draft and
+                  removes it from public listings.
+                </p>
+              )}
           </Panel>
         </TabsContent>
       </Tabs>
@@ -811,7 +870,10 @@ function toFormValues(
     labelsText: vehicle.labels.join("\n"),
     status: vehicle.status,
     inspectionStatus: vehicle.inspectionStatus,
-    isFeatured: vehicle.isFeatured,
+    isFeatured:
+      vehicle.status === "draft"
+        ? vehicle.featureOnPublish
+        : vehicle.isFeatured,
     isAvailable: vehicle.status === "published",
     photoIds: vehicle.photoIds ?? [],
   };

@@ -76,6 +76,8 @@ describe("vehicle form draft payload", () => {
       features: ["Heated seats", "Panoramic roof"],
       labels: ["Premium", "Low mileage"],
       photoIds: ["asset-1", "asset-2"],
+      inspectionStatus: "passed",
+      isFeatured: true,
     });
   });
 
@@ -115,8 +117,6 @@ describe("vehicle form draft payload", () => {
     assert.deepEqual(payload.features, []);
     assert.deepEqual(payload.labels, []);
     assert.equal("status" in payload, false);
-    assert.equal("inspectionStatus" in payload, false);
-    assert.equal("isFeatured" in payload, false);
     assert.equal("isAvailable" in payload, false);
   });
 
@@ -134,26 +134,25 @@ describe("vehicle form draft payload", () => {
     assert.equal(payload.vehicleId, "vehicle-123");
     assert.equal(payload.expectedVersion, 7);
     assert.equal("status" in payload, false);
-    assert.equal("inspectionStatus" in payload, false);
-    assert.equal("isFeatured" in payload, false);
+    assert.equal(payload.inspectionStatus, "failed");
+    assert.equal(payload.isFeatured, true);
     assert.equal("isAvailable" in payload, false);
   });
 
-  it("uses a separate publish payload with explicit inspection confirmation", () => {
-    const createPayload = toPublishVehiclePayload(formValues(), true);
-    const updatePayload = toPublishVehiclePayload(formValues(), true, {
+  it("sends the chosen inspection and Featured settings when publishing", () => {
+    const createPayload = toPublishVehiclePayload(formValues());
+    const updatePayload = toPublishVehiclePayload(formValues(), {
       vehicleId: "vehicle-123",
       expectedVersion: 7,
     });
 
-    assert.equal(createPayload.confirmInspectionPassed, true);
     assert.equal("vehicleId" in createPayload, false);
     assert.equal(updatePayload.vehicleId, "vehicle-123");
     assert.equal(updatePayload.expectedVersion, 7);
     for (const payload of [createPayload, updatePayload]) {
       assert.equal("status" in payload, false);
-      assert.equal("inspectionStatus" in payload, false);
-      assert.equal("isFeatured" in payload, false);
+      assert.equal(payload.inspectionStatus, "passed");
+      assert.equal(payload.isFeatured, true);
       assert.equal("isAvailable" in payload, false);
     }
   });

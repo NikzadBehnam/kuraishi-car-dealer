@@ -72,6 +72,7 @@ export interface StaffInventoryVehicleDTO extends InventoryVehicleDTO {
   vinLastSix: string | null;
   photoIds: string[];
   inspectionStatus: VehicleInspectionStatus;
+  featureOnPublish: boolean;
   // A business calendar date (YYYY-MM-DD), not an instant.
   acquisitionDate: string;
   reservedUntil: string | null;

@@ -546,12 +546,37 @@ describe("isolated inventory queries", { concurrency: false }, () => {
           make,
           model,
           photoIds: [],
+          isFeatured: true,
+          inspectionStatus: "in_progress",
         }),
       );
       assert.equal(draftResponse.status, 201);
       const draft: { vehicleId: string; version: number } =
         await draftResponse.json();
       vehicleId = draft.vehicleId;
+      const savedDraft = await queries.getStaffVehicle(vehicleId);
+      assert.equal(savedDraft?.inspectionStatus, "in_progress");
+      assert.equal(savedDraft?.featureOnPublish, true);
+      assert.equal(savedDraft?.isFeatured, false);
+      assert.equal(
+        (await queries.resolvePublicVehicleDetail(vehicleSlug)).kind,
+        "ineligible",
+      );
+      for (const inspectionStatus of ["pending", "failed", "passed"]) {
+        const response = await adminVehicleRoutes.PATCH(
+          jsonRequest("http://localhost:3000/api/admin/vehicles", "PATCH", {
+            vehicleId,
+            expectedVersion: draft.version,
+            inspectionStatus,
+          }),
+        );
+        assert.equal(response.status, 200);
+        draft.version = (await response.json()).version;
+        const saved = await queries.getStaffVehicle(vehicleId);
+        assert.equal(saved?.status, "draft");
+        assert.equal(saved?.inspectionStatus, inspectionStatus);
+        assert.equal(saved?.featureOnPublish, true);
+      }
       await prisma.vehiclePhotoUpload.create({
         data: {
           id: imageId,
@@ -587,7 +612,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
             transmissionType: "automatic",
             bodyType: "wagon",
             photoIds: [imageId],
-            confirmInspectionPassed: true,
+            inspectionStatus: "passed",
           },
         ),
       );
@@ -606,6 +631,26 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         throw new Error("The published integration vehicle must be visible.");
       }
       assert.equal(detail.vehicle.id, draft.vehicleId);
+      assert.equal(detail.vehicle.isFeatured, true);
+      assert.equal(
+        (await queries.getStaffVehicle(vehicleId))?.featureOnPublish,
+        false,
+      );
+      for (const isFeatured of [false, true]) {
+        const response = await adminVehicleRoutes.PATCH(
+          jsonRequest("http://localhost:3000/api/admin/vehicles", "PATCH", {
+            vehicleId,
+            expectedVersion: published.version,
+            isFeatured,
+          }),
+        );
+        assert.equal(response.status, 200);
+        published.version = (await response.json()).version;
+        assert.equal(
+          (await queries.getPublicVehicle(vehicleSlug))?.isFeatured,
+          isFeatured,
+        );
+      }
       assert.deepEqual(
         (await queries.getPublicComparisonVehicles([draft.vehicleId])).map(
           ({ id }) => id,

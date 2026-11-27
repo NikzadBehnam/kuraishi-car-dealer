@@ -50,6 +50,8 @@ export function toCreateVehicleDraftPayload(values: VehicleFormValues) {
     features: splitLines(values.featuresText),
     labels: splitLines(values.labelsText),
     photoIds: values.photoIds,
+    inspectionStatus: values.inspectionStatus,
+    isFeatured: values.isFeatured,
   };
 }
 
@@ -67,12 +69,10 @@ export function toUpdateVehiclePayload(
 
 export function toPublishVehiclePayload(
   values: VehicleFormValues,
-  confirmInspectionPassed: boolean,
   target?: { vehicleId: string; expectedVersion: number },
 ) {
   return {
     ...toCreateVehicleDraftPayload(values),
-    confirmInspectionPassed,
     ...(target ?? {}),
   };
 }

@@ -18,6 +18,7 @@ import {
 import {
   firstRegistrationMonthSchema,
   inventoryIdSchema,
+  inspectionStatusSchema,
   inventorySlugSchema,
   inventorySelectionSchema,
 } from "./inventory-validation.ts";
@@ -136,6 +137,8 @@ const vehicleDraftFieldsSchema = z.strictObject({
 
 export const createDraftVehicleSchema = vehicleDraftFieldsSchema.extend({
   photoIds: photoIdsSchema.default([]),
+  inspectionStatus: inspectionStatusSchema.default("pending"),
+  isFeatured: z.boolean().default(false),
 });
 
 export const updateVehicleSchema = vehicleDraftFieldsSchema
@@ -144,6 +147,8 @@ export const updateVehicleSchema = vehicleDraftFieldsSchema
     vehicleId: inventoryIdSchema,
     expectedVersion: z.number().int().min(1).max(2_147_483_647),
     photoIds: photoIdsSchema.optional(),
+    inspectionStatus: inspectionStatusSchema.optional(),
+    isFeatured: z.boolean().optional(),
   })
   .refine(
     (changes) =>
@@ -183,7 +188,10 @@ export const deleteVehicleMutationSchema = z.strictObject({
 export const publishVehicleSchema = vehicleDraftFieldsSchema
   .extend({
     photoIds: photoIdsSchema,
-    confirmInspectionPassed: z.literal(true),
+    inspectionStatus: z.literal("passed", {
+      error: "Set Inspection to Passed before publishing.",
+    }),
+    isFeatured: z.boolean().optional(),
     vehicleId: inventoryIdSchema.optional(),
     expectedVersion: z.number().int().min(1).max(2_147_483_647).optional(),
   })
@@ -376,7 +384,7 @@ export async function createDraftVehicle(input: unknown) {
   const session = await requireSession();
   const parsed = createDraftVehicleSchema.parse(input);
   assertValidConsumption(parsed);
-  const { photoIds, ...vehicleFields } = parsed;
+  const { photoIds, isFeatured: featureOnPublish, ...vehicleFields } = parsed;
 
   try {
     return await prisma.$transaction(
@@ -390,7 +398,7 @@ export async function createDraftVehicle(input: unknown) {
             updatedById: session.user.id,
             acquisitionDate: todayInDealershipTimezone(),
             status: "draft",
-            inspectionStatus: "pending",
+            featureOnPublish,
             isFeatured: false,
           },
           select: { id: true, version: true },
@@ -403,7 +411,7 @@ export async function createDraftVehicle(input: unknown) {
             previousStatus: null,
             status: "draft",
             previousInspectionStatus: null,
-            inspectionStatus: "pending",
+            inspectionStatus: parsed.inspectionStatus,
           },
         });
         await saveVehiclePhotos(
@@ -643,7 +651,14 @@ export async function deleteDraftVehicle(input: unknown) {
 export async function updateVehicle(input: unknown) {
   const session = await requireSession();
   const parsed = updateVehicleSchema.parse(input);
-  const { vehicleId, expectedVersion, photoIds, ...changes } = parsed;
+  const {
+    vehicleId,
+    expectedVersion,
+    photoIds,
+    inspectionStatus,
+    isFeatured,
+    ...changes
+  } = parsed;
   const current = await prisma.vehicle.findUnique({
     where: { id: vehicleId },
     select: {
@@ -653,6 +668,7 @@ export async function updateVehicle(input: unknown) {
       publishedAt: true,
       status: true,
       inspectionStatus: true,
+      isFeatured: true,
       soldAt: true,
       fuelType: true,
       consumption: true,
@@ -691,11 +707,27 @@ export async function updateVehicle(input: unknown) {
         ? current.consumptionUnit
         : changes.consumptionUnit,
   });
+  if (
+    isFeatured &&
+    current.status !== "draft" &&
+    current.status !== "published"
+  ) {
+    throw new InventoryMutationError(
+      422,
+      "Only draft or published vehicles can be selected for Featured placement.",
+    );
+  }
+  const lifecycle = resolveInventoryPolicyUpdate(current, {
+    status: current.status,
+    inspectionStatus,
+    isFeatured,
+  });
+  const withdrawn = lifecycle.status !== current.status;
   try {
     const result = await prisma.$transaction(
       async (tx) => {
         assertPublicVehicleHasPhoto(
-          current.status,
+          lifecycle.status,
           photoIds?.length ??
             (await tx.vehiclePhoto.count({ where: { vehicleId } })),
         );
@@ -708,6 +740,11 @@ export async function updateVehicle(input: unknown) {
           },
           data: {
             ...changes,
+            status: lifecycle.status,
+            inspectionStatus: lifecycle.inspectionStatus,
+            isFeatured: lifecycle.isFeatured,
+            featureOnPublish: current.status === "draft" ? isFeatured : false,
+            ...(withdrawn ? { reservedUntil: null } : {}),
             updatedById: session.user.id,
             version: { increment: 1 },
           },
@@ -725,9 +762,9 @@ export async function updateVehicle(input: unknown) {
             actorId: session.user.id,
             version,
             previousStatus: current.status,
-            status: current.status,
+            status: lifecycle.status,
             previousInspectionStatus: current.inspectionStatus,
-            inspectionStatus: current.inspectionStatus,
+            inspectionStatus: lifecycle.inspectionStatus,
             previousSoldAt: current.soldAt,
             soldAt: current.soldAt,
           },
@@ -743,6 +780,7 @@ export async function updateVehicle(input: unknown) {
         return {
           vehicleId,
           version,
+          withdrawn,
           photoIds:
             photoIds ??
             (
@@ -860,6 +898,7 @@ async function transitionVehicleLifecycleForSession(
           data: {
             status: lifecycle.status,
             isFeatured: lifecycle.isFeatured,
+            featureOnPublish: false,
             reservedUntil: null,
             soldAt,
             updatedById: session.user.id,
@@ -981,20 +1020,10 @@ export async function bulkTransitionVehicles(input: unknown) {
 export async function publishVehicle(input: unknown) {
   const session = await requireSession();
   const parsed = publishVehicleSchema.parse(input);
-  const {
-    vehicleId,
-    expectedVersion,
-    photoIds,
-    ...vehicleFieldsWithConfirmation
-  } = parsed;
-  const { confirmInspectionPassed, ...vehicleFields } =
-    vehicleFieldsWithConfirmation;
-  if (!confirmInspectionPassed) {
-    throw new InventoryMutationError(
-      422,
-      "Confirm that the vehicle passed inspection before publishing.",
-    );
-  }
+  const { vehicleId, expectedVersion, photoIds, ...vehicleFieldsWithPolicy } =
+    parsed;
+  const { inspectionStatus, isFeatured, ...vehicleFields } =
+    vehicleFieldsWithPolicy;
   const current = vehicleId
     ? await prisma.vehicle.findUnique({
         where: { id: vehicleId },
@@ -1005,6 +1034,7 @@ export async function publishVehicle(input: unknown) {
           status: true,
           inspectionStatus: true,
           isFeatured: true,
+          featureOnPublish: true,
           publishedAt: true,
           soldAt: true,
         },
@@ -1040,7 +1070,8 @@ export async function publishVehicle(input: unknown) {
   };
   const publication = {
     status: "published" as const,
-    inspectionStatus: "passed" as const,
+    inspectionStatus,
+    isFeatured: isFeatured ?? current?.featureOnPublish ?? false,
   };
   const lifecycle = resolveInventoryPolicyUpdate(
     currentPolicy,
@@ -1109,6 +1140,7 @@ export async function publishVehicle(input: unknown) {
             status: lifecycle.status,
             inspectionStatus: lifecycle.inspectionStatus,
             isFeatured: lifecycle.isFeatured,
+            featureOnPublish: false,
             publishedAt,
             soldAt: null,
           },

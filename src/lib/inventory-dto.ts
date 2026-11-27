@@ -41,6 +41,7 @@ export const publicVehicleSelect = {
 
 export const staffVehicleSelect = {
   ...publicVehicleSelect,
+  featureOnPublish: true,
   stockNumber: true,
   marginEstimate: true,
   vinLastSix: true,
@@ -129,6 +130,7 @@ export function serializeStaffVehicle(
     vinLastSix: row.vinLastSix,
     photoIds: row.photos.map(({ id }) => id),
     inspectionStatus: row.inspectionStatus,
+    featureOnPublish: row.featureOnPublish,
     acquisitionDate: row.acquisitionDate.toISOString().slice(0, 10),
     reservedUntil: row.reservedUntil?.toISOString() ?? null,
     soldAt: row.soldAt?.toISOString() ?? null,

@@ -6,6 +6,27 @@
 
 ## Vehicle-photo simplification
 
+### Add/Edit Vehicle follow-up
+
+- Drafts retain a staff-only **Feature on publish** choice. Publication
+  applies it to the existing Featured flag and clears the draft choice.
+  Published vehicles can be featured or unfeatured from the editor.
+- The **Inspection** dropdown replaces the separate confirmation checkbox.
+  Only Passed permits publication. As specified in the lifecycle policy,
+  changing inspection away from Passed on a Published or Reserved vehicle
+  returns it to Draft and clears public placement in the same save.
+- **Save and preview** saves the vehicle and its photos before opening the
+  protected preview. A failed save keeps the form open with its values intact.
+- The additive draft preference migration defaults existing vehicles to no
+  draft preference and leaves the existing Featured flag unchanged.
+- Local verification passed: 140 source tests, 30 inventory/database tests,
+  three vehicle-photo/storage tests, Prisma validation, TypeScript, ESLint,
+  changed-code formatting, and an optimized build. With ordinary staff and
+  synthetic data, the mobile form created a draft with a photo and opened the
+  saved preview. Desktop testing verified persisted publishing settings,
+  input retention with a simulated save failure, and a single update request
+  on a double click. The preview showed the updated model and loaded its photo.
+
 - [x] **Production inventory and storage preflight (2026-11-27, read-only).**
   Production had zero vehicles, zero photo associations, and no active upload
   intents. The database had 11 unattached private image records and four

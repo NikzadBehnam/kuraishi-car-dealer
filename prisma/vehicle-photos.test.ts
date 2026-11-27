@@ -331,12 +331,12 @@ describe("vehicle-owned photos on isolated Neon resources", () => {
       [third.uploadId, first.uploadId],
     );
 
-    const published = await mutations.publishVehicle({
+    const publication = {
       ...fields,
       vehicleId: draft.vehicleId,
       expectedVersion: updated.version,
       photoIds: updated.photoIds,
-      confirmInspectionPassed: true,
+      inspectionStatus: "passed",
       price: "19999.00",
       firstRegistration: "2020-05",
       mileage: 46000,
@@ -347,7 +347,12 @@ describe("vehicle-owned photos on isolated Neon resources", () => {
       condition: "used",
       location: "Vienna",
       description: "Synthetic description for an isolated test vehicle.",
-    });
+    };
+    await assert.rejects(
+      mutations.publishVehicle({ ...publication, inspectionStatus: "failed" }),
+      /Set Inspection to Passed before publishing/,
+    );
+    const published = await mutations.publishVehicle(publication);
     assert.deepEqual(
       (await gallery.listPublicVehiclePhotos(draft.vehicleId)).map(
         ({ id }) => id,
@@ -367,14 +372,25 @@ describe("vehicle-owned photos on isolated Neon resources", () => {
     assert.equal(publicPhoto.status, 200);
     assert.match(publicPhoto.headers.get("cache-control") ?? "", /no-store/);
     await publicPhoto.arrayBuffer();
-    await mutations.transitionVehicleLifecycle({
+    const withdrawn = await mutations.updateVehicle({
       vehicleId: draft.vehicleId,
       expectedVersion: published.version,
-      status: "archived",
+      inspectionStatus: "failed",
     });
+    assert.equal(withdrawn.withdrawn, true);
     assert.equal(
       (await gallery.serveVehiclePhoto(third.uploadId, "public")).status,
       404,
+    );
+    const saved = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: draft.vehicleId },
+    });
+    assert.equal(saved.status, "draft");
+    assert.equal(saved.inspectionStatus, "failed");
+    assert.equal(saved.isFeatured, false);
+    assert.equal(
+      (await gallery.listStaffVehiclePhotos(draft.vehicleId)).length,
+      2,
     );
   });
 

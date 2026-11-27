@@ -129,6 +129,7 @@ model Vehicle {
   status            VehicleStatus            @default(draft)
   inspectionStatus  VehicleInspectionStatus  @default(pending)
   isFeatured        Boolean                  @default(false)
+  featureOnPublish  Boolean                  @default(false)
   acquisitionDate   DateTime                 @db.Date
   publishedAt       DateTime?                @db.Timestamptz(3)
   reservedUntil     DateTime?                @db.Timestamptz(3)

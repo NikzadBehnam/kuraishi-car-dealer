@@ -45,7 +45,31 @@
   browser database and its recorded storage keys were removed.
   All 140 source tests, Prisma validation, ESLint, TypeScript, the optimized
   Next.js build, and the frozen lockfile check passed.
-- [ ] **Production authorization and cutover.** Freeze legacy writes
+- [x] **Production authorization and cutover (2026-11-27).** Froze legacy writes
+  and verified that staff, auth, inventory, and inquiry paths were blocked
+  while protected public reads stayed available. Retained the Ready
+  no-compute recovery branch `br-bold-butterfly-b90vahkd` at `0/2197200`
+  through `2026-12-04T09:29:55Z`. The frozen inventory had zero vehicles,
+  photo associations, and live grants. Both approved Prisma migrations
+  applied on the direct connection; all 15 ledger entries were complete,
+  the two new checksums matched Git, the legacy tables were absent, and
+  the runtime role had the expected photo-table grants. Reverified each
+  private original before deleting exactly the four approved public keys.
+  Their old URLs returned `404`; all 11 private originals and both buckets
+  remained.
+- [x] **Production deployment and live verification.** Fast-forwarded Git
+  `master` to `596b434609308543fd06e930c206eb15338af39c` and promoted the
+  protected deployment `dpl_ELi1auzKiGNGTPypcdACu6myPcuS` to
+  `www.kuraishicars.com`. Removed the temporary freeze. The signed-in
+  ordinary staff account could open **Vehicles → Add vehicle → Photos**,
+  with uploads enabled and no Media navigation. The old page and API
+  returned `404`; the staff image endpoint returned `401` without an app
+  session. The site remained gated for anonymous callers. Health and
+  catalog returned `200`, `noindex, nofollow` remained active, the sitemap
+  returned `404`, and inquiry intake and the email worker returned `503`
+  in the disabled configuration. No Production test vehicles or photo
+  uploads were created.
+- **Cutover and recovery procedure.** Freeze legacy writes
   and capture an approved recovery point and restricted manifests of attached,
   unattached, and storage-only objects. For each attached private photo, verify
   its current private key. For each attached public photo, copy its bytes to
@@ -59,7 +83,6 @@
   leaving an object in a public-read bucket leaves its old URL readable.
   See the [vehicle photo cutover](./Operations-and-Recovery-Runbook.md#vehicle-photo-cutover)
   for the two migrations, the four exact keys, and deployment/rollback gates.
-  No Production migration or object deletion has been approved or run.
 
 ## V1 delivery milestone
 

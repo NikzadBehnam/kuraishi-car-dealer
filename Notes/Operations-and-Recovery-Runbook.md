@@ -371,7 +371,8 @@ Leave 16.11 open if any required check fails or remains unknown.
 
 The implementation branch is based on the protected customer-review
 release. The Git default branch is `master`; the Production database branch
-is `main`. This runbook is a proposal, not authorization.
+is `main`. See the [release record](./report.md#vehicle-photo-simplification)
+for the approved cutover and its verification.
 
 1. Stage the exact verified Vercel Production candidate without assigning
    the domain. Confirm Vercel Authentication, the named customer access,
@@ -408,8 +409,8 @@ is `main`. This runbook is a proposal, not authorization.
    | --- | ---: | --- |
    | `approved/1c705031-5d27-4d88-9e03-594cc4c8c902.jpg` | 107610 | `c9ffd318d4305f587c28a826017369a9` |
    | `approved/925228d7-83d7-4131-bfb3-c5331ffa2208.jpg` | 162032 | `3960a08b4284ea30e26cca8733188e82` |
-   | `approved/95ecc3d3-7fbd-43e7-8125-1d1a185f9490.jpg` | 149423 | `8efad8ee6eb7d46241682787c33b34f4` |
-   | `approved/bae65bc1-9742-455f-bd97-6738c6ab11d8.jpg` | 149423 | `8efad8ee6eb7d46241682787c33b34f4` |
+   | `approved/95ecc3d3-7fbd-43e7-8125-1d1a185f9490.jpg` | 149423 | `8efad8ee6eb7d10241682787c33b34f4` |
+   | `approved/bae65bc1-9742-455f-bd97-6738c6ab11d8.jpg` | 149423 | `8efad8ee6eb7d10241682787c33b34f4` |
 
 5. Merge the reviewed revision, promote the verified deployment to
    `www.kuraishicars.com`, and check the legacy paths are absent and the

@@ -10,6 +10,8 @@ The public website is called the "client side" in this document. This does **not
 
 For an integrated retest of implemented work, use the [full test guide](./Implemented-Sections-Test-Guide.md). It distinguishes completed isolated DB checks from still-pending browser, business/legal, and Production gates.
 
+**Vehicle photo supersession (2026-11-27):** Vehicle creation and editing now own the Photos workflow. The standalone Media and image-approval checklist items below are historical, not current retest steps. See the [Production cutover and verification](./report.md#vehicle-photo-simplification).
+
 ### What already works
 
 - Better Auth email/password login, database sessions, sign-out, protected dashboard access, and master-admin-only account creation have been implemented. Preserve this work rather than rebuilding authentication.
@@ -19,7 +21,7 @@ For an integrated retest of implemented work, use the [full test guide](./Implem
 
 ### Existing authorization policy to preserve
 
-- Any valid staff account may use ordinary dashboard features, including inventory, media, inquiries, and settings operations.
+- Any valid staff account may use ordinary dashboard features, including inventory, vehicle photos, inquiries, and settings operations.
 - Only the master admin may create staff accounts. Do not silently make every business mutation master-admin-only.
 - Each new protected query, Server Action, Route Handler, upload authorization, and mutation must validate its own session on the server. A protected layout and hidden button are not authorization.
 - Public callers may read only explicitly public data and submit validated inquiries. They must never receive draft vehicles, private notes, customer records, storage credentials, or staff-only fields.

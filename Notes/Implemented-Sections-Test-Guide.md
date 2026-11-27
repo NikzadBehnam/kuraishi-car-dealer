@@ -185,6 +185,8 @@ Use only a safe non-Production app environment and existing test accounts. The d
    - Search by stock number, make, model, variant and location; combine with status filters.
    - Sort by title, price, mileage, status, location and last update in both directions. Check nullable values and invalid/stale page URLs.
    - Select rows, navigate pages, and change filters. Selection must follow the approved rules and stay within the selection limit.
+   - On any vehicle status, choose **Hide from my list** in the row menu. The row disappears from your list and selection, but its status, public visibility and inventory totals stay unchanged. Reload in the same browser and verify it remains hidden for your account only.
+   - Turn on **Show hidden vehicles** and choose **Restore to my list** on a hidden row. Verify it remains visible after a refresh. Hiding can leave a partly filled or empty page because database pagination is unchanged.
 3. **Create and edit**
    - Create a Draft with required identity and optional fields left blank. Save, refresh and reopen it; blanks must remain null/blank rather than becoming fake zeros or fixture values.
    - Edit descriptive, technical, pricing and ordered-media fields. Save and reload to confirm persistence.

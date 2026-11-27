@@ -16,6 +16,7 @@ import {
   CarFront,
   Copy,
   Eye,
+  EyeOff,
   FilePenLine,
   MoreHorizontal,
   Plus,
@@ -28,6 +29,7 @@ import type { StaffInventoryVehicleDTO } from "@/types/inventory";
 import type { StaffInventoryFilters } from "@/lib/inventory-validation";
 import { adminRoutes } from "@/config/admin-routes.config";
 import { routeBuilders } from "@/config/routes.config";
+import { authClient } from "@/lib/auth-client";
 import {
   formatCurrency,
   formatFuelType,
@@ -35,6 +37,7 @@ import {
 } from "@/lib/formatters";
 import { getPublicVehicleVisibility } from "@/lib/inventory-policy";
 import {
+  inventoryIdSchema,
   inventorySelectionSchema,
   MAX_INVENTORY_SELECTION_SIZE,
 } from "@/lib/inventory-validation";
@@ -133,6 +136,72 @@ const bulkLifecycleResponseSchema = z.strictObject({
     }),
   ),
 });
+const hiddenVehicleIdsSchema = z.array(inventoryIdSchema);
+
+function useHiddenVehicles() {
+  const { data: session } = authClient.useSession();
+  const storageKey = session?.user.id
+    ? `kuraishi-admin-hidden-vehicles:${session.user.id}`
+    : null;
+  const [stored, setStored] = useState<{ key: string; ids: Set<string> }>();
+  const hiddenIds = stored?.key === storageKey ? stored.ids : undefined;
+
+  useEffect(() => {
+    if (!storageKey) return;
+
+    const load = () => {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        const ids =
+          raw === null ? [] : hiddenVehicleIdsSchema.parse(JSON.parse(raw));
+        setStored({ key: storageKey, ids: new Set(ids) });
+      } catch (error) {
+        if (!(
+          error instanceof DOMException ||
+          error instanceof SyntaxError ||
+          error instanceof z.ZodError
+        )) {
+          throw error;
+        }
+        toast.error("Could not load hidden vehicles on this browser.");
+      }
+    };
+    const sync = (event: StorageEvent) => {
+      if (event.key === storageKey || event.key === null) load();
+    };
+    let active = true;
+    queueMicrotask(() => {
+      if (active) load();
+    });
+    window.addEventListener("storage", sync);
+    return () => {
+      active = false;
+      window.removeEventListener("storage", sync);
+    };
+  }, [storageKey]);
+
+  const setVehicleHidden = (id: string, hidden: boolean) => {
+    if (!storageKey || !hiddenIds) return false;
+    const next = new Set(hiddenIds);
+    if (hidden) next.add(id);
+    else next.delete(id);
+    try {
+      if (next.size)
+        localStorage.setItem(storageKey, JSON.stringify([...next]));
+      else localStorage.removeItem(storageKey);
+    } catch (error) {
+      if (!(error instanceof DOMException)) throw error;
+      toast.error(
+        "Could not save your vehicle list preference on this browser.",
+      );
+      return false;
+    }
+    setStored({ key: storageKey, ids: next });
+    return true;
+  };
+
+  return { hiddenIds, setVehicleHidden };
+}
 
 export function VehicleInventoryTable({
   vehicles,
@@ -150,7 +219,13 @@ export function VehicleInventoryTable({
   filters: StaffInventoryFilters;
 }) {
   const [query, setQuery] = useState(filters.search);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { hiddenIds, setVehicleHidden } = useHiddenVehicles();
+  const [showHidden, setShowHidden] = useState(false);
+  const [selection, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectedIds =
+    showHidden || !hiddenIds
+      ? selection
+      : new Set([...selection].filter((id) => !hiddenIds.has(id)));
   const [bulkAction, setBulkAction] = useState<"sold" | "archived" | null>(
     null,
   );
@@ -166,7 +241,11 @@ export function VehicleInventoryTable({
   const statusFilter = filters.status ?? "all";
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
-  const visibleIds = vehicles.map((vehicle) => vehicle.id);
+  const visibleVehicles = vehicles.filter(
+    ({ id }) => showHidden || !hiddenIds?.has(id),
+  );
+  const hiddenOnPage = vehicles.length - visibleVehicles.length;
+  const visibleIds = visibleVehicles.map((vehicle) => vehicle.id);
   const selectedVisibleCount = visibleIds.filter((id) =>
     selectedIds.has(id),
   ).length;
@@ -239,12 +318,23 @@ export function VehicleInventoryTable({
     updateSearchParams({ page: nextPage === 1 ? null : String(nextPage) });
   };
 
-  const removeDeletedVehicleFromSelection = (vehicleId: string) => {
+  const removeVehicleFromSelection = (vehicleId: string) => {
     setSelectedIds((current) => {
       const next = new Set(current);
       next.delete(vehicleId);
       return next;
     });
+  };
+
+  const toggleVehicleHidden = (vehicle: StaffInventoryVehicleDTO) => {
+    const hidden = !hiddenIds?.has(vehicle.id);
+    if (!setVehicleHidden(vehicle.id, hidden)) return;
+    if (hidden) removeVehicleFromSelection(vehicle.id);
+    toast.success(
+      hidden
+        ? "Vehicle hidden from your list."
+        : "Vehicle restored to your list.",
+    );
   };
 
   const openBulkAction = (action: "sold" | "archived") => {
@@ -410,6 +500,17 @@ export function VehicleInventoryTable({
             </SelectContent>
           </Select>
         </div>
+        <label className="mt-3 flex w-fit items-center gap-2 text-sm">
+          <Checkbox
+            checked={showHidden}
+            disabled={!hiddenIds}
+            onCheckedChange={(checked) => {
+              setShowHidden(checked === true);
+              setSelectedIds(new Set());
+            }}
+          />
+          Show hidden vehicles
+        </label>
       </section>
 
       {selectedCount > 0 && (
@@ -516,8 +617,8 @@ export function VehicleInventoryTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {vehicles.length ? (
-              vehicles.map((vehicle) => (
+            {visibleVehicles.length ? (
+              visibleVehicles.map((vehicle) => (
                 <TableRow
                   key={vehicle.id}
                   data-state={selectedIds.has(vehicle.id) ? "selected" : ""}
@@ -561,6 +662,9 @@ export function VehicleInventoryTable({
                       <p className="text-muted-foreground truncate text-xs">
                         {vehicle.stockNumber} - {vehicle.variant ?? "—"}
                       </p>
+                      {hiddenIds?.has(vehicle.id) && (
+                        <Badge>Hidden from your list</Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="px-3 text-right font-extrabold">
@@ -601,9 +705,9 @@ export function VehicleInventoryTable({
                   <TableCell className="px-3 text-right">
                     <VehicleRowActions
                       vehicle={vehicle}
-                      onDeleted={() =>
-                        removeDeletedVehicleFromSelection(vehicle.id)
-                      }
+                      hidden={hiddenIds?.has(vehicle.id)}
+                      onToggleHidden={() => toggleVehicleHidden(vehicle)}
+                      onDeleted={() => removeVehicleFromSelection(vehicle.id)}
                     />
                   </TableCell>
                 </TableRow>
@@ -616,10 +720,15 @@ export function VehicleInventoryTable({
                       <CarFront className="size-6" aria-hidden="true" />
                     </span>
                     <div>
-                      <p className="font-extrabold">No vehicles found</p>
+                      <p className="font-extrabold">
+                        {hiddenOnPage
+                          ? "All vehicles on this page are hidden"
+                          : "No vehicles found"}
+                      </p>
                       <p className="text-muted-foreground mt-1 text-sm">
-                        Adjust the search or status filter to show more
-                        inventory records.
+                        {hiddenOnPage
+                          ? "Turn on Show hidden vehicles to see them again."
+                          : "Adjust the search or status filter to show more inventory records."}
                       </p>
                     </div>
                   </div>
@@ -631,11 +740,12 @@ export function VehicleInventoryTable({
 
         <div className="grid gap-3 border-t p-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-muted-foreground text-sm">
-            Showing{" "}
+            Inventory results{" "}
             <strong className="text-foreground">
               {start}-{end}
             </strong>{" "}
             of <strong className="text-foreground">{total}</strong> vehicles
+            {hiddenOnPage > 0 && ` · ${hiddenOnPage} hidden on this page`}
           </p>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex">
             <Button
@@ -776,9 +886,13 @@ function SortableHead({
 
 function VehicleRowActions({
   vehicle,
+  hidden,
+  onToggleHidden,
   onDeleted,
 }: {
   vehicle: StaffInventoryVehicleDTO;
+  hidden: boolean | undefined;
+  onToggleHidden: () => void;
   onDeleted: () => void;
 }) {
   const title = `${vehicle.make} ${vehicle.model}`;
@@ -994,6 +1108,13 @@ function VehicleRowActions({
           <DropdownMenuItem onSelect={() => setIsDuplicateDialogOpen(true)}>
             <Copy />
             Duplicate
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={hidden === undefined}
+            onSelect={onToggleHidden}
+          >
+            {hidden ? <Eye /> : <EyeOff />}
+            {hidden ? "Restore to my list" : "Hide from my list"}
           </DropdownMenuItem>
           {vehicle.status === "draft" && vehicle.publishedAt === null && (
             <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)}>

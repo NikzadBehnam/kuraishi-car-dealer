@@ -16,7 +16,7 @@ import {
   inquiryServiceTopics,
   type InquiryServiceTopic,
 } from "@/lib/inquiry-service-topics";
-import { inquiryPrivacyNotice } from "@/content/de/inquiry-privacy";
+import { inquiryPrivacyAcknowledgement } from "@/content/de/inquiry-privacy-acknowledgement";
 import { useHydrated } from "@/hooks/use-hydrated";
 import type { InquiryIntakeMode } from "@/lib/inquiry-intake-policy";
 import { publicRoutes, routeBuilders } from "@/config/routes.config";
@@ -77,7 +77,7 @@ export function ContactForm({
         vehicleSlug: vehicle?.slug ?? null,
         serviceTopic,
         website,
-        privacyNoticeVersion: inquiryPrivacyNotice.version,
+        privacyNoticeVersion: inquiryPrivacyAcknowledgement.version,
       };
       const fingerprint = JSON.stringify(payload);
       if (retry.current?.fingerprint !== fingerprint) {
@@ -378,7 +378,11 @@ export function ContactForm({
           <span>{formContent.consent}</span>
         </label>
         <Link
-          href={`${publicRoutes.privacy}?version=${inquiryPrivacyNotice.version}`}
+          href={
+            enabled
+              ? `${publicRoutes.privacy}?version=${inquiryPrivacyAcknowledgement.version}`
+              : publicRoutes.privacy
+          }
           className="w-fit text-sm underline"
           target="_blank"
           rel="noopener noreferrer"

@@ -1,6 +1,7 @@
+import { inquiryPrivacyAcknowledgement } from "./inquiry-privacy-acknowledgement.ts";
+
 export const inquiryPrivacyNotice = {
-  version: "2026-11-27-v2",
-  text: "Ich habe den Datenschutzhinweis zur Kenntnis genommen.",
+  ...inquiryPrivacyAcknowledgement,
   controller: {
     name: "Kuraishi Autohandel e.U.",
     address: "Treustraße 57/4/3, 1200 Wien, Österreich",

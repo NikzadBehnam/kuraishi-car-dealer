@@ -1,9 +1,9 @@
-import { inquiryPrivacyNotice } from "./inquiry-privacy.ts";
+import { inquiryPrivacyAcknowledgement } from "./inquiry-privacy-acknowledgement.ts";
 
 export const formContent = {
   required: "Dieses Feld ist erforderlich.",
   invalidEmail: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-  consent: inquiryPrivacyNotice.text,
+  consent: inquiryPrivacyAcknowledgement.text,
   unavailable:
     "Online-Anfragen sind derzeit noch nicht verfügbar. Bitte kontaktieren Sie uns telefonisch oder per E-Mail. Ein Wunschtermin ist keine bestätigte Buchung.",
   successTitle: "Ihre Anfrage ist eingegangen.",

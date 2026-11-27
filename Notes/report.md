@@ -4,6 +4,13 @@
 - **Branch / revision:** `test/backend-integration-and-release` / `466f70e`
   **Checklist reviewed:** [Checklist.md](./Checklist.md), cross-checked with the [implemented-sections test guide](./Implemented-Sections-Test-Guide.md), [README](../README.md), and [operations runbook](./Operations-and-Recovery-Runbook.md).
 
+## Contact and appointment requests: Phase 1 release
+
+- On 2026-11-27, the approved Phase 1 changes (`CONTACT-003/004/006/007/008`, single success confirmation, and compact directions) were fast-forwarded into `master` at `476495dc1f6d47f77d1b554570b01fd871611b37`. Vercel deployment `dpl_hWH8b7naJMjQ8vqQubCjfiLPrXke` was Ready and promoted to `www.kuraishicars.com`. No database migration or Production configuration change was made.
+- Verification passed: 141 source tests, 24 isolated integration tests, TypeScript, ESLint, Prisma validation, and an optimized build during implementation; 20 focused tests, ESLint, Prettier, and whitespace checks passed before release. The disposable review and integration databases were removed.
+- Live read-only smoke verified homepage and navigation, Contact without horizontal overflow at desktop and mobile widths, the optional-message hint, the 44 px directions action, the Admin dashboard, Add vehicle photo controls, and an existing vehicle gallery. Anonymous requests remained protected, Contact returned `X-Robots-Tag: noindex, nofollow`, and `/sitemap.xml` returned 404 behind protection. Inquiry intake remained disabled and external email delivery was not enabled. The calendar, validation, retry, and successful submission flows were exercised only in isolated testing.
+- **Open Production issue:** `/admin/leads` renders an error because the runtime role cannot read `InquiryNotification` (SQLSTATE `42501`). Vercel logs show the identical failure on the previous deployment before promotion. No permission change or rollback was performed. A separate, least-privilege Production remediation is needed to verify the live Leads inbox.
+
 ## Vehicle-photo simplification
 
 ### Accidental sale correction

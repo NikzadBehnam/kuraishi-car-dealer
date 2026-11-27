@@ -61,4 +61,24 @@ describe("trusted request origins", () => {
       );
     }
   });
+
+  it("can opt in to the exact provider-assigned Preview deployment host", () => {
+    const env = {
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+      BETTER_AUTH_URL: "auto",
+      VERCEL_URL: "dealer-current-preview.vercel.app",
+    };
+    assert.deepEqual(getTrustedOrigins(true, env), [
+      "https://dealer-current-preview.vercel.app",
+    ]);
+    assert.deepEqual(
+      getTrustedOrigins(true, { ...env, VERCEL_URL: "dealer.vercel.app/other" }),
+      [],
+    );
+    assert.deepEqual(
+      getTrustedOrigins(true, { ...env, VERCEL_URL: undefined }),
+      [],
+    );
+  });
 });

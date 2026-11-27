@@ -28,17 +28,19 @@ if (secret.length < 32) {
   throw new Error("BETTER_AUTH_SECRET must be at least 32 characters long.");
 }
 
-const baseURL = requireEnv("BETTER_AUTH_URL");
 const trustedOrigins = getTrustedOrigins(isProduction);
+const baseURL = isVercelPreview()
+  ? trustedOrigins[0]
+  : requireEnv("BETTER_AUTH_URL");
+
+if (!baseURL) {
+  throw new Error(
+    "Set BETTER_AUTH_URL to the exact HTTPS Preview origin, or to auto for the current Vercel Preview deployment.",
+  );
+}
 
 if (isProduction && !baseURL.startsWith("https://")) {
   throw new Error("BETTER_AUTH_URL must use HTTPS in production.");
-}
-
-if (isVercelPreview() && trustedOrigins.length === 0) {
-  throw new Error(
-    "BETTER_AUTH_URL must be an exact HTTPS Vercel Preview origin without a trailing slash.",
-  );
 }
 
 export const auth = betterAuth({

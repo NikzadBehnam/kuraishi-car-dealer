@@ -268,6 +268,8 @@ and [notification configuration](../src/lib/inquiry-email-config.ts).
 
 ## Customer-data retention and deletion
 
+See the [Phase 4 proposed schedule and erasure rehearsal](#inquiry-privacy-retention-and-operator-erasure-phase-4).
+
 - No inquiry retention period, anonymization rule, or deletion schedule has
   been approved. Section 09.05 remains a legal/business gate; do not infer a
   period from database fields, deployment defaults, or this runbook.
@@ -848,6 +850,115 @@ for protected review, not for public launch.
    browser still cannot access `www`. Leave indexing, sitemap, inquiries and
    external email disabled. Record the result without credentials; keep
    16.15 open until approval and both access checks are recorded.
+
+### Inquiry privacy, retention and operator erasure (Phase 4)
+
+**Draft for dealership and qualified privacy approval.** The German inquiry
+notice on `/datenschutz` is not approved by this procedure. Review the controller
+and rights contact, proposed Art. 6 bases and balancing, actual recipients and
+processor agreements, transfers and safeguards, and the final retention criteria.
+The [EU GDPR (Arts. 5, 6, 12–13, 15–22, 28, 44–49 and 77)](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
+and [Austrian Data Protection Authority guidance](https://dsb.gv.at/rechte-pflichten/ihre-rechte-als-betroffene-person)
+are the starting points, not approval of the draft.
+
+- Keep each notice body and acknowledgement under its immutable version in
+  [the notice registry](../src/content/de/inquiry-privacy.ts). The form links to
+  `/datenschutz?version=<version>`; an inquiry stores the server-owned version,
+  exact acknowledgement and time. Assign a new version when any notice content,
+  controller contact or acknowledgement changes. Retain the old versions and
+  their review records. The Phase 1–3 `2026-11-19-v1` value recorded a checkbox
+  only; do not claim a versioned full policy was shown for it. Until approval,
+  Production keeps the existing public Datenschutz page and does not serve the
+  draft at its versioned URL. Review the draft only in synthetic mode.
+- Keep both inquiry modes off in Production until Phase 4C authorization.
+  Synthetic testing uses `INQUIRY_TEST_MODE=true`, an isolated database, and a
+  `.invalid` address on `localhost:3000` or the exact protected Vercel Preview
+  deployment host. For a manually staged Preview, `BETTER_AUTH_URL=auto`
+  uses the exact provider-assigned `VERCEL_URL` as the auth origin.
+  Live intake additionally requires the canonical Production
+  host and origin, `INQUIRY_LIVE_MODE=true`, the exact approved
+  `INQUIRY_APPROVED_NOTICE_VERSION`, and a stable private `INQUIRY_HASH_SECRET`
+  (at least 32 characters). Never set an approval value for an unresolved draft.
+  Live acceptance does not create notification rows; keep email and the worker
+  off. No database migration or notification write grant is needed.
+
+#### Proposed review schedule (not a legal requirement)
+
+| What | Proposed operational rule, subject to approval |
+| --- | --- |
+| Inbox | Named staff check on business days and reply manually. Review unresolved leads weekly; review New or In progress after 30 days from receipt and close if no purpose remains. |
+| Closed | At a monthly review, propose deleting Closed inquiries received more than 90 days ago where follow-up has ended and there is no hold. Do not interpret `updatedAt` as closure time. A policy based on elapsed time since closure would require a separate `closedAt` design. |
+| Erasure and holds | Route promptly to the authorized operator. Verify the requester proportionately and assess the scope and applicable response deadline (GDPR Art. 12). Document the reason, reviewer, restricted access and next review for a hold; a hold is not indefinite. Do not wait for the monthly review to process a valid erasure request. |
+| Rate-limit buckets | The 15-minute window is quota validity, not physical retention. Intake sweeps up to 100 expired rows after a successful transaction. Include a weekly operator sweep if there are expired rows, including during idle periods. No scheduler or new service is needed. |
+| Copies | Apply approved rules separately to mailboxes, sent mail, exports, logs and recovery copies. Track each recovery copy's purpose, access and expiry. Review old branches and snapshots separately; never delete one as part of lead erasure. |
+
+#### Authorized operator erasure
+
+1. Use the approved direct database connection and operator role, never the app
+   runtime role. In the control plane verify project, branch, endpoint, database
+   and expected operator role. Verify the direct connection host privately; do
+   not print its URL. In a read-only transaction check `current_database()`,
+   `current_user`, and the expected inquiry foreign keys. Confirm the right
+   tenant and environment before querying candidate IDs.
+2. Resolve a request to an exact inquiry ID in the protected inbox and check the
+   approved retention rule or erasure request and any hold. **Dry run (default):**
+   in `BEGIN READ ONLY`, preview only the ID, status, receipt time, vehicle
+   existence, and note/outbox counts. Do not export contact details, messages or
+   note text. Confirm exactly one target and `ROLLBACK`. Obtain explicit approval
+   identifying the target environment, case/ID and permitted operation before
+   any permanent deletion. Any discrepancy or hold means stop.
+3. Use a fresh transaction, set a short lock/statement timeout, lock the exact
+   lead and recheck the preview under that lock. In a private `psql` session,
+   set `inquiry_id` to the approved opaque ID; `:'inquiry_id'` quotes it as a
+   SQL literal. Run the steps interactively or separately, not as an unattended
+   script. For a read-only dry run, run just the second `SELECT` inside
+   `BEGIN READ ONLY`.
+
+   ```sql
+   BEGIN;
+   SET LOCAL lock_timeout = '5s';
+   SET LOCAL statement_timeout = '30s';
+   SELECT id FROM public."Inquiry" WHERE id = :'inquiry_id' FOR UPDATE;
+   SELECT i.id, i.status, i."createdAt", i."vehicleId",
+          EXISTS (SELECT 1 FROM public."Vehicle" v WHERE v.id = i."vehicleId") AS vehicle_exists,
+          (SELECT count(*) FROM public."InquiryNote" n WHERE n."inquiryId" = i.id) AS notes,
+          (SELECT count(*) FROM public."InquiryNotification" o WHERE o."inquiryId" = i.id) AS notifications
+   FROM public."Inquiry" i WHERE i.id = :'inquiry_id';
+   ```
+
+4. Proceed only if one row and the displayed values match the approved scope.
+   Record the vehicle ID transiently if present; never delete the vehicle. Run
+   the deletion and verify while still inside the transaction:
+
+   ```sql
+   DELETE FROM public."Inquiry" WHERE id = :'inquiry_id' RETURNING id;
+   SELECT
+     (SELECT count(*) FROM public."Inquiry" WHERE id = :'inquiry_id') AS inquiries,
+     (SELECT count(*) FROM public."InquiryNote" WHERE "inquiryId" = :'inquiry_id') AS notes,
+     (SELECT count(*) FROM public."InquiryNotification" WHERE "inquiryId" = :'inquiry_id') AS notifications;
+   -- If the preview had a linked vehicle, use its exact ID as the vehicle_id variable.
+   SELECT EXISTS (SELECT 1 FROM public."Vehicle" WHERE id = :'vehicle_id') AS vehicle_preserved;
+   ```
+
+   Expect one deleted ID, zero inquiry/child rows, and the vehicle still present
+   if it existed. `ROLLBACK` on any mismatch; `COMMIT` only with the explicit
+   approval already recorded. Recheck the counts after commit. Rehearse deletion
+   and rollback only in an isolated database with synthetic leads. Do not perform
+   even a rollback-based delete rehearsal against Production.
+5. Record an access-restricted audit reference, operator, date, approval/reason
+   code, environment, counts and outcome, not the deleted content. Keep the
+   minimum opaque ID mapping only as long as needed for approved recovery and
+   erasure handling. Remove approved mailbox copies separately or document the
+   specific exception. If restoring a backup, keep it isolated, check the
+   recovery target, reconcile and reapply recorded erasures before reopening
+   access, and check any new backup branch created by restoration.
+
+For rate-limit cleanup, preview only `count(*) WHERE "expiresAt" <= now()` using
+the same target checks. Authorized maintenance may delete expired rows in
+bounded batches using the existing expiry predicate and lock pattern in
+[inquiry intake](../src/lib/inquiry-intake.ts); never include current quotas or
+log the pseudonymous keys. Recheck the expired count and stop or retry on a lock
+timeout. This is separate from inquiry erasure.
 
 ### Recovery resource proposal and acceptance (16.12)
 

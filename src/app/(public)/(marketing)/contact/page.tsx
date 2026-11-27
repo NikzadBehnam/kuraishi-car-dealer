@@ -1,4 +1,5 @@
 import { Globe, MapPin, Phone, Mail, Navigation } from "lucide-react";
+import { headers } from "next/headers";
 import { PageHeader } from "@/components/layout/page-header";
 import { ContactForm } from "./_components/contact-form";
 import { Card } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { getPublicDealershipSettings } from "@/lib/dealership-settings";
 import { getDealershipPhones } from "@/lib/dealership-phones";
 import { createPublicMetadata } from "@/lib/metadata";
 import { getPublicVehicleForInquiry } from "@/lib/inventory-queries";
+import { getInquiryIntakePolicy } from "@/lib/inquiry-intake-policy";
 import {
   inquiryServiceTopics,
   inquiryServiceTopicSchema,
@@ -14,7 +16,6 @@ import {
 import {
   inquiryAppointmentTypes,
   inquiryContactParamsSchema,
-  inquiryTestModeEnabled,
 } from "@/lib/inquiry-validation";
 
 export async function generateMetadata() {
@@ -30,6 +31,7 @@ export default async function ContactPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const settings = await getPublicDealershipSettings();
+  const { mode } = getInquiryIntakePolicy((await headers()).get("host"));
   const parsed = inquiryContactParamsSchema.safeParse(await searchParams);
   const service = parsed.success ? parsed.data.service : undefined;
   const topic = inquiryServiceTopicSchema.safeParse(service);
@@ -58,7 +60,7 @@ export default async function ContactPage({
           <div className="mt-7">
             <ContactForm
               key={JSON.stringify([vehicle?.slug, service, contextError])}
-              enabled={inquiryTestModeEnabled()}
+              mode={mode}
               vehicle={vehicle}
               contextError={contextError}
               appointmentType={appointmentType}

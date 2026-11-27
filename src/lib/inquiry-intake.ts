@@ -4,6 +4,7 @@ import { Prisma } from "../generated/prisma/client.ts";
 import { inquiryPrivacyNotice } from "../content/de/inquiry-privacy.ts";
 import { prisma } from "./db.ts";
 import { getPublicVehicleEligibilitySql } from "./inventory-eligibility.ts";
+import type { EnabledInquiryIntakeMode } from "./inquiry-intake-policy.ts";
 import {
   getInitialInquiryNotificationStatus,
   getInquiryNotificationIdempotencyKey,
@@ -19,6 +20,7 @@ export const INQUIRY_LIMIT_WINDOW_SECONDS = 15 * 60;
 const maximumNewInquiries = 5;
 
 type SubmissionIdentity = { clientHash: string; payloadHash: string };
+type InquiryIntakeClient = Pick<typeof prisma, "inquiry" | "$transaction">;
 
 function assertSameSubmission(storedHash: string | null, payloadHash: string) {
   if (storedHash !== payloadHash) {
@@ -33,6 +35,13 @@ export async function acceptInquiry(
   input: unknown,
   identity: SubmissionIdentity,
   now = new Date(),
+  {
+    mode = "synthetic",
+    client = prisma,
+  }: {
+    mode?: EnabledInquiryIntakeMode;
+    client?: InquiryIntakeClient;
+  } = {},
 ): Promise<void> {
   const submission = inquirySubmissionSchema.parse(input);
   if (
@@ -41,7 +50,7 @@ export async function acceptInquiry(
   ) {
     throw new Error("Inquiry submission identity is invalid.");
   }
-  const existing = await prisma.inquiry.findUnique({
+  const existing = await client.inquiry.findUnique({
     where: { submissionKey: submission.requestId },
     select: { submissionHash: true },
   });
@@ -57,7 +66,7 @@ export async function acceptInquiry(
     );
   }
   try {
-    await prisma.$transaction(async (tx) => {
+    await client.$transaction(async (tx) => {
       const quota = await tx.$queryRaw<{ key: string }[]>`
         INSERT INTO "InquiryRateLimit" ("key", "count", "expiresAt")
         VALUES (${identity.clientHash}, 1, ${new Date(now.getTime() + INQUIRY_LIMIT_WINDOW_SECONDS * 1000)})
@@ -125,14 +134,16 @@ export async function acceptInquiry(
         },
         select: { id: true },
       });
-      await tx.inquiryNotification.create({
-        data: {
-          inquiryId: inquiry.id,
-          status: getInitialInquiryNotificationStatus(process.env),
-          idempotencyKey: getInquiryNotificationIdempotencyKey(inquiry.id),
-        },
-        select: { id: true },
-      });
+      if (mode === "synthetic") {
+        await tx.inquiryNotification.create({
+          data: {
+            inquiryId: inquiry.id,
+            status: getInitialInquiryNotificationStatus(process.env),
+            idempotencyKey: getInquiryNotificationIdempotencyKey(inquiry.id),
+          },
+          select: { id: true },
+        });
+      }
       await tx.$executeRaw`
         DELETE FROM "InquiryRateLimit" WHERE "key" IN (
           SELECT "key" FROM "InquiryRateLimit" WHERE "expiresAt" <= ${now}
@@ -146,7 +157,7 @@ export async function acceptInquiry(
         error.code === "P2002") ||
       (error instanceof InquiryIntakeError && error.status === 429)
     ) {
-      const concurrent = await prisma.inquiry.findUnique({
+      const concurrent = await client.inquiry.findUnique({
         where: { submissionKey: submission.requestId },
         select: { submissionHash: true },
       });

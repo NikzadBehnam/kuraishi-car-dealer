@@ -34,11 +34,13 @@ const input: InquirySubmission = {
 function request(
   body = JSON.stringify(input),
   headers: Record<string, string> = {},
+  origin = "http://localhost:3000",
 ) {
-  return new Request("http://localhost:3000/api/inquiries", {
+  return new Request(`${origin}/api/inquiries`, {
     method: "POST",
     headers: {
-      origin: "http://localhost:3000",
+      host: new URL(origin).host,
+      origin,
       "content-type": "application/json",
       ...headers,
     },
@@ -83,6 +85,73 @@ describe("inquiry HTTP boundary", () => {
     );
     assert.equal(result.status, 400);
     assert.match((await result.json()).error, /example\.invalid/);
+  });
+
+  it("allows live intake only with approved configuration on the exact Production host and origin", async () => {
+    const origin = "https://www.kuraishicars.com";
+    const env = {
+      NODE_ENV: "production",
+      VERCEL: "1",
+      VERCEL_ENV: "production",
+      INQUIRY_LIVE_MODE: "true",
+      INQUIRY_HASH_SECRET: localEnv.INQUIRY_HASH_SECRET,
+      INQUIRY_APPROVED_NOTICE_VERSION: inquiryPrivacyNotice.version,
+    };
+    const headers = { "x-vercel-forwarded-for": "192.0.2.1" };
+    const body = JSON.stringify({
+      ...input,
+      fields: { ...input.fields, email: "visitor@example.com" },
+    });
+    const liveRequest = () => request(body, headers, origin);
+    const accept = async () => assert.fail("This request must not be stored.");
+    for (const invalid of [
+      { VERCEL: undefined },
+      { VERCEL_ENV: "preview" },
+      { NODE_ENV: "development" },
+      { INQUIRY_LIVE_MODE: "TRUE" },
+      { INQUIRY_TEST_MODE: "true" },
+      { INQUIRY_TEST_MODE: "1" },
+      { INQUIRY_HASH_SECRET: " ".repeat(32) },
+      { INQUIRY_HASH_SECRET: "short" },
+      { INQUIRY_APPROVED_NOTICE_VERSION: undefined },
+      { INQUIRY_APPROVED_NOTICE_VERSION: "obsolete" },
+      { INQUIRY_EMAIL_MODE: "test" },
+    ]) {
+      assert.equal(
+        (
+          await handleInquiryRequest(liveRequest(), accept, {
+            ...env,
+            ...invalid,
+          })
+        ).status,
+        503,
+      );
+    }
+    const alias = request(
+      body,
+      { ...headers, origin },
+      "https://project.vercel.app",
+    );
+    assert.equal((await handleInquiryRequest(alias, accept, env)).status, 503);
+    const wrongOrigin = request(
+      body,
+      { ...headers, origin: "https://kuraishicars.com" },
+      origin,
+    );
+    assert.equal(
+      (await handleInquiryRequest(wrongOrigin, accept, env)).status,
+      403,
+    );
+    const response = await handleInquiryRequest(
+      liveRequest(),
+      async (submission, _identity, mode) => {
+        assert.equal(mode, "live");
+        assert.equal(submission.fields.email, "visitor@example.com");
+      },
+      env,
+    );
+    assert.equal(response.status, 202);
+    assert.deepEqual(await response.json(), { ok: true });
   });
 
   it("requires a trusted origin, JSON, consent, an empty honeypot and strict fields", async () => {
@@ -131,6 +200,7 @@ describe("inquiry HTTP boundary", () => {
     const invalidUtf8 = new Request("http://localhost:3000/api/inquiries", {
       method: "POST",
       headers: {
+        host: "localhost:3000",
         origin: "http://localhost:3000",
         "content-type": "application/json",
       },
@@ -238,6 +308,7 @@ describe("inquiry HTTP boundary", () => {
     };
     const accept = async () => {};
     const headers = {
+      host: env.VERCEL_URL,
       origin: "https://synthetic-preview.vercel.app",
       "x-vercel-forwarded-for": "2001:db8::1",
     };

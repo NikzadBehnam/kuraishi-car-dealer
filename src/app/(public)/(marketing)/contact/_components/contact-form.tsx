@@ -17,6 +17,8 @@ import {
   type InquiryServiceTopic,
 } from "@/lib/inquiry-service-topics";
 import { inquiryPrivacyNotice } from "@/content/de/inquiry-privacy";
+import { useHydrated } from "@/hooks/use-hydrated";
+import type { InquiryIntakeMode } from "@/lib/inquiry-intake-policy";
 import { publicRoutes, routeBuilders } from "@/config/routes.config";
 import type { PublicVehicleInquiryDTO } from "@/types/inventory";
 import { Button } from "@/components/ui/button";
@@ -29,18 +31,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 export function ContactForm({
-  enabled,
+  mode,
   vehicle,
   contextError,
   appointmentType,
   initialServiceTopic,
 }: {
-  enabled: boolean;
+  mode: InquiryIntakeMode;
   vehicle: PublicVehicleInquiryDTO | null;
   contextError: string | null;
   appointmentType: ContactFormValues["appointmentType"];
   initialServiceTopic?: InquiryServiceTopic;
 }) {
+  const ready = useHydrated();
+  const enabled = mode !== "off";
   const [submitted, setSubmitted] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [website, setWebsite] = useState("");
@@ -64,7 +68,7 @@ export function ContactForm({
     },
   });
   const submit = async (fields: ContactFormValues) => {
-    if (!enabled || contextError || inFlight.current) return;
+    if (!ready || !enabled || contextError || inFlight.current) return;
     inFlight.current = true;
     setSubmissionError(null);
     try {
@@ -133,6 +137,7 @@ export function ContactForm({
   }
   return (
     <form
+      method="post"
       noValidate
       onSubmit={(event) => void handleSubmit(submit)(event)}
       className="grid gap-5"
@@ -144,12 +149,17 @@ export function ContactForm({
         >
           {formContent.unavailable}
         </p>
-      ) : (
+      ) : mode === "synthetic" ? (
         <p className="text-muted-foreground rounded-xl border p-4 text-sm">
           Nur für Testanfragen. Verwenden Sie fiktive Angaben und eine
           E-Mail-Adresse wie test@example.invalid. Geben Sie keine echten
           personenbezogenen Daten ein.
         </p>
+      ) : null}
+      {enabled && (
+        <noscript>
+          Bitte aktivieren Sie JavaScript, um die Anfrage sicher zu senden.
+        </noscript>
       )}
       {contextError ? (
         <div
@@ -197,6 +207,7 @@ export function ContactForm({
         <input
           id="contact-website"
           name="website"
+          disabled={!ready || !enabled}
           value={website}
           onChange={(event) => setWebsite(event.target.value)}
           tabIndex={-1}
@@ -204,7 +215,7 @@ export function ContactForm({
         />
       </div>
       <fieldset
-        disabled={isSubmitting || !enabled || Boolean(contextError)}
+        disabled={!ready || isSubmitting || !enabled || Boolean(contextError)}
         className="grid min-w-0 gap-5"
       >
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -366,6 +377,14 @@ export function ContactForm({
           />
           <span>{formContent.consent}</span>
         </label>
+        <Link
+          href={`${publicRoutes.privacy}?version=${inquiryPrivacyNotice.version}`}
+          className="w-fit text-sm underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Datenschutzhinweis lesen (öffnet in einem neuen Tab)
+        </Link>
         {errors.consent && (
           <p id="contact-consent-error" className="text-destructive text-sm">
             {errors.consent.message}
@@ -381,7 +400,9 @@ export function ContactForm({
           </div>
           <Button
             variant="accent"
-            disabled={isSubmitting || !enabled || Boolean(contextError)}
+            disabled={
+              !ready || isSubmitting || !enabled || Boolean(contextError)
+            }
             className="h-auto min-h-11 w-full justify-center rounded-[var(--radius-sm)] whitespace-normal"
           >
             {isSubmitting ? (

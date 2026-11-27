@@ -4,12 +4,8 @@ import {
   createElement,
   type FormEventHandler,
   type PropsWithChildren,
-  useSyncExternalStore,
 } from "react";
-
-const subscribe = () => () => {};
-const getClientSnapshot = () => true;
-const getServerSnapshot = () => false;
+import { useHydrated } from "../../../hooks/use-hydrated.ts";
 
 export function CredentialForm({
   children,
@@ -18,11 +14,7 @@ export function CredentialForm({
   onSubmit: FormEventHandler<HTMLFormElement>;
 }>) {
   // Keep the native form inert until the client submit handler is attached.
-  const ready = useSyncExternalStore(
-    subscribe,
-    getClientSnapshot,
-    getServerSnapshot,
-  );
+  const ready = useHydrated();
 
   return createElement(
     "form",

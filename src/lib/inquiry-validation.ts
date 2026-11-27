@@ -101,7 +101,10 @@ export const inquiryFieldsSchema = z.strictObject({
     ),
   consent: z
     .boolean()
-    .refine(Boolean, "Bitte stimmen Sie der Datenverarbeitung zu."),
+    .refine(
+      Boolean,
+      "Bitte bestätigen Sie, dass Sie den Datenschutzhinweis zur Kenntnis genommen haben.",
+    ),
 });
 
 export type InquiryFields = z.infer<typeof inquiryFieldsSchema>;
@@ -165,9 +168,11 @@ export function inquiryTestModeEnabled(
 ): boolean {
   return (
     env.INQUIRY_TEST_MODE === "true" &&
-    env.VERCEL_ENV !== "production" &&
-    (env.NODE_ENV === "development" ||
-      env.NODE_ENV === "test" ||
-      (env.VERCEL === "1" && env.VERCEL_ENV === "preview"))
+    (env.INQUIRY_LIVE_MODE === undefined ||
+      env.INQUIRY_LIVE_MODE === "false") &&
+    ((env.VERCEL === "1" && env.VERCEL_ENV === "preview") ||
+      (env.VERCEL === undefined &&
+        env.VERCEL_ENV === undefined &&
+        (env.NODE_ENV === "development" || env.NODE_ENV === "test")))
   );
 }

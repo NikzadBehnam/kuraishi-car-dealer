@@ -528,6 +528,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       new Request(url, {
         method,
         headers: {
+          host: new URL(url).host,
           origin: "http://localhost:3000",
           "content-type": "application/json",
         },
@@ -2382,6 +2383,123 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         },
       });
     }
+  });
+
+  it("saves live leads without outbox rows and rehearses inquiry erasure without deleting the vehicle", async () => {
+    const clientHash = createHash("sha256")
+      .update(`erasure-${prefix}`)
+      .digest("hex");
+    inquiryClients.push(clientHash);
+    const vehicleId = ids[0];
+    const now = new Date();
+    const records: string[] = [];
+    for (const mode of ["live", "synthetic"] as const) {
+      const requestId = randomUUID();
+      inquiryKeys.push(requestId);
+      const submission: InquirySubmission = {
+        requestId,
+        fields: {
+          name: "Synthetic Erasure Fixture",
+          email: "erasure@example.invalid",
+          appointmentType: "Probefahrt",
+          message: "Synthetic fixture only.",
+          consent: true,
+        },
+        vehicleSlug: slug(0),
+        website: "",
+        privacyNoticeVersion: inquiryPrivacyNotice.version,
+      };
+      const identity = {
+        clientHash,
+        payloadHash: createHash("sha256")
+          .update(JSON.stringify(submission))
+          .digest("hex"),
+      };
+      if (mode === "live") {
+        await withLeadsTestRuntime(
+          async (client) => {
+            await inquiryIntake.acceptInquiry(submission, identity, now, {
+              mode,
+              client,
+            });
+            await inquiryIntake.acceptInquiry(submission, identity, now, {
+              mode,
+              client,
+            });
+          },
+          { liveIntake: true },
+        );
+      } else {
+        await inquiryIntake.acceptInquiry(submission, identity, now, { mode });
+      }
+      const inquiry = await prisma.inquiry.findUniqueOrThrow({
+        where: { submissionKey: requestId },
+      });
+      assert.equal(inquiry.status, "new");
+      assert.equal(inquiry.vehicleId, vehicleId);
+      assert.equal(inquiry.privacyNoticeVersion, inquiryPrivacyNotice.version);
+      assert.equal(
+        await prisma.inquiryNotification.count({
+          where: { inquiryId: inquiry.id },
+        }),
+        mode === "synthetic" ? 1 : 0,
+      );
+      session = { user: { role: "user", id: actorId } };
+      const lead = await adminInquiryQueries.getAdminInquiryPage({
+        page: "1",
+        status: "new",
+        lead: inquiry.id,
+      });
+      assert.equal(lead.selectedInquiry?.id, inquiry.id);
+      assert.equal(
+        lead.selectedInquiry?.delivery?.status ?? null,
+        mode === "synthetic" ? "disabled" : null,
+      );
+      assert.deepEqual(
+        await adminInquiryNotes.addAdminInquiryNote({
+          inquiryId: inquiry.id,
+          content: "Synthetic follow-up.",
+        }),
+        { ok: true },
+      );
+      records.push(inquiry.id);
+    }
+    assert.equal(
+      (
+        await prisma.inquiryRateLimit.findUniqueOrThrow({
+          where: { key: clientHash },
+        })
+      ).count,
+      2,
+    );
+
+    const originalVehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: vehicleId },
+    });
+    const dryRun = new Error("Roll back synthetic dry run");
+    const erase = async (rollback: boolean) => {
+      await prisma.$transaction(async (tx) => {
+        const where = { id: { in: records } };
+        const related = { inquiryId: { in: records } };
+        assert.equal(await tx.inquiry.count({ where }), 2);
+        assert.equal(await tx.inquiryNote.count({ where: related }), 2);
+        assert.equal(await tx.inquiryNotification.count({ where: related }), 1);
+        assert.equal((await tx.inquiry.deleteMany({ where })).count, 2);
+        assert.equal(await tx.inquiryNote.count({ where: related }), 0);
+        assert.equal(await tx.inquiryNotification.count({ where: related }), 0);
+        assert.deepEqual(
+          await tx.vehicle.findUnique({ where: { id: vehicleId } }),
+          originalVehicle,
+        );
+        if (rollback) throw dryRun;
+      });
+    };
+    await assert.rejects(erase(true), (error) => error === dryRun);
+    await erase(false);
+    assert.equal(
+      await prisma.inquiry.count({ where: { id: { in: records } } }),
+      0,
+    );
   });
 
   it("accepts each inquiry type durably and enforces five new requests with idempotent retries", async () => {

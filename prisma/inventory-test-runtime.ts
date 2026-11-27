@@ -7,6 +7,7 @@ import { createInventoryTestDatabase } from "./inventory-test-client.ts";
 
 export async function withLeadsTestRuntime<T>(
   run: (client: PrismaClient, role: string) => Promise<T>,
+  { liveIntake = false }: { liveIntake?: boolean } = {},
 ): Promise<T> {
   const { prisma: owner, connectionString } = createInventoryTestDatabase();
   const target = new URL(connectionString);
@@ -47,6 +48,15 @@ export async function withLeadsTestRuntime<T>(
       `GRANT SELECT ("id", "inquiryId", "status", "attemptCount", "lastErrorCode", "nextAttemptAt", "sentAt") ON public."InquiryNotification" TO ${role}`,
     ]) {
       await owner.$executeRawUnsafe(grant);
+    }
+    if (liveIntake) {
+      for (const grant of [
+        `GRANT UPDATE ("status") ON public."Vehicle" TO ${role}`,
+        `GRANT INSERT ("id", "customerName", "customerEmail", "customerPhone", "message", "source", "status", "requestedService", "serviceTopic", "preferredDate", "vehicleId", "vehicleSlugSnapshot", "vehicleTitleSnapshot", "privacyNoticeVersion", "privacyNoticeText", "privacyAcknowledgedAt", "submissionKey", "submissionHash", "createdAt", "updatedAt") ON public."Inquiry" TO ${role}`,
+        `GRANT SELECT ("key", "count", "expiresAt"), INSERT ("key", "count", "expiresAt"), UPDATE ("count", "expiresAt"), DELETE ON public."InquiryRateLimit" TO ${role}`,
+      ]) {
+        await owner.$executeRawUnsafe(grant);
+      }
     }
 
     target.username = role;

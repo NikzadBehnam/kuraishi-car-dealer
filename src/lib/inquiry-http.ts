@@ -5,15 +5,18 @@ import { ZodError } from "zod";
 import {
   InquiryIntakeError,
   inquirySubmissionSchema,
-  inquiryTestModeEnabled,
   type InquirySubmission,
 } from "./inquiry-validation.ts";
-import { getTrustedOrigins } from "./trusted-origins.ts";
+import {
+  getInquiryIntakePolicy,
+  type EnabledInquiryIntakeMode,
+} from "./inquiry-intake-policy.ts";
 
 export const MAX_INQUIRY_BODY_BYTES = 16 * 1024;
 type AcceptInquiry = (
   input: InquirySubmission,
   identity: { clientHash: string; payloadHash: string },
+  mode: EnabledInquiryIntakeMode,
 ) => Promise<void>;
 
 function response(body: object, status: number) {
@@ -71,23 +74,15 @@ export async function handleInquiryRequest(
   accept: AcceptInquiry,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<Response> {
-  if (!inquiryTestModeEnabled(env)) {
+  const policy = getInquiryIntakePolicy(request.headers.get("host"), env);
+  if (policy.mode === "off") {
     return response(
       { error: "Online-Anfragen sind derzeit nicht verfügbar." },
       503,
     );
   }
   try {
-    const origins = getTrustedOrigins(env.NODE_ENV === "production");
-    if (
-      env.VERCEL === "1" &&
-      env.VERCEL_ENV === "preview" &&
-      env.VERCEL_URL &&
-      /^[a-z0-9-]+\.vercel\.app$/.test(env.VERCEL_URL)
-    ) {
-      origins.push(`https://${env.VERCEL_URL}`);
-    }
-    if (!origins.includes(request.headers.get("origin") ?? "")) {
+    if (request.headers.get("origin") !== policy.origin) {
       return response({ error: "Nicht erlaubter Anfrageursprung." }, 403);
     }
     if (
@@ -99,12 +94,6 @@ export async function handleInquiryRequest(
     ) {
       return response({ error: "Bitte senden Sie JSON-Daten." }, 415);
     }
-    const secret = env.INQUIRY_HASH_SECRET;
-    if (!secret || secret.length < 32) {
-      throw new Error(
-        "INQUIRY_HASH_SECRET must contain at least 32 characters.",
-      );
-    }
     let address: string;
     if (env.VERCEL === "1") {
       const forwarded = request.headers.get("x-vercel-forwarded-for")?.trim();
@@ -114,19 +103,15 @@ export async function handleInquiryRequest(
       }
       address =
         version === 6 ? new URL(`http://[${forwarded}]`).hostname : forwarded;
-    } else if (
-      (env.NODE_ENV === "development" || env.NODE_ENV === "test") &&
-      request.headers.get("origin") === "http://localhost:3000"
-    ) {
+    } else {
       // Local requests share one conservative quota; arbitrary forwarded headers are never trusted.
       address = "local-development";
-    } else {
-      throw new Error(
-        "Inquiry client-address trust is not configured for this deployment.",
-      );
     }
     const input = inquirySubmissionSchema.parse(await readBoundedJson(request));
-    if (!input.fields.email.toLowerCase().endsWith(".invalid")) {
+    if (
+      policy.mode === "synthetic" &&
+      !input.fields.email.toLowerCase().endsWith(".invalid")
+    ) {
       return response(
         {
           error:
@@ -136,7 +121,7 @@ export async function handleInquiryRequest(
       );
     }
     const hash = (value: string) =>
-      createHmac("sha256", secret).update(value).digest("hex");
+      createHmac("sha256", policy.secret).update(value).digest("hex");
     const clientHash = hash(`client\0${address}`);
     const { phone, preferredDate, ...fields } = input.fields;
     const payloadHash = hash(
@@ -151,7 +136,7 @@ export async function handleInquiryRequest(
         serviceTopic: input.serviceTopic,
       })}`,
     );
-    await accept(input, { clientHash, payloadHash });
+    await accept(input, { clientHash, payloadHash }, policy.mode);
     return response({ ok: true }, 202);
   } catch (error) {
     if (error instanceof ZodError) {

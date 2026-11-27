@@ -4,6 +4,13 @@
 - **Branch / revision:** `test/backend-integration-and-release` / `466f70e`
   **Checklist reviewed:** [Checklist.md](./Checklist.md), cross-checked with the [implemented-sections test guide](./Implemented-Sections-Test-Guide.md), [README](../README.md), and [operations runbook](./Operations-and-Recovery-Runbook.md).
 
+## Real inquiry intake: Phase 4B local verification
+
+- [x] CONTACT-001 technical preparation: added a versioned German privacy draft and direct form link, replaced consent wording with acknowledgement, and documented the proposed retention schedule and operator-only dry run, deletion, and restore procedure in the [runbook](./Operations-and-Recovery-Runbook.md#inquiry-privacy-retention-and-operator-erasure-phase-4). The notice, legal basis, retention and processor/transfer arrangements are not approved.
+- [x] CONTACT-002 technical preparation: shared off/synthetic/live policy, native POST plus hydration guard, and atomic live inquiry intake without notification rows. The final live write succeeded with the proposed column grants and no notification write grant in a disposable database. No schema change is needed.
+- [x] Local verification: source suite, 32 isolated database tests plus a final 26-test query-suite rerun, TypeScript, ESLint, Prisma and optimized build passed. Chromium verified JavaScript-off and delayed hydration, acknowledgement validation, and synthetic POST submission without changing the URL. The erasure rehearsal verified rollback, cascaded note/outbox deletion, and vehicle preservation. Temporary database and local server were removed.
+- [ ] Phase 4C: obtain qualified review and owner approval, rehearse hosted behavior and verify indexing safeguards, then obtain separate authorization for Production grants, configuration and deployment. No Production change or activation was performed.
+
 ## Leads status management: Phase 3 release
 
 - LEADS-002 adds New, In progress, and Closed to the staff inbox. Existing and newly received inquiries default to New; viewing a lead does not change it. Staff explicitly save status changes in the detail panel and can reopen closed items.

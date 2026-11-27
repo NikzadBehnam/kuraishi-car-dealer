@@ -637,14 +637,16 @@ function LeadDetailSheet({
             </DetailSection>
 
             <InquiryNotesSection lead={lead} />
-            <details className="rounded border p-3 text-sm">
-              <summary className="cursor-pointer font-medium">
-                Email delivery details
-              </summary>
-              <div className="mt-3">
-                <NotificationDeliverySection lead={lead} />
-              </div>
-            </details>
+            {lead.delivery && (
+              <details className="rounded border p-3 text-sm">
+                <summary className="cursor-pointer font-medium">
+                  Email delivery details
+                </summary>
+                <div className="mt-3">
+                  <NotificationDeliverySection delivery={lead.delivery} />
+                </div>
+              </details>
+            )}
           </div>
         </ScrollArea>
       </SheetContent>
@@ -838,51 +840,46 @@ function InquiryNoteEntry({ note }: { note: AdminInquiryNote }) {
   );
 }
 
-function NotificationDeliverySection({ lead }: { lead: AdminInquiryDetail }) {
-  const delivery = lead.delivery;
+function NotificationDeliverySection({
+  delivery,
+}: {
+  delivery: NonNullable<AdminInquiryDetail["delivery"]>;
+}) {
   return (
     <DetailSection title="Email notification">
-      {!delivery ? (
-        <p className="text-muted-foreground text-sm">
-          Delivery state was not recorded for this inquiry.
-        </p>
-      ) : (
-        <div className="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <p className="text-muted-foreground text-xs font-bold">Status</p>
-            <div className="mt-1">
-              <DeliveryBadge status={delivery.status} />
-            </div>
+      <div className="grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <p className="text-muted-foreground text-xs font-bold">Status</p>
+          <div className="mt-1">
+            <DeliveryBadge status={delivery.status} />
           </div>
-          <Info label="Attempts" value={String(delivery.attemptCount)} />
-          {delivery.status === "sent" && delivery.sentAt && (
-            <p className="text-muted-foreground text-sm sm:col-span-2">
-              The provider accepted the request at{" "}
-              {formatDateTime(delivery.sentAt)}. Inbox delivery is not
-              confirmed.
-            </p>
-          )}
-          {delivery.status === "retry" && (
-            <>
-              <Info
-                label="Next retry"
-                value={formatDateTime(delivery.nextAttemptAt)}
-              />
-              <p className="text-muted-foreground text-sm sm:col-span-2">
-                A retry is pending. Automatic worker scheduling is not
-                configured.
-              </p>
-            </>
-          )}
-          {delivery.status === "failed" && (
-            <p role="status" className="text-destructive text-sm sm:col-span-2">
-              {delivery.lastErrorCode
-                ? deliveryErrorMessages[delivery.lastErrorCode]
-                : "Notification delivery failed."}
-            </p>
-          )}
         </div>
-      )}
+        <Info label="Attempts" value={String(delivery.attemptCount)} />
+        {delivery.status === "sent" && delivery.sentAt && (
+          <p className="text-muted-foreground text-sm sm:col-span-2">
+            The provider accepted the request at{" "}
+            {formatDateTime(delivery.sentAt)}. Inbox delivery is not confirmed.
+          </p>
+        )}
+        {delivery.status === "retry" && (
+          <>
+            <Info
+              label="Next retry"
+              value={formatDateTime(delivery.nextAttemptAt)}
+            />
+            <p className="text-muted-foreground text-sm sm:col-span-2">
+              A retry is pending. Automatic worker scheduling is not configured.
+            </p>
+          </>
+        )}
+        {delivery.status === "failed" && (
+          <p role="status" className="text-destructive text-sm sm:col-span-2">
+            {delivery.lastErrorCode
+              ? deliveryErrorMessages[delivery.lastErrorCode]
+              : "Notification delivery failed."}
+          </p>
+        )}
+      </div>
     </DetailSection>
   );
 }

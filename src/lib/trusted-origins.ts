@@ -15,7 +15,10 @@ export function getTrustedOrigins(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ) {
   if (isVercelPreview(env)) {
-    const origin = env.BETTER_AUTH_URL;
+    const origin =
+      env.BETTER_AUTH_URL === "auto"
+        ? env.VERCEL_URL && `https://${env.VERCEL_URL}`
+        : env.BETTER_AUTH_URL;
     return origin && previewOriginPattern.test(origin) ? [origin] : [];
   }
 

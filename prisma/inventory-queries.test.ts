@@ -29,6 +29,7 @@ import {
   inventoryFixtures,
 } from "./inventory-fixtures.ts";
 import { createInventoryTestDatabase } from "./inventory-test-client.ts";
+import { withLeadsTestRuntime } from "./inventory-test-runtime.ts";
 import { inquiryPrivacyNotice } from "../src/content/de/inquiry-privacy.ts";
 import { dealershipDate } from "../src/lib/business-date.ts";
 import {
@@ -2156,6 +2157,145 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       await queries.getRelatedVehicles({ id: `missing-${prefix}` }),
       null,
     );
+  });
+
+  it("reads and notes Leads through a restricted runtime login without outbox write or schema privileges", async () => {
+    const requestId = randomUUID();
+    inquiryKeys.push(requestId);
+    const identity = createHash("sha256").update(requestId).digest("hex");
+    inquiryClients.push(identity);
+    await inquiryIntake.acceptInquiry(
+      {
+        requestId,
+        fields: {
+          name: "Restricted Runtime Visitor",
+          email: "restricted-runtime@example.invalid",
+          appointmentType: "Fahrzeugbewertung",
+          message: "Synthetic least privilege fixture",
+          consent: true,
+        },
+        vehicleSlug: null,
+        serviceTopic: "fahrzeugankauf",
+        website: "",
+        privacyNoticeVersion: inquiryPrivacyNotice.version,
+      },
+      { clientHash: identity, payloadHash: identity },
+    );
+    const inquiry = await prisma.inquiry.findUniqueOrThrow({
+      where: { submissionKey: requestId },
+    });
+    assert.equal(inquiry.serviceTopic, "fahrzeugankauf");
+    session = { user: { role: "user", id: actorId } };
+    try {
+      await withLeadsTestRuntime(async (runtime) => {
+        const list = await adminInquiryQueries.getAdminInquiryPage({}, runtime);
+        assert.equal(
+          list.items.find(({ id }) => id === inquiry.id)?.deliveryStatus,
+          "disabled",
+        );
+        const search = await adminInquiryQueries.getAdminInquiryPage(
+          { q: "restricted-runtime@example.invalid", lead: inquiry.id },
+          runtime,
+        );
+        assert.equal(search.total, 1);
+        assert.equal(search.items[0]?.id, inquiry.id);
+        assert.equal(search.selectedInquiry?.serviceTopic, "Fahrzeugankauf");
+        assert.equal(search.selectedInquiry?.delivery?.status, "disabled");
+        assert.deepEqual(
+          await adminInquiryNotes.addAdminInquiryNote(
+            {
+              inquiryId: inquiry.id,
+              content: "Restricted login staff note.",
+            },
+            runtime,
+          ),
+          { ok: true },
+        );
+        const detail = await adminInquiryQueries.getAdminInquiryPage(
+          { lead: inquiry.id },
+          runtime,
+        );
+        assert.equal(
+          detail.selectedInquiry?.notes[0]?.content,
+          "Restricted login staff note.",
+        );
+
+        const permissionError = z.object({
+          driverAdapterError: z.object({
+            cause: z.object({ originalCode: z.literal("42501") }),
+          }),
+        });
+        const denied = (error: unknown) =>
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          permissionError.safeParse(error.meta).success;
+        await assert.rejects(
+          runtime.$queryRaw`SELECT "providerMessageId" FROM "InquiryNotification"`,
+          denied,
+        );
+        await assert.rejects(
+          runtime.$queryRaw`EXPLAIN INSERT INTO "InquiryNotification" ("id") VALUES ('forbidden')`,
+          denied,
+        );
+        await assert.rejects(
+          runtime.$queryRaw`EXPLAIN UPDATE "InquiryNotification" SET "status" = 'disabled'`,
+          denied,
+        );
+        await assert.rejects(
+          runtime.$queryRaw`EXPLAIN DELETE FROM "InquiryNotification"`,
+          denied,
+        );
+        await assert.rejects(
+          runtime.$transaction(
+            async (tx) => {
+              await tx.$executeRaw`CREATE TABLE public.leads_test_forbidden (id integer)`;
+              throw new Error(
+                "Restricted runtime unexpectedly created a table.",
+              );
+            },
+            { maxWait: 10_000, timeout: 10_000 },
+          ),
+          denied,
+        );
+        const [privileges] = await runtime.$queryRaw<
+          {
+            elevated: boolean;
+            migrations: boolean;
+            rateLimit: boolean;
+            createSchema: boolean;
+            readableOutboxColumns: string[];
+          }[]
+        >`
+        SELECT (rolsuper OR rolcreaterole OR rolcreatedb OR rolbypassrls) AS elevated,
+          has_table_privilege(current_user, 'public._prisma_migrations', 'SELECT') AS migrations,
+          has_table_privilege(current_user, 'public."InquiryRateLimit"', 'SELECT, INSERT, UPDATE, DELETE') AS "rateLimit",
+          has_database_privilege(current_user, current_database(), 'CREATE') AS "createSchema",
+          (SELECT array_agg(attname::text ORDER BY attname::text COLLATE "C")
+            FROM pg_attribute
+            WHERE attrelid = 'public."InquiryNotification"'::regclass
+              AND attnum > 0 AND NOT attisdropped
+              AND has_column_privilege(current_user, attrelid, attnum, 'SELECT')
+          ) AS "readableOutboxColumns"
+        FROM pg_roles WHERE rolname = current_user
+      `;
+        assert.deepEqual(privileges, {
+          elevated: false,
+          migrations: false,
+          rateLimit: false,
+          createSchema: false,
+          readableOutboxColumns: [
+            "attemptCount",
+            "id",
+            "inquiryId",
+            "lastErrorCode",
+            "nextAttemptAt",
+            "sentAt",
+            "status",
+          ],
+        });
+      });
+    } finally {
+      await prisma.inquiry.delete({ where: { id: inquiry.id } });
+    }
   });
 
   it("accepts each inquiry type durably and enforces five new requests with idempotent retries", async () => {

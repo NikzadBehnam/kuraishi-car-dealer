@@ -14,6 +14,7 @@ const inquiry: AdminInquiryDetailQueryRow = {
   id: "cm123safe",
   source: "test_drive",
   requestedService: "test_drive",
+  serviceTopic: null,
   customerName: "Synthetic Staff Test",
   customerEmail: "synthetic@example.invalid",
   customerPhone: null,

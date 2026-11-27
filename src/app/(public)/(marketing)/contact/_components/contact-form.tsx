@@ -12,6 +12,10 @@ import {
 import { formContent } from "@/content/de/forms";
 import { dealershipDate } from "@/lib/business-date";
 import { inquiryAppointmentTypes } from "@/lib/inquiry-validation";
+import {
+  inquiryServiceTopics,
+  type InquiryServiceTopic,
+} from "@/lib/inquiry-service-topics";
 import { inquiryPrivacyNotice } from "@/content/de/inquiry-privacy";
 import { publicRoutes, routeBuilders } from "@/config/routes.config";
 import type { PublicVehicleInquiryDTO } from "@/types/inventory";
@@ -29,15 +33,18 @@ export function ContactForm({
   vehicle,
   contextError,
   appointmentType,
+  initialServiceTopic,
 }: {
   enabled: boolean;
   vehicle: PublicVehicleInquiryDTO | null;
   contextError: string | null;
   appointmentType: ContactFormValues["appointmentType"];
+  initialServiceTopic?: InquiryServiceTopic;
 }) {
   const [submitted, setSubmitted] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [website, setWebsite] = useState("");
+  const [serviceTopic, setServiceTopic] = useState(initialServiceTopic);
   const retry = useRef<{ fingerprint: string; key: string } | null>(null);
   const inFlight = useRef(false);
   const {
@@ -64,6 +71,7 @@ export function ContactForm({
       const payload = {
         fields,
         vehicleSlug: vehicle?.slug ?? null,
+        serviceTopic,
         website,
         privacyNoticeVersion: inquiryPrivacyNotice.version,
       };
@@ -175,6 +183,12 @@ export function ContactForm({
           </Link>
         </div>
       ) : null}
+      {!contextError && serviceTopic && (
+        <p className="rounded-xl border p-4 text-sm">
+          Servicethema:{" "}
+          <strong>{inquiryServiceTopics[serviceTopic].title}</strong>
+        </p>
+      )}
       <div
         className="absolute -left-[10000px] size-px overflow-hidden"
         aria-hidden="true"
@@ -203,7 +217,19 @@ export function ContactForm({
               name="appointmentType"
               control={control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => {
+                    if (
+                      serviceTopic &&
+                      value !==
+                        inquiryServiceTopics[serviceTopic].appointmentType
+                    ) {
+                      setServiceTopic(undefined);
+                    }
+                    field.onChange(value);
+                  }}
+                >
                   <SelectTrigger
                     id="appointment-type"
                     ref={field.ref}

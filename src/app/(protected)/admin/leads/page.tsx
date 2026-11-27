@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { adminRoutes } from "@/config/admin-routes.config";
 import { getAdminInquiryPage } from "@/lib/admin-inquiry-queries";
 import {
-  adminInquirySearchParamsSchema,
+  adminInquiryRouteParamsSchema,
   buildAdminInquiriesHref,
 } from "@/lib/admin-inquiry-validation";
 import { LeadsInbox } from "./_components/leads-inbox";
@@ -16,24 +16,35 @@ export default async function AdminLeadsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const rawSearchParams = await searchParams;
-  const parsed = adminInquirySearchParamsSchema.safeParse(rawSearchParams);
+  if ("q" in rawSearchParams) {
+    const legacy = adminInquiryRouteParamsSchema.safeParse({
+      page: rawSearchParams.page,
+      lead: rawSearchParams.lead,
+    });
+    redirect(
+      legacy.success
+        ? buildAdminInquiriesHref(legacy.data.page, legacy.data.lead)
+        : adminRoutes.leads,
+    );
+  }
+  const parsed = adminInquiryRouteParamsSchema.safeParse(rawSearchParams);
   if (!parsed.success) return <InvalidLeadFilters />;
 
   const result = await getAdminInquiryPage(rawSearchParams);
   const totalPages = Math.max(1, result.totalPages);
   if (result.page > totalPages) {
-    redirect(buildAdminInquiriesHref(result.search, totalPages));
+    redirect(
+      buildAdminInquiriesHref(totalPages, result.requestedLeadId ?? undefined),
+    );
   }
 
   return (
     <LeadsInbox
-      key={`${result.search}:${result.page}`}
       leads={result.items}
       total={result.total}
       page={result.page}
       pageSize={result.pageSize}
       totalPages={totalPages}
-      search={result.search}
       selectedInquiry={result.selectedInquiry}
       requestedLeadId={result.requestedLeadId}
     />

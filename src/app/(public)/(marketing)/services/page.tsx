@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { publicRoutes } from "@/config/routes.config";
 import { createPublicMetadata } from "@/lib/metadata";
+import { inquiryServiceTopics } from "@/lib/inquiry-service-topics";
 
 export async function generateMetadata() {
   return createPublicMetadata(
@@ -12,14 +13,6 @@ export async function generateMetadata() {
     publicRoutes.services,
   );
 }
-const services = [
-  { title: "Inzahlungnahme", appointmentType: "Fahrzeugbewertung" },
-  { title: "Fahrzeugankauf", appointmentType: "Fahrzeugbewertung" },
-  { title: "Garantie", appointmentType: "Beratung" },
-  { title: "Versicherung", appointmentType: "Beratung" },
-  { title: "Zulassungsservice", appointmentType: "Beratung" },
-  { title: "Werkstatt", appointmentType: "Werkstatt" },
-];
 export default function ServicesPage() {
   return (
     <>
@@ -29,8 +22,8 @@ export default function ServicesPage() {
         breadcrumb="Services"
       />
       <div className="site-container grid gap-4 py-10 md:grid-cols-2 lg:grid-cols-3">
-        {services.map((service, index) => (
-          <Card className="rounded-none p-6" key={index}>
+        {Object.entries(inquiryServiceTopics).map(([id, service], index) => (
+          <Card className="rounded-none p-6" key={id}>
             <p className="eyebrow">0{index + 1}</p>
             <h2 className="mt-3 text-xl font-extrabold">{service.title}</h2>
             <p className="text-muted-foreground mt-3">
@@ -39,7 +32,7 @@ export default function ServicesPage() {
             </p>
             <Link
               className="text-accent mt-5 inline-flex items-center gap-2 font-bold"
-              href={`${publicRoutes.contact}?service=${encodeURIComponent(service.appointmentType)}`}
+              href={`${publicRoutes.contact}?service=${id}`}
             >
               Anfrage senden <ArrowRight className="size-4" />
             </Link>

@@ -6,6 +6,10 @@ import type {
 } from "../generated/prisma/enums.ts";
 import { dealershipDate } from "./business-date.ts";
 import { inventorySlugSchema } from "./inventory-validation.ts";
+import {
+  inquiryServiceTopics,
+  inquiryServiceTopicSchema,
+} from "./inquiry-service-topics.ts";
 
 export const inquiryAppointmentTypes = [
   "Probefahrt",
@@ -102,25 +106,39 @@ export const inquiryFieldsSchema = z.strictObject({
 
 export type InquiryFields = z.infer<typeof inquiryFieldsSchema>;
 
-export const inquirySubmissionSchema = z.strictObject({
-  fields: inquiryFieldsSchema.extend({
-    // A replay of an accepted request may arrive after its preferred date.
-    preferredDate: z
-      .string()
-      .trim()
-      .refine(
-        (value) => value === "" || isCalendarDate(value),
-        "Bitte geben Sie ein gültiges Datum ein.",
-      )
-      .optional(),
-  }),
-  vehicleSlug: inventorySlugSchema.nullable(),
-  requestId: z.uuid({
-    error: "Ungültiger Anfrageschlüssel. Bitte laden Sie die Seite neu.",
-  }),
-  website: z.literal("", { error: "Die Anfrage konnte nicht geprüft werden." }),
-  privacyNoticeVersion: z.string().min(1).max(64),
-});
+export const inquirySubmissionSchema = z
+  .strictObject({
+    fields: inquiryFieldsSchema.extend({
+      // A replay of an accepted request may arrive after its preferred date.
+      preferredDate: z
+        .string()
+        .trim()
+        .refine(
+          (value) => value === "" || isCalendarDate(value),
+          "Bitte geben Sie ein gültiges Datum ein.",
+        )
+        .optional(),
+    }),
+    vehicleSlug: inventorySlugSchema.nullable(),
+    serviceTopic: inquiryServiceTopicSchema.optional(),
+    requestId: z.uuid({
+      error: "Ungültiger Anfrageschlüssel. Bitte laden Sie die Seite neu.",
+    }),
+    website: z.literal("", {
+      error: "Die Anfrage konnte nicht geprüft werden.",
+    }),
+    privacyNoticeVersion: z.string().min(1).max(64),
+  })
+  .refine(
+    ({ serviceTopic, fields }) =>
+      !serviceTopic ||
+      inquiryServiceTopics[serviceTopic].appointmentType ===
+        fields.appointmentType,
+    {
+      path: ["serviceTopic"],
+      message: "Das Servicethema passt nicht zur Terminart.",
+    },
+  );
 
 export type InquirySubmission = z.infer<typeof inquirySubmissionSchema>;
 
@@ -136,7 +154,10 @@ export class InquiryIntakeError extends Error {
 
 export const inquiryContactParamsSchema = z.object({
   vehicle: inventorySlugSchema.optional(),
-  service: z.enum(inquiryAppointmentTypes).optional(),
+  service: z
+    .enum(inquiryAppointmentTypes)
+    .or(inquiryServiceTopicSchema)
+    .optional(),
 });
 
 export function inquiryTestModeEnabled(

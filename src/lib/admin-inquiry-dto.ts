@@ -13,6 +13,10 @@ import type {
   AdminLeadSource,
 } from "../types/admin.ts";
 import type { InquiryNotificationErrorCode } from "./inquiry-notification-retry.ts";
+import {
+  inquiryServiceTopics,
+  inquiryServiceTopicSchema,
+} from "./inquiry-service-topics.ts";
 
 const notificationErrorCodeSchema = z.enum([
   "provider_rejected",
@@ -76,6 +80,7 @@ export interface AdminInquiryDetailQueryRow extends Omit<
   AdminInquiryQueryRow,
   "notification"
 > {
+  serviceTopic: string | null;
   message: string;
   preferredDate: Date | null;
   updatedAt: Date;
@@ -153,6 +158,12 @@ export function serializeAdminInquiryDetail(
   const summary = serializeAdminInquiryListItem(row);
   return {
     ...summary,
+    serviceTopic:
+      row.serviceTopic === null
+        ? null
+        : inquiryServiceTopics[
+            inquiryServiceTopicSchema.parse(row.serviceTopic)
+          ].title,
     message: row.message,
     preferredDate: row.preferredDate?.toISOString().slice(0, 10) ?? null,
     updatedAt: row.updatedAt.toISOString(),

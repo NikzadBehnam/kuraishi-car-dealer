@@ -148,6 +148,7 @@ export async function handleInquiryRequest(
         },
         vehicleSlug: input.vehicleSlug,
         privacyNoticeVersion: input.privacyNoticeVersion,
+        serviceTopic: input.serviceTopic,
       })}`,
     );
     await accept(input, { clientHash, payloadHash });

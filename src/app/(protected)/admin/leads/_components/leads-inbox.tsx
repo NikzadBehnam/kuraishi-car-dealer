@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Inbox, Mail, Phone, Search } from "lucide-react";
 
@@ -12,10 +12,15 @@ import type {
   AdminInquiryNote,
 } from "@/types/admin";
 import type { InquiryNotificationErrorCode } from "@/lib/inquiry-notification-retry";
-import { addAdminInquiryNoteAction } from "../actions";
-import { adminRoutes } from "@/config/admin-routes.config";
+import {
+  addAdminInquiryNoteAction,
+  searchAdminInquiriesAction,
+} from "../actions";
 import { formatMileage } from "@/lib/formatters";
-import { buildAdminInquiriesHref } from "@/lib/admin-inquiry-validation";
+import {
+  buildAdminInquiriesHref,
+  MAX_ADMIN_INQUIRY_SEARCH_LENGTH,
+} from "@/lib/admin-inquiry-validation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,12 +80,11 @@ const businessDate = new Intl.DateTimeFormat("en-GB", {
 });
 
 export function LeadsInbox({
-  leads,
-  total,
-  page,
+  leads: initialLeads,
+  total: initialTotal,
+  page: routePage,
   pageSize,
-  totalPages,
-  search,
+  totalPages: initialTotalPages,
   selectedInquiry,
   requestedLeadId,
 }: {
@@ -89,14 +93,26 @@ export function LeadsInbox({
   page: number;
   pageSize: number;
   totalPages: number;
-  search: string;
   selectedInquiry: AdminInquiryDetail | null;
   requestedLeadId: string | null;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const searchParamsString = searchParams.toString();
+  const [searchValue, setSearchValue] = useState("");
+  const [filtered, setFiltered] = useState<{
+    search: string;
+    leads: AdminInquiryListItem[];
+    total: number;
+    page: number;
+    totalPages: number;
+  } | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchPending, startSearch] = useTransition();
+  const { leads, total, page, totalPages } = filtered ?? {
+    leads: initialLeads,
+    total: initialTotal,
+    page: routePage,
+    totalPages: initialTotalPages,
+  };
   const range =
     total === 0
       ? { start: 0, end: 0 }
@@ -106,16 +122,42 @@ export function LeadsInbox({
         };
 
   function openLead(leadId: string) {
-    const params = new URLSearchParams(searchParamsString);
-    params.set("lead", leadId);
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(buildAdminInquiriesHref(routePage, leadId));
   }
 
   function closeLead() {
-    const params = new URLSearchParams(searchParamsString);
-    params.delete("lead");
-    const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
+    router.push(buildAdminInquiriesHref(routePage));
+  }
+
+  function searchLeads(query: string, nextPage = 1) {
+    const search = query.trim();
+    setSearchError(null);
+    if (!search) {
+      setFiltered(null);
+      setSearchValue("");
+      if (routePage !== 1) {
+        router.push(buildAdminInquiriesHref(1, requestedLeadId ?? undefined));
+      }
+      return;
+    }
+    startSearch(async () => {
+      try {
+        let result = await searchAdminInquiriesAction(search, String(nextPage));
+        if (result.ok && result.page > result.totalPages) {
+          result = await searchAdminInquiriesAction(
+            search,
+            String(result.totalPages),
+          );
+        }
+        if (!result.ok) {
+          setSearchError(result.message);
+          return;
+        }
+        setFiltered({ ...result, search });
+      } catch {
+        setSearchError("The search could not be completed. Please try again.");
+      }
+    });
   }
 
   return (
@@ -134,8 +176,7 @@ export function LeadsInbox({
         </div>
 
         <form
-          action={pathname}
-          method="get"
+          action={() => searchLeads(searchValue)}
           className="mt-4 flex flex-wrap items-center gap-2"
         >
           <div className="relative min-w-56 flex-1">
@@ -144,23 +185,34 @@ export function LeadsInbox({
               aria-hidden="true"
             />
             <Input
-              name="q"
-              defaultValue={search}
-              maxLength={100}
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              maxLength={MAX_ADMIN_INQUIRY_SEARCH_LENGTH}
+              autoComplete="off"
               placeholder="Search customer, contact, vehicle, message"
               aria-label="Search leads"
               className="bg-background pl-9"
             />
           </div>
-          <Button type="submit" variant="outline">
-            Search
+          <Button type="submit" variant="outline" disabled={searchPending}>
+            {searchPending ? "Searching..." : "Search"}
           </Button>
-          {search && (
-            <Button asChild variant="ghost">
-              <Link href={adminRoutes.leads}>Clear</Link>
+          {(searchValue || filtered) && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={searchPending}
+              onClick={() => searchLeads("")}
+            >
+              Clear
             </Button>
           )}
         </form>
+        {searchError && (
+          <p role="alert" className="text-destructive text-sm">
+            {searchError}
+          </p>
+        )}
       </Card>
 
       <Card className="min-w-0 overflow-hidden rounded-[var(--radius-sm)]">
@@ -204,7 +256,7 @@ export function LeadsInbox({
             </div>
           </>
         ) : (
-          <EmptyLeadsState hasSearch={Boolean(search)} />
+          <EmptyLeadsState hasSearch={Boolean(filtered)} />
         )}
       </Card>
 
@@ -213,11 +265,18 @@ export function LeadsInbox({
           aria-label="Lead inbox pages"
           className="flex items-center justify-center gap-3"
         >
-          {page > 1 ? (
+          {filtered ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={searchPending || page <= 1}
+              onClick={() => searchLeads(filtered.search, page - 1)}
+            >
+              Previous
+            </Button>
+          ) : page > 1 ? (
             <Button asChild variant="outline" size="sm">
-              <Link href={buildAdminInquiriesHref(search, page - 1)}>
-                Previous
-              </Link>
+              <Link href={buildAdminInquiriesHref(page - 1)}>Previous</Link>
             </Button>
           ) : (
             <Button disabled variant="outline" size="sm">
@@ -227,9 +286,18 @@ export function LeadsInbox({
           <span className="text-muted-foreground text-sm">
             Page {page} of {totalPages}
           </span>
-          {page < totalPages ? (
+          {filtered ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={searchPending || page >= totalPages}
+              onClick={() => searchLeads(filtered.search, page + 1)}
+            >
+              Next
+            </Button>
+          ) : page < totalPages ? (
             <Button asChild variant="outline" size="sm">
-              <Link href={buildAdminInquiriesHref(search, page + 1)}>Next</Link>
+              <Link href={buildAdminInquiriesHref(page + 1)}>Next</Link>
             </Button>
           ) : (
             <Button disabled variant="outline" size="sm">
@@ -256,6 +324,19 @@ export function LeadsInbox({
         key={selectedInquiry?.id}
         lead={selectedInquiry}
         open={Boolean(requestedLeadId && selectedInquiry)}
+        onNoteSaved={(id) => {
+          setFiltered(
+            (current) =>
+              current && {
+                ...current,
+                leads: current.leads.map((lead) =>
+                  lead.id === id
+                    ? { ...lead, notesCount: lead.notesCount + 1 }
+                    : lead,
+                ),
+              },
+          );
+        }}
         onOpenChange={(open) => {
           if (!open) closeLead();
         }}
@@ -356,10 +437,12 @@ function LeadDetailSheet({
   lead,
   open,
   onOpenChange,
+  onNoteSaved,
 }: {
   lead: AdminInquiryDetail | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onNoteSaved: (id: string) => void;
 }) {
   if (!lead) return null;
 
@@ -435,6 +518,9 @@ function LeadDetailSheet({
             <DetailSection title="Request">
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <Info label="Request type" value={lead.requestedService} />
+                {lead.serviceTopic && (
+                  <Info label="Requested service" value={lead.serviceTopic} />
+                )}
                 <Info
                   label="Preferred date"
                   value={
@@ -457,7 +543,10 @@ function LeadDetailSheet({
             </DetailSection>
 
             <NotificationDeliverySection lead={lead} />
-            <InquiryNotesSection lead={lead} />
+            <InquiryNotesSection
+              lead={lead}
+              onSaved={() => onNoteSaved(lead.id)}
+            />
           </div>
         </ScrollArea>
       </SheetContent>
@@ -465,7 +554,13 @@ function LeadDetailSheet({
   );
 }
 
-function InquiryNotesSection({ lead }: { lead: AdminInquiryDetail }) {
+function InquiryNotesSection({
+  lead,
+  onSaved,
+}: {
+  lead: AdminInquiryDetail;
+  onSaved: () => void;
+}) {
   const router = useRouter();
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -488,6 +583,7 @@ function InquiryNotesSection({ lead }: { lead: AdminInquiryDetail }) {
         }
         setContent("");
         setFeedback("Note saved.");
+        onSaved();
         router.refresh();
       } catch {
         setError(

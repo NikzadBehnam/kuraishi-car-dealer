@@ -84,6 +84,7 @@ export interface AdminInquiryNote {
 }
 
 export interface AdminInquiryDetail extends AdminInquiryListItem {
+  serviceTopic: string | null;
   message: string;
   preferredDate: string | null;
   updatedAt: string;

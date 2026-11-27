@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  adminInquiryRouteParamsSchema,
   adminInquirySearchParamsSchema,
   buildAdminInquiryDetailHref,
   buildAdminInquiriesHref,
@@ -54,14 +55,18 @@ describe("admin inquiry search parameters", () => {
       "max",
       "mustermann",
     ]);
-    assert.equal(buildAdminInquiriesHref("", 1), "/admin/leads");
+    assert.equal(buildAdminInquiriesHref(1), "/admin/leads");
+    assert.equal(
+      adminInquiryRouteParamsSchema.safeParse({ q: "private" }).success,
+      false,
+    );
     assert.equal(
       buildAdminInquiryDetailHref("cm123safe"),
       "/admin/leads?lead=cm123safe",
     );
     assert.equal(
-      buildAdminInquiriesHref("Müller & Sohn", 3),
-      "/admin/leads?q=M%C3%BCller+%26+Sohn&page=3",
+      buildAdminInquiriesHref(3, "cm123safe"),
+      "/admin/leads?page=3&lead=cm123safe",
     );
   });
 });

@@ -106,6 +106,7 @@ export async function acceptInquiry(
           customerPhone: fields.phone || null,
           message: fields.message,
           ...inquiryServiceMapping[fields.appointmentType],
+          serviceTopic: submission.serviceTopic ?? null,
           preferredDate: fields.preferredDate
             ? new Date(`${fields.preferredDate}T00:00:00.000Z`)
             : null,

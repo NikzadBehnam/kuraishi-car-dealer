@@ -11,7 +11,9 @@ const nextConfig: NextConfig = {
     // Staff account creation sends credentials as server-action arguments.
     serverFunctions: false,
     incomingRequests: {
-      ignore: [/^\/(?:login|admin\/accounts\/new|api\/auth)(?:[/?]|$)/],
+      ignore: [
+        /^\/(?:login|admin\/(?:accounts\/new|leads)|api\/auth)(?:[/?]|$)/,
+      ],
     },
   },
   images: {

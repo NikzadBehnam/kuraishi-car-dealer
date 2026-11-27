@@ -8,6 +8,11 @@ import { getDealershipPhones } from "@/lib/dealership-phones";
 import { createPublicMetadata } from "@/lib/metadata";
 import { getPublicVehicleForInquiry } from "@/lib/inventory-queries";
 import {
+  inquiryServiceTopics,
+  inquiryServiceTopicSchema,
+} from "@/lib/inquiry-service-topics";
+import {
+  inquiryAppointmentTypes,
   inquiryContactParamsSchema,
   inquiryTestModeEnabled,
 } from "@/lib/inquiry-validation";
@@ -26,6 +31,11 @@ export default async function ContactPage({
 }) {
   const settings = await getPublicDealershipSettings();
   const parsed = inquiryContactParamsSchema.safeParse(await searchParams);
+  const service = parsed.success ? parsed.data.service : undefined;
+  const topic = inquiryServiceTopicSchema.safeParse(service);
+  const appointmentType = topic.success
+    ? inquiryServiceTopics[topic.data].appointmentType
+    : (inquiryAppointmentTypes.find((type) => type === service) ?? "Beratung");
   const vehicle =
     parsed.success && parsed.data.vehicle
       ? await getPublicVehicleForInquiry(parsed.data.vehicle)
@@ -47,14 +57,12 @@ export default async function ContactPage({
           <h2 className="section-title text-3xl">Termin anfragen</h2>
           <div className="mt-7">
             <ContactForm
+              key={JSON.stringify([vehicle?.slug, service, contextError])}
               enabled={inquiryTestModeEnabled()}
               vehicle={vehicle}
               contextError={contextError}
-              appointmentType={
-                parsed.success
-                  ? (parsed.data.service ?? "Beratung")
-                  : "Beratung"
-              }
+              appointmentType={appointmentType}
+              initialServiceTopic={topic.success ? topic.data : undefined}
             />
           </div>
         </Card>

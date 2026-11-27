@@ -29,13 +29,7 @@ export const addAdminInquiryNoteSchema = z.strictObject({
     ),
 });
 
-export const adminInquirySearchParamsSchema = z.strictObject({
-  q: z
-    .string()
-    .trim()
-    .max(MAX_ADMIN_INQUIRY_SEARCH_LENGTH)
-    .refine((value) => !/[\u0000-\u001f\u007f]/.test(value))
-    .default(""),
+export const adminInquiryRouteParamsSchema = z.strictObject({
   page: z
     .string()
     .regex(/^[1-9]\d*$/)
@@ -56,6 +50,16 @@ export const adminInquirySearchParamsSchema = z.strictObject({
   lead: inventoryIdSchema.optional(),
 });
 
+export const adminInquirySearchParamsSchema =
+  adminInquiryRouteParamsSchema.extend({
+    q: z
+      .string()
+      .trim()
+      .max(MAX_ADMIN_INQUIRY_SEARCH_LENGTH)
+      .refine((value) => !/[\u0000-\u001f\u007f]/.test(value))
+      .default(""),
+  });
+
 export type AdminInquirySearchParams = z.infer<
   typeof adminInquirySearchParamsSchema
 >;
@@ -64,15 +68,14 @@ export function getAdminInquirySearchTerms(search: string): string[] {
   return search.toLocaleLowerCase("de").split(/\s+/).filter(Boolean);
 }
 
-export function buildAdminInquiriesHref(search: string, page: number): string {
+export function buildAdminInquiriesHref(page: number, lead?: string): string {
   const params = new URLSearchParams();
-  if (search) params.set("q", search);
   if (page > 1) params.set("page", String(page));
+  if (lead) params.set("lead", lead);
   const query = params.toString();
   return query ? `${adminRoutes.leads}?${query}` : adminRoutes.leads;
 }
 
 export function buildAdminInquiryDetailHref(inquiryId: string): string {
-  const params = new URLSearchParams({ lead: inquiryId });
-  return `${adminRoutes.leads}?${params.toString()}`;
+  return buildAdminInquiriesHref(1, inquiryId);
 }

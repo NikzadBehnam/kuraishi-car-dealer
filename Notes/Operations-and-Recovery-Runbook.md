@@ -785,6 +785,15 @@ The exact deployed application revision is
 
 ### Named owner access (16.15)
 
+For every Leads release, sign in as ordinary staff and verify that the
+**Leads inbox** and its list or empty state actually render. Check that the
+admin error panel is absent; the stream can return HTTP 200 even when the
+inbox fails. Perform a synthetic search and check the rendered result, the
+clean URL, and the deployment's runtime logs. Open a protected detail only
+if suitable data already exists. Never create Production fixtures for smoke
+tests; prove populated detail and note creation on a disposable database
+through the restricted login in `test:inventory-db`.
+
 **16.14 verification, 2026-11-26:** On live deployment
 `dpl_GZx9SE3v7Hv5Mb3sk4S91Rut9Vyo`, an existing ordinary staff account
 authenticated and opened Dashboard, Settings, Vehicles, Media and Leads.

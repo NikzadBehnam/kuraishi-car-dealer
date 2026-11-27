@@ -54,6 +54,7 @@ const inquiryListSelect = {
 
 const inquiryDetailSelect = {
   ...inquiryListSelect,
+  serviceTopic: true,
   message: true,
   preferredDate: true,
   updatedAt: true,

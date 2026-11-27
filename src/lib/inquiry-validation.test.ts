@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { dealershipDate } from "./business-date.ts";
+import { inquiryServiceTopics } from "./inquiry-service-topics.ts";
 import {
   inquiryAppointmentTypes,
   inquiryFieldsSchema,
@@ -20,6 +21,38 @@ const validInquiry = {
 };
 
 describe("inquiry validation", () => {
+  it("accepts every exact service with its matching type and rejects forged or contradictory context", () => {
+    const body = {
+      fields: validInquiry,
+      requestId: "e71518aa-d484-4fb9-8fad-9770520836b0",
+      vehicleSlug: "example-car",
+      website: "",
+      privacyNoticeVersion: "previous-notice",
+    };
+    for (const [serviceTopic, { appointmentType }] of Object.entries(
+      inquiryServiceTopics,
+    )) {
+      assert.equal(
+        inquiryContactParamsSchema.safeParse({ service: serviceTopic }).success,
+        true,
+      );
+      assert.equal(
+        inquirySubmissionSchema.parse({
+          ...body,
+          serviceTopic,
+          fields: { ...body.fields, appointmentType },
+        }).serviceTopic,
+        serviceTopic,
+      );
+    }
+    for (const serviceTopic of ["inzahlungnahme", "constructor", "forged"]) {
+      assert.equal(
+        inquirySubmissionSchema.safeParse({ ...body, serviceTopic }).success,
+        false,
+      );
+    }
+    assert.equal(inquirySubmissionSchema.parse(body).serviceTopic, undefined);
+  });
   it("allows calendar-valid dates in retry envelopes but rejects past dates for new intake", () => {
     const fields = { ...validInquiry, preferredDate: "2000-01-01" };
     const envelope = {

@@ -163,6 +163,7 @@ model Inquiry {
   message               String               @db.VarChar(1000)
   source                InquirySource
   requestedService      InquiryService
+  serviceTopic          String?
   preferredDate         DateTime?            @db.Date
   vehicleId             String?
   vehicle               Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: SetNull)

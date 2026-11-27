@@ -327,7 +327,7 @@ Intake is off by default and code-blocked in Production. Isolated development/Ve
    - Source coverage includes the five service/source mappings, contact/date bounds, consent, forged fields, malformed URL context, Vienna dates, Production/off gates, trusted origin/address handling, exact 16 KiB body boundaries and failure responses.
 2. **Prepare the isolated database before enabling test intake**
    - The credential rotation and isolated-target gate was satisfied for the 2026-11-20 run. The inventory migration/query suite passed **30/30** (6 migration, 24 query), exercising inquiry persistence, quotas/window reset, changed-payload conflicts, unavailable/forged vehicle references, DB failures, and simultaneous retries. No Production database was used.
-   - If rerunning `pnpm test:inventory-db`, re-confirm the credential and target are isolated and empty; it applies migrations and temporarily writes synthetic rows. Never bypass the guard.
+   - If rerunning `pnpm test:inventory-db`, re-confirm the credential and target are isolated and empty; it applies migrations and temporarily writes synthetic rows. Use a disposable database named with an `_test` or `_checks` suffix (optionally followed by a run ID), with the Better Auth baseline applied and an isolated owner allowed to create and drop a temporary role. The Leads regression seeds as the owner, connects again as a temporary restricted login with the Production Leads grants, proves allowed and denied operations, and removes that login. Never use Production credentials or bypass the guard.
    - For browser testing, use a separately verified disposable non-Production app database with the required migrations and synthetic dealership/vehicle fixtures. Do not point the running app at the DB suite's empty target while the suite runs.
    - In its ignored server environment only, set `INQUIRY_TEST_MODE=true` and a new random `INQUIRY_HASH_SECRET` of at least 32 characters. Never reuse an auth secret or commit its value. Restart the app.
    - Local testing uses `http://localhost:3000` and one shared development quota. Vercel Preview requires actual platform environment flags, the current deployment origin and its single trusted `x-vercel-forwarded-for` address; fabricated forwarding headers outside Vercel cannot create new quota identities.
@@ -341,7 +341,8 @@ Intake is off by default and code-blocked in Production. Isolated development/Ve
    - Follow a Published vehicle contact link and confirm its current title/link is displayed. Submit and verify the saved ID/title/slug snapshots match that vehicle, not client-supplied values.
    - Repeat for Reserved: context must be informational, not an available booking. Sold/private/missing slugs, repeated vehicle parameters and malformed slugs must be explicitly refused, with a link to restart general contact.
    - Open contact for an eligible vehicle, then withdraw that vehicle before submitting. Expect an explicit error and no new Inquiry; do not silently save a general inquiry.
-   - Check service CTA preselection: trade-in/purchase -> Fahrzeugbewertung, workshop -> Werkstatt, warranty/insurance/registration assistance -> Beratung.
+   - Open all six service CTAs. Check both the exact visible topic and appointment-type preselection: trade-in/purchase -> Fahrzeugbewertung, workshop -> Werkstatt, warranty/insurance/registration assistance -> Beratung. Check that changing to an incompatible type clears the topic and that the server refuses a mismatched or unknown submitted topic. Existing broad-type links still work without inventing an exact topic.
+   - For a synthetic submission, confirm `Inquiry.serviceTopic` stores the stable topic identifier separately from the appointment type and that Leads detail shows both. General and vehicle-only submissions should leave the topic null; the vehicle snapshot is independent.
 5. **Failure, retries and abuse controls**
    - Use synthetic payloads only. Reject missing consent, a nonempty hidden Website field, forged source/vehicle ID/snapshot fields, an untrusted Origin and non-JSON input.
    - Send exactly 16,384 bytes of valid JSON plus padding and then 16,385 bytes. The latter must return 413 even with omitted or falsely low Content-Length. Invalid UTF-8/JSON must fail.
@@ -350,7 +351,7 @@ Intake is off by default and code-blocked in Production. Isolated development/Ve
    - With a safe isolated failure simulation or browser request blocking, verify no false success appears, fields remain and an unchanged in-page retry retains its key. Reloading does not retain the retry key; do not claim cross-reload deduplication.
    - Verify unexpected server errors are generic to the visitor and server logs contain no submitted contact/message data. Restore safe configuration after failure simulation.
 
-Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. The isolated DB suite has passed; the browser checks above remain deferred. Use the completion record below to track them.
+Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. The full Section 09 browser retest is separate from the focused Phase 2 checks. For Phase 2 review, use the synthetic local app and verify the service topic in Leads detail, then search for a synthetic customer, paginate, and open and close a detail without the filter appearing in the URL. Reloading intentionally clears the private filter; a signed-in staff member can still open a copied Lead ID link.
 
 ## 12. Section 10.01 — Historical Resend setup (out of scope for v1)
 

@@ -16,7 +16,9 @@ export function proxy(request: NextRequest) {
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     // Lets the admin layout build a safe post-login return path; not an auth check.
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-return-path", `${pathname}${request.nextUrl.search}`);
+    const returnUrl = request.nextUrl.clone();
+    if (pathname === "/admin/leads") returnUrl.searchParams.delete("q");
+    requestHeaders.set("x-return-path", `${pathname}${returnUrl.search}`);
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 

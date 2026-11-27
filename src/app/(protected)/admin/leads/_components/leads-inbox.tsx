@@ -207,7 +207,10 @@ export function LeadsInbox({
         </div>
 
         <form
-          action={() => searchLeads(searchValue, filtered?.status)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            searchLeads(searchValue, filtered?.status);
+          }}
           className="mt-4 flex flex-wrap items-center gap-2"
         >
           <div className="relative min-w-0 flex-[1_1_16rem]">

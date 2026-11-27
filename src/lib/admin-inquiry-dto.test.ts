@@ -12,6 +12,7 @@ import {
 
 const inquiry: AdminInquiryDetailQueryRow = {
   id: "cm123safe",
+  status: "new",
   source: "test_drive",
   requestedService: "test_drive",
   serviceTopic: null,
@@ -49,6 +50,8 @@ describe("admin inquiry DTOs", () => {
     const result = serializeAdminInquiryListItem(inquiry);
     assert.equal(result.source, "test-drive");
     assert.equal(result.requestedService, "Test drive");
+    assert.equal(result.status, "new");
+    assert.equal(result.preferredDate, "2026-11-20");
     assert.equal(result.vehicle, null);
     assert.equal(result.vehicleTitleSnapshot, "Example Model Snapshot");
     assert.equal(result.vehicleSlugSnapshot, "example-model");

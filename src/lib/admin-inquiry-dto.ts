@@ -4,6 +4,7 @@ import type {
   InquiryNotificationStatus,
   InquiryService,
   InquirySource,
+  InquiryStatus,
 } from "../generated/prisma/enums.ts";
 import type {
   AdminInquiryDetail,
@@ -55,8 +56,11 @@ interface AdminInquiryNotificationDetailRow extends AdminInquiryNotificationList
 
 export interface AdminInquiryQueryRow {
   id: string;
+  status: InquiryStatus;
   source: InquirySource;
   requestedService: InquiryService;
+  serviceTopic: string | null;
+  preferredDate: Date | null;
   customerName: string;
   customerEmail: string;
   customerPhone: string | null;
@@ -80,9 +84,7 @@ export interface AdminInquiryDetailQueryRow extends Omit<
   AdminInquiryQueryRow,
   "notification"
 > {
-  serviceTopic: string | null;
   message: string;
-  preferredDate: Date | null;
   updatedAt: Date;
   notes: AdminInquiryNoteQueryRow[];
   notification: AdminInquiryNotificationDetailRow | null;
@@ -126,8 +128,16 @@ export function serializeAdminInquiryListItem(
 ): AdminInquiryListItem {
   return {
     id: row.id,
+    status: row.status,
     source: serializeAdminInquirySource(row.source),
     requestedService: serviceLabels[row.requestedService],
+    serviceTopic:
+      row.serviceTopic === null
+        ? null
+        : inquiryServiceTopics[
+            inquiryServiceTopicSchema.parse(row.serviceTopic)
+          ].title,
+    preferredDate: row.preferredDate?.toISOString().slice(0, 10) ?? null,
     customerName: row.customerName,
     customerEmail: row.customerEmail,
     customerPhone: row.customerPhone,
@@ -158,14 +168,7 @@ export function serializeAdminInquiryDetail(
   const summary = serializeAdminInquiryListItem(row);
   return {
     ...summary,
-    serviceTopic:
-      row.serviceTopic === null
-        ? null
-        : inquiryServiceTopics[
-            inquiryServiceTopicSchema.parse(row.serviceTopic)
-          ].title,
     message: row.message,
-    preferredDate: row.preferredDate?.toISOString().slice(0, 10) ?? null,
     updatedAt: row.updatedAt.toISOString(),
     notes: row.notes.map(serializeAdminInquiryNote),
     delivery: row.notification

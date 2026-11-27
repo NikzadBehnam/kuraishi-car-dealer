@@ -62,8 +62,11 @@ export interface AdminInquiryVehicle {
 
 export interface AdminInquiryListItem {
   id: string;
+  status: import("../generated/prisma/enums").InquiryStatus;
   source: AdminLeadSource;
   requestedService: string;
+  serviceTopic: string | null;
+  preferredDate: string | null;
   customerName: string;
   customerEmail: string;
   customerPhone: string | null;
@@ -84,9 +87,7 @@ export interface AdminInquiryNote {
 }
 
 export interface AdminInquiryDetail extends AdminInquiryListItem {
-  serviceTopic: string | null;
   message: string;
-  preferredDate: string | null;
   updatedAt: string;
   notes: AdminInquiryNote[];
   delivery: {

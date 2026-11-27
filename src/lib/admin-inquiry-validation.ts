@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { adminRoutes } from "../config/admin-routes.config.ts";
+import { InquiryStatus } from "../generated/prisma/enums.ts";
 import { inventoryIdSchema } from "./inventory-validation.ts";
 
 export const ADMIN_INQUIRY_PAGE_SIZE = 25;
@@ -8,6 +9,13 @@ export const MAX_ADMIN_INQUIRY_SEARCH_LENGTH = 100;
 export const MAX_ADMIN_INQUIRY_NOTE_LENGTH = 2000;
 
 const maximumOffset = 2_147_483_647;
+
+export const inquiryStatusSchema = z.enum(InquiryStatus);
+
+export const updateAdminInquiryStatusSchema = z.strictObject({
+  inquiryId: inventoryIdSchema,
+  status: inquiryStatusSchema,
+});
 
 export const addAdminInquiryNoteSchema = z.strictObject({
   inquiryId: z
@@ -52,6 +60,7 @@ export const adminInquiryRouteParamsSchema = z.strictObject({
 
 export const adminInquirySearchParamsSchema =
   adminInquiryRouteParamsSchema.extend({
+    status: inquiryStatusSchema.optional(),
     q: z
       .string()
       .trim()

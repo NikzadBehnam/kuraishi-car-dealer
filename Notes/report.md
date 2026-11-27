@@ -4,6 +4,14 @@
 - **Branch / revision:** `test/backend-integration-and-release` / `466f70e`
   **Checklist reviewed:** [Checklist.md](./Checklist.md), cross-checked with the [implemented-sections test guide](./Implemented-Sections-Test-Guide.md), [README](../README.md), and [operations runbook](./Operations-and-Recovery-Runbook.md).
 
+## Leads status management: Phase 3 manual review
+
+- LEADS-002 adds New, In progress, and Closed to the staff inbox. Existing and newly received inquiries default to New; viewing a lead does not change it. Staff explicitly save status changes in the detail panel and can reopen closed items.
+- Search and status filters work together through the protected Server Action. Both stay in page memory, not browser storage or URL parameters. The list prioritizes the customer, request, vehicle, dates, and workflow status; email delivery diagnostics remain available in details.
+- `20261127140000_add_inquiry_status` is additive. After a separately approved Production migration, the only new runtime grant needed is `GRANT UPDATE ("status") ON TABLE public."Inquiry" TO kuraishi_v1_runtime;`. The existing table `SELECT` grant covers the new column; neither table-wide `UPDATE`, an `updatedAt` grant, nor any additional notification access is needed. No Production migration or grant was run for manual review.
+- Local verification passed: 143 source tests, 31 isolated database tests, TypeScript, ESLint, Prettier, Prisma validation, and an optimized build. Replaying the migration against an existing synthetic row preserved its ID and message and assigned New.
+- Ordinary-staff browser review covered synthetic Contact intake, the full status cycle and reopen, persistence after refresh, authored notes, private search with status and pagination, mobile cards and details, keyboard focus restoration, and error feedback after an interrupted save. The review database retained the synthetic request, vehicle reference, privacy evidence, and note; external delivery was disabled. The local review inbox contains 35 synthetic leads across all three statuses.
+
 ## Contact, appointments, and Leads: Phase 2 release
 
 - On 2026-11-27, `master` and the feature branch fast-forwarded to `f66d93e1e1abda204e04c0d928c965580bbc3093`. Protected Vercel deployment `dpl_5HqDYa2UH4FTuov42mcoBZV3aivk` was verified before promotion and is assigned to `www.kuraishicars.com`. The release preserves exact service topics separately from appointment types, keeps Leads search terms out of URLs, and adds a restricted-role regression test.

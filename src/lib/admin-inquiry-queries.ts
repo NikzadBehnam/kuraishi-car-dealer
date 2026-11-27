@@ -39,7 +39,10 @@ const notificationDetailSelect = {
 const inquiryListSelect = {
   id: true,
   source: true,
+  status: true,
   requestedService: true,
+  serviceTopic: true,
+  preferredDate: true,
   customerName: true,
   customerEmail: true,
   customerPhone: true,
@@ -54,9 +57,7 @@ const inquiryListSelect = {
 
 const inquiryDetailSelect = {
   ...inquiryListSelect,
-  serviceTopic: true,
   message: true,
-  preferredDate: true,
   updatedAt: true,
   notification: { select: notificationDetailSelect },
   notes: {
@@ -84,8 +85,11 @@ export async function getAdminInquiryPage(
   const params = adminInquirySearchParamsSchema.parse(input);
   await requireSession();
 
-  const { q, page, lead } = params;
-  const where: Prisma.InquiryWhereInput = getAdminInquiryWhere(q);
+  const { q, page, lead, status } = params;
+  const where: Prisma.InquiryWhereInput = {
+    ...getAdminInquiryWhere(q),
+    ...(status ? { status } : {}),
+  };
   const skip = (page - 1) * ADMIN_INQUIRY_PAGE_SIZE;
 
   const [rows, total, selectedRow] = await client.$transaction(

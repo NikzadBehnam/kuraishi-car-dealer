@@ -43,6 +43,7 @@ export async function withLeadsTestRuntime<T>(
       `GRANT USAGE ON SCHEMA public TO ${role}`,
       `GRANT SELECT ON public."Inquiry", public."Vehicle", public."user" TO ${role}`,
       `GRANT SELECT, INSERT ON public."InquiryNote" TO ${role}`,
+      `GRANT UPDATE ("status") ON public."Inquiry" TO ${role}`,
       `GRANT SELECT ("id", "inquiryId", "status", "attemptCount", "lastErrorCode", "nextAttemptAt", "sentAt") ON public."InquiryNotification" TO ${role}`,
     ]) {
       await owner.$executeRawUnsafe(grant);

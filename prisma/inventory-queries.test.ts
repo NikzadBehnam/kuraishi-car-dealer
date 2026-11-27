@@ -80,6 +80,7 @@ let dealershipSettings: typeof import("../src/lib/dealership-settings.ts");
 let inquiryIntake: typeof import("../src/lib/inquiry-intake.ts");
 let adminInquiryQueries: typeof import("../src/lib/admin-inquiry-queries.ts");
 let adminInquiryNotes: typeof import("../src/lib/admin-inquiry-notes.ts");
+let adminInquiryStatus: typeof import("../src/lib/admin-inquiry-status.ts");
 let adminDashboardQueries: typeof import("../src/lib/admin-dashboard-queries.ts");
 let adminVehicleRoutes: typeof import("../src/app/api/admin/vehicles/route.ts");
 let adminVehiclePublishRoute: typeof import("../src/app/api/admin/vehicles/publish/route.ts");
@@ -213,6 +214,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     inquiryIntake = await import("../src/lib/inquiry-intake.ts");
     adminInquiryQueries = await import("../src/lib/admin-inquiry-queries.ts");
     adminInquiryNotes = await import("../src/lib/admin-inquiry-notes.ts");
+    adminInquiryStatus = await import("../src/lib/admin-inquiry-status.ts");
     adminDashboardQueries =
       await import("../src/lib/admin-dashboard-queries.ts");
     adminVehicleRoutes = await import("../src/app/api/admin/vehicles/route.ts");
@@ -2159,7 +2161,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     );
   });
 
-  it("reads and notes Leads through a restricted runtime login without outbox write or schema privileges", async () => {
+  it("reads, notes and updates Leads through a restricted runtime login", async () => {
     const requestId = randomUUID();
     inquiryKeys.push(requestId);
     const identity = createHash("sha256").update(requestId).digest("hex");
@@ -2185,10 +2187,26 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       where: { submissionKey: requestId },
     });
     assert.equal(inquiry.serviceTopic, "fahrzeugankauf");
+    assert.equal(inquiry.status, "new");
+    const additionalFixtures = Array.from({ length: 26 }, (_, index) => ({
+      customerName: `Restricted Leads batch ${index}`,
+      customerEmail: `batch-${index}@example.invalid`,
+      message: "",
+      source: inquiry.source,
+      requestedService: inquiry.requestedService,
+      status: "closed" as const,
+      privacyNoticeVersion: inquiry.privacyNoticeVersion,
+      privacyNoticeText: inquiry.privacyNoticeText,
+      privacyAcknowledgedAt: inquiry.privacyAcknowledgedAt,
+    }));
     session = { user: { role: "user", id: actorId } };
     try {
+      await prisma.inquiry.createMany({ data: additionalFixtures });
       await withLeadsTestRuntime(async (runtime) => {
-        const list = await adminInquiryQueries.getAdminInquiryPage({}, runtime);
+        const list = await adminInquiryQueries.getAdminInquiryPage(
+          { status: "new" },
+          runtime,
+        );
         assert.equal(
           list.items.find(({ id }) => id === inquiry.id)?.deliveryStatus,
           "disabled",
@@ -2200,7 +2218,33 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         assert.equal(search.total, 1);
         assert.equal(search.items[0]?.id, inquiry.id);
         assert.equal(search.selectedInquiry?.serviceTopic, "Fahrzeugankauf");
+        assert.equal(search.items[0]?.serviceTopic, "Fahrzeugankauf");
+        assert.equal(search.selectedInquiry?.status, "new");
         assert.equal(search.selectedInquiry?.delivery?.status, "disabled");
+        const changeStatus = (status: string) =>
+          adminInquiryStatus.updateAdminInquiryStatus(
+            { inquiryId: inquiry.id, status },
+            runtime,
+          );
+        session = null;
+        const unauthorizedStatus = await changeStatus("closed");
+        assert.equal(
+          !unauthorizedStatus.ok && unauthorizedStatus.kind,
+          "unauthorized",
+        );
+        session = { user: { role: "user", id: actorId } };
+        const invalidStatus = await changeStatus("sold");
+        assert.equal(!invalidStatus.ok && invalidStatus.kind, "invalid");
+        assert.equal(
+          (
+            await adminInquiryQueries.getAdminInquiryPage(
+              { lead: inquiry.id },
+              runtime,
+            )
+          ).selectedInquiry?.status,
+          "new",
+        );
+        assert.deepEqual(await changeStatus("in_progress"), { ok: true });
         assert.deepEqual(
           await adminInquiryNotes.addAdminInquiryNote(
             {
@@ -2219,6 +2263,27 @@ describe("isolated inventory queries", { concurrency: false }, () => {
           detail.selectedInquiry?.notes[0]?.content,
           "Restricted login staff note.",
         );
+        assert.equal(detail.selectedInquiry?.status, "in_progress");
+        assert.deepEqual(await changeStatus("closed"), { ok: true });
+        const byStatus = await adminInquiryQueries.getAdminInquiryPage(
+          { q: "runtime visitor", status: "closed", lead: inquiry.id },
+          runtime,
+        );
+        assert.equal(byStatus.total, 1);
+        assert.equal(byStatus.items[0]?.status, "closed");
+        const pageTwo = await adminInquiryQueries.getAdminInquiryPage(
+          { q: "restricted leads batch", status: "closed", page: "2" },
+          runtime,
+        );
+        assert.equal(pageTwo.total, 26);
+        assert.equal(pageTwo.totalPages, 2);
+        assert.equal(pageTwo.items.length, 1);
+        assert.equal(pageTwo.items[0]?.status, "closed");
+        assert.deepEqual(await changeStatus("in_progress"), { ok: true });
+        const afterReopen = await prisma.inquiry.findUniqueOrThrow({
+          where: { id: inquiry.id },
+        });
+        assert.deepEqual(afterReopen, { ...inquiry, status: "in_progress" });
 
         const permissionError = z.object({
           driverAdapterError: z.object({
@@ -2228,6 +2293,14 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         const denied = (error: unknown) =>
           error instanceof Prisma.PrismaClientKnownRequestError &&
           permissionError.safeParse(error.meta).success;
+        await assert.rejects(
+          runtime.$queryRaw`EXPLAIN UPDATE "Inquiry" SET "customerName" = 'forbidden'`,
+          denied,
+        );
+        await assert.rejects(
+          runtime.$queryRaw`EXPLAIN DELETE FROM "Inquiry"`,
+          denied,
+        );
         await assert.rejects(
           runtime.$queryRaw`SELECT "providerMessageId" FROM "InquiryNotification"`,
           denied,
@@ -2294,7 +2367,20 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         });
       });
     } finally {
-      await prisma.inquiry.delete({ where: { id: inquiry.id } });
+      await prisma.inquiry.deleteMany({
+        where: {
+          OR: [
+            { id: inquiry.id },
+            {
+              customerEmail: {
+                in: additionalFixtures.map(
+                  ({ customerEmail }) => customerEmail,
+                ),
+              },
+            },
+          ],
+        },
+      });
     }
   });
 

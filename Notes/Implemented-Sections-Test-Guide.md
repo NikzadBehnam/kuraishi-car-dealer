@@ -353,6 +353,8 @@ Intake is off by default and code-blocked in Production. Isolated development/Ve
 
 Leave `INQUIRY_TEST_MODE` disabled outside approved isolated testing. The full Section 09 browser retest is separate from the focused Phase 2 checks. For Phase 2 review, use the synthetic local app and verify the service topic in Leads detail, then search for a synthetic customer, paginate, and open and close a detail without the filter appearing in the URL. Reloading intentionally clears the private filter; a signed-in staff member can still open a copied Lead ID link.
 
+**Phase 3 status management:** With isolated synthetic data, submit an inquiry, verify opening it leaves it New, and save In progress from the detail panel. Add a note and refresh; verify status, note author and timestamp, and the original request. Close the inquiry, combine a private search with the Closed filter, and reopen it by setting In progress. Verify the closed result drops out without losing the search or protected detail link. Check pagination with a filter matching over 25 records. Verify anonymous access and mutation are denied and the runtime cannot update any other inquiry column or write to the notification outbox. Never perform the intake or status-write smoke checks against Production without approval.
+
 ## 12. Section 10.01 — Historical Resend setup (out of scope for v1)
 
 V1 uses the **protected admin inbox**, not external staff email. Keep

@@ -7,6 +7,7 @@ import {
   buildAdminInquiryDetailHref,
   buildAdminInquiriesHref,
   getAdminInquirySearchTerms,
+  updateAdminInquiryStatusSchema,
 } from "./admin-inquiry-validation.ts";
 
 describe("admin inquiry search parameters", () => {
@@ -67,6 +68,45 @@ describe("admin inquiry search parameters", () => {
     assert.equal(
       buildAdminInquiriesHref(3, "cm123safe"),
       "/admin/leads?page=3&lead=cm123safe",
+    );
+  });
+
+  it("accepts only valid statuses for mutations and private searches", () => {
+    for (const status of ["new", "in_progress", "closed"]) {
+      assert.equal(
+        updateAdminInquiryStatusSchema.parse({ inquiryId: "cm123safe", status })
+          .status,
+        status,
+      );
+      assert.equal(
+        adminInquirySearchParamsSchema.parse({ status }).status,
+        status,
+      );
+      assert.equal(
+        adminInquiryRouteParamsSchema.safeParse({ status }).success,
+        false,
+      );
+    }
+    for (const status of ["", "all", "sold", ["closed"], null]) {
+      assert.equal(
+        adminInquirySearchParamsSchema.safeParse({ status }).success,
+        false,
+      );
+      assert.equal(
+        updateAdminInquiryStatusSchema.safeParse({
+          inquiryId: "cm123safe",
+          status,
+        }).success,
+        false,
+      );
+    }
+    assert.equal(
+      updateAdminInquiryStatusSchema.safeParse({
+        inquiryId: "cm123safe",
+        status: "closed",
+        customerName: "Not writable",
+      }).success,
+      false,
     );
   });
 });

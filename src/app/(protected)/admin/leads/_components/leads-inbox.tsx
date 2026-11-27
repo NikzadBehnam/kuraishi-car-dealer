@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 import { Inbox, Mail, Phone, Search } from "lucide-react";
 
 import type {
@@ -15,10 +15,12 @@ import type { InquiryNotificationErrorCode } from "@/lib/inquiry-notification-re
 import {
   addAdminInquiryNoteAction,
   searchAdminInquiriesAction,
+  updateAdminInquiryStatusAction,
 } from "../actions";
 import { formatMileage } from "@/lib/formatters";
 import {
   buildAdminInquiriesHref,
+  inquiryStatusSchema,
   MAX_ADMIN_INQUIRY_SEARCH_LENGTH,
 } from "@/lib/admin-inquiry-validation";
 import { cn } from "@/lib/utils";
@@ -50,6 +52,24 @@ const sourceLabels = {
   "test-drive": "Test drive",
   callback: "Callback",
 } as const;
+
+type LeadStatus = AdminInquiryListItem["status"];
+
+const leadStatuses = {
+  new: "New",
+  in_progress: "In progress",
+  closed: "Closed",
+} satisfies Record<LeadStatus, string>;
+
+const statusColors = {
+  new: "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200",
+  in_progress:
+    "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200",
+  closed: "border-border bg-muted text-foreground",
+} satisfies Record<LeadStatus, string>;
+
+const selectClass =
+  "border-input bg-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm focus-visible:ring-2 disabled:opacity-50";
 
 const deliveryLabels: Record<AdminInquiryDeliveryStatus, string> = {
   disabled: "Disabled",
@@ -97,9 +117,12 @@ export function LeadsInbox({
   requestedLeadId: string | null;
 }) {
   const router = useRouter();
+  const searchInput = useRef<HTMLInputElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [filtered, setFiltered] = useState<{
     search: string;
+    status?: LeadStatus;
     leads: AdminInquiryListItem[];
     total: number;
     page: number;
@@ -122,6 +145,10 @@ export function LeadsInbox({
         };
 
   function openLead(leadId: string) {
+    opener.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     router.push(buildAdminInquiriesHref(routePage, leadId));
   }
 
@@ -129,12 +156,11 @@ export function LeadsInbox({
     router.push(buildAdminInquiriesHref(routePage));
   }
 
-  function searchLeads(query: string, nextPage = 1) {
+  function searchLeads(query: string, status?: LeadStatus, nextPage = 1) {
     const search = query.trim();
     setSearchError(null);
-    if (!search) {
+    if (!search && !status) {
       setFiltered(null);
-      setSearchValue("");
       if (routePage !== 1) {
         router.push(buildAdminInquiriesHref(1, requestedLeadId ?? undefined));
       }
@@ -142,18 +168,23 @@ export function LeadsInbox({
     }
     startSearch(async () => {
       try {
-        let result = await searchAdminInquiriesAction(search, String(nextPage));
+        let result = await searchAdminInquiriesAction(
+          search,
+          String(nextPage),
+          status,
+        );
         if (result.ok && result.page > result.totalPages) {
           result = await searchAdminInquiriesAction(
             search,
             String(result.totalPages),
+            status,
           );
         }
         if (!result.ok) {
           setSearchError(result.message);
           return;
         }
-        setFiltered({ ...result, search });
+        setFiltered({ ...result, search, status });
       } catch {
         setSearchError("The search could not be completed. Please try again.");
       }
@@ -171,20 +202,21 @@ export function LeadsInbox({
             </p>
           </div>
           <p className="text-muted-foreground text-sm" aria-live="polite">
-            {range.start}-{range.end} of {total}
+            {total ? `${range.start}-${range.end} of ${total}` : "0 inquiries"}
           </p>
         </div>
 
         <form
-          action={() => searchLeads(searchValue)}
+          action={() => searchLeads(searchValue, filtered?.status)}
           className="mt-4 flex flex-wrap items-center gap-2"
         >
-          <div className="relative min-w-56 flex-1">
+          <div className="relative min-w-0 flex-[1_1_16rem]">
             <Search
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
+              ref={searchInput}
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               maxLength={MAX_ADMIN_INQUIRY_SEARCH_LENGTH}
@@ -197,16 +229,36 @@ export function LeadsInbox({
           <Button type="submit" variant="outline" disabled={searchPending}>
             {searchPending ? "Searching..." : "Search"}
           </Button>
-          {(searchValue || filtered) && (
+          {(searchValue || filtered?.search) && (
             <Button
               type="button"
               variant="ghost"
               disabled={searchPending}
-              onClick={() => searchLeads("")}
+              onClick={() => {
+                setSearchValue("");
+                searchLeads("", filtered?.status);
+              }}
             >
               Clear
             </Button>
           )}
+          <label className="flex items-center gap-2 text-sm font-medium">
+            Status filter
+            <select
+              className={selectClass}
+              disabled={searchPending}
+              value={filtered?.status ?? ""}
+              onChange={(event) => {
+                const status = inquiryStatusSchema.safeParse(
+                  event.target.value,
+                );
+                searchLeads(filtered?.search ?? "", status.data);
+              }}
+            >
+              <option value="">All</option>
+              <StatusOptions />
+            </select>
+          </label>
         </form>
         {searchError && (
           <p role="alert" className="text-destructive text-sm">
@@ -215,19 +267,20 @@ export function LeadsInbox({
         )}
       </Card>
 
-      <Card className="min-w-0 overflow-hidden rounded-[var(--radius-sm)]">
+      <Card
+        aria-busy={searchPending}
+        className="min-w-0 overflow-hidden rounded-[var(--radius-sm)]"
+      >
         {leads.length ? (
           <>
-            <div className="hidden md:block">
+            <div className="hidden xl:block">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="px-3">Source</TableHead>
                     <TableHead className="px-3">Customer</TableHead>
-                    <TableHead className="px-3">Vehicle interest</TableHead>
-                    <TableHead className="px-3">Email delivery</TableHead>
-                    <TableHead className="px-3">Notes</TableHead>
-                    <TableHead className="px-3 text-right">Created</TableHead>
+                    <TableHead className="px-3">Request</TableHead>
+                    <TableHead className="px-3">Dates</TableHead>
+                    <TableHead className="px-3">Status</TableHead>
                     <TableHead className="w-24 px-3 text-right">
                       Action
                     </TableHead>
@@ -245,7 +298,7 @@ export function LeadsInbox({
               </Table>
             </div>
 
-            <div className="grid min-w-0 md:hidden">
+            <div className="grid min-w-0 xl:hidden">
               {leads.map((lead) => (
                 <LeadCard
                   key={lead.id}
@@ -256,7 +309,7 @@ export function LeadsInbox({
             </div>
           </>
         ) : (
-          <EmptyLeadsState hasSearch={Boolean(filtered)} />
+          <EmptyLeadsState hasFilters={Boolean(filtered)} />
         )}
       </Card>
 
@@ -270,7 +323,9 @@ export function LeadsInbox({
               variant="outline"
               size="sm"
               disabled={searchPending || page <= 1}
-              onClick={() => searchLeads(filtered.search, page - 1)}
+              onClick={() =>
+                searchLeads(filtered.search, filtered.status, page - 1)
+              }
             >
               Previous
             </Button>
@@ -291,7 +346,9 @@ export function LeadsInbox({
               variant="outline"
               size="sm"
               disabled={searchPending || page >= totalPages}
-              onClick={() => searchLeads(filtered.search, page + 1)}
+              onClick={() =>
+                searchLeads(filtered.search, filtered.status, page + 1)
+              }
             >
               Next
             </Button>
@@ -324,18 +381,15 @@ export function LeadsInbox({
         key={selectedInquiry?.id}
         lead={selectedInquiry}
         open={Boolean(requestedLeadId && selectedInquiry)}
-        onNoteSaved={(id) => {
-          setFiltered(
-            (current) =>
-              current && {
-                ...current,
-                leads: current.leads.map((lead) =>
-                  lead.id === id
-                    ? { ...lead, notesCount: lead.notesCount + 1 }
-                    : lead,
-                ),
-              },
-          );
+        onStatusSaved={() => {
+          if (filtered) searchLeads(filtered.search, filtered.status, page);
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          (opener.current?.isConnected
+            ? opener.current
+            : searchInput.current
+          )?.focus();
         }}
         onOpenChange={(open) => {
           if (!open) closeLead();
@@ -354,27 +408,21 @@ function LeadTableRow({
 }) {
   return (
     <TableRow>
-      <TableCell className="px-3">
-        <SourceBadge source={lead.source} />
-      </TableCell>
-      <TableCell className="min-w-56 px-3">
+      <TableCell className="px-3 [overflow-wrap:anywhere] whitespace-normal">
         <p className="font-extrabold">{lead.customerName}</p>
         <p className="text-muted-foreground text-xs">{lead.customerEmail}</p>
         {lead.customerPhone && (
           <p className="text-muted-foreground text-xs">{lead.customerPhone}</p>
         )}
       </TableCell>
-      <TableCell className="min-w-56 px-3">
-        <LeadVehicleInterest lead={lead} />
+      <TableCell className="px-3 [overflow-wrap:anywhere] whitespace-normal">
+        <RequestSummary lead={lead} />
       </TableCell>
       <TableCell className="px-3">
-        <DeliveryBadge status={lead.deliveryStatus} />
+        <LeadDates lead={lead} />
       </TableCell>
-      <TableCell className="px-3 text-sm">
-        {lead.notesCount} {lead.notesCount === 1 ? "note" : "notes"}
-      </TableCell>
-      <TableCell className="text-muted-foreground px-3 text-right text-xs font-bold whitespace-nowrap">
-        {formatDateTime(lead.createdAt)}
+      <TableCell className="px-3">
+        <StatusBadge status={lead.status} />
       </TableCell>
       <TableCell className="px-3 text-right">
         <Button
@@ -399,10 +447,9 @@ function LeadCard({
   onOpen: () => void;
 }) {
   return (
-    <article className="grid gap-3 border-b p-4 last:border-b-0">
+    <article className="grid min-w-0 gap-3 border-b p-4 [overflow-wrap:anywhere] last:border-b-0">
       <div className="flex flex-wrap items-center gap-2">
-        <SourceBadge source={lead.source} />
-        <DeliveryBadge status={lead.deliveryStatus} />
+        <StatusBadge status={lead.status} />
       </div>
       <div>
         <h3 className="font-extrabold">{lead.customerName}</h3>
@@ -411,15 +458,9 @@ function LeadCard({
           <p className="text-muted-foreground text-sm">{lead.customerPhone}</p>
         )}
       </div>
-      <LeadVehicleInterest lead={lead} />
-      <p className="text-muted-foreground text-xs">
-        {lead.notesCount}{" "}
-        {lead.notesCount === 1 ? "internal note" : "internal notes"}
-      </p>
+      <RequestSummary lead={lead} />
       <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground text-xs font-bold">
-          {formatDateTime(lead.createdAt)}
-        </span>
+        <LeadDates lead={lead} />
         <Button
           type="button"
           variant="outline"
@@ -433,16 +474,65 @@ function LeadCard({
   );
 }
 
+function RequestSummary({ lead }: { lead: AdminInquiryListItem }) {
+  return (
+    <div className="grid gap-1 text-sm">
+      <p className="font-semibold">{lead.requestedService}</p>
+      {lead.serviceTopic && <p>{lead.serviceTopic}</p>}
+      {(lead.vehicle || lead.vehicleTitleSnapshot) && (
+        <LeadVehicleInterest lead={lead} />
+      )}
+    </div>
+  );
+}
+
+function LeadDates({ lead }: { lead: AdminInquiryListItem }) {
+  return (
+    <div className="text-muted-foreground grid gap-1 text-xs">
+      <p>
+        Submitted{" "}
+        <time dateTime={lead.createdAt}>{formatDateTime(lead.createdAt)}</time>
+      </p>
+      {lead.preferredDate && (
+        <p>
+          Preferred{" "}
+          <time dateTime={lead.preferredDate}>
+            {formatBusinessDate(lead.preferredDate)}
+          </time>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: LeadStatus }) {
+  return (
+    <Badge className={cn("border", statusColors[status])}>
+      {leadStatuses[status]}
+    </Badge>
+  );
+}
+
+function StatusOptions() {
+  return Object.entries(leadStatuses).map(([status, label]) => (
+    <option value={status} key={status}>
+      {label}
+    </option>
+  ));
+}
+
 function LeadDetailSheet({
   lead,
   open,
   onOpenChange,
-  onNoteSaved,
+  onStatusSaved,
+  onCloseAutoFocus,
 }: {
   lead: AdminInquiryDetail | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNoteSaved: (id: string) => void;
+  onStatusSaved: () => void;
+  onCloseAutoFocus: (event: Event) => void;
 }) {
   if (!lead) return null;
 
@@ -450,21 +540,24 @@ function LeadDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
+        onCloseAutoFocus={onCloseAutoFocus}
         className="w-[min(44rem,calc(100vw-1rem))] overflow-hidden p-0"
       >
         <ScrollArea className="h-full">
           <div className="grid min-w-0 gap-5 p-4 pt-12 sm:p-5 sm:pr-12">
             <SheetHeader>
               <div className="flex flex-wrap gap-2">
-                <SourceBadge source={lead.source} />
-                <DeliveryBadge status={lead.deliveryStatus} />
+                <StatusBadge status={lead.status} />
               </div>
-              <SheetTitle>{lead.customerName}</SheetTitle>
+              <SheetTitle className="[overflow-wrap:anywhere]">
+                {lead.customerName}
+              </SheetTitle>
               <SheetDescription>
-                Created {formatDateTime(lead.createdAt)} from{" "}
+                Submitted {formatDateTime(lead.createdAt)} from{" "}
                 {sourceLabels[lead.source].toLowerCase()}.
               </SheetDescription>
             </SheetHeader>
+            <LeadStatusForm lead={lead} onSaved={onStatusSaved} />
 
             <div className="grid min-w-0 gap-2 sm:grid-cols-2">
               {lead.customerPhone ? (
@@ -510,19 +603,17 @@ function LeadDetailSheet({
                   label="Phone"
                   value={lead.customerPhone ?? "Not provided"}
                 />
-                <Info label="Created" value={formatDateTime(lead.createdAt)} />
-                <Info label="Updated" value={formatDateTime(lead.updatedAt)} />
               </div>
             </DetailSection>
 
             <DetailSection title="Request">
               <div className="grid gap-3 text-sm sm:grid-cols-2">
-                <Info label="Request type" value={lead.requestedService} />
+                <Info label="Appointment type" value={lead.requestedService} />
                 {lead.serviceTopic && (
                   <Info label="Requested service" value={lead.serviceTopic} />
                 )}
                 <Info
-                  label="Preferred date"
+                  label="Preferred date (not confirmed)"
                   value={
                     lead.preferredDate
                       ? formatBusinessDate(lead.preferredDate)
@@ -542,11 +633,15 @@ function LeadDetailSheet({
               </p>
             </DetailSection>
 
-            <NotificationDeliverySection lead={lead} />
-            <InquiryNotesSection
-              lead={lead}
-              onSaved={() => onNoteSaved(lead.id)}
-            />
+            <InquiryNotesSection lead={lead} />
+            <details className="rounded border p-3 text-sm">
+              <summary className="cursor-pointer font-medium">
+                Email delivery details
+              </summary>
+              <div className="mt-3">
+                <NotificationDeliverySection lead={lead} />
+              </div>
+            </details>
           </div>
         </ScrollArea>
       </SheetContent>
@@ -554,13 +649,81 @@ function LeadDetailSheet({
   );
 }
 
-function InquiryNotesSection({
+function LeadStatusForm({
   lead,
   onSaved,
 }: {
   lead: AdminInquiryDetail;
   onSaved: () => void;
 }) {
+  const [selection, setSelection] = useState<LeadStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [pending, startSave] = useTransition();
+  const value = selection ?? lead.status;
+
+  function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending || value === lead.status) return;
+    setError(null);
+    setSaved(false);
+    startSave(async () => {
+      try {
+        const result = await updateAdminInquiryStatusAction({
+          inquiryId: lead.id,
+          status: value,
+        });
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+        setSelection(null);
+        setSaved(true);
+        onSaved();
+      } catch {
+        setError("The status could not be confirmed. Refresh before retrying.");
+      }
+    });
+  }
+
+  return (
+    <form onSubmit={save} className="grid gap-2">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="grid gap-1 text-sm font-medium">
+          Inquiry status
+          <select
+            className={selectClass}
+            value={value}
+            disabled={pending}
+            onChange={(event) => {
+              const status = inquiryStatusSchema.parse(event.target.value);
+              setSelection(status);
+              setSaved(false);
+              setError(null);
+            }}
+          >
+            <StatusOptions />
+          </select>
+        </label>
+        <Button type="submit" disabled={pending || value === lead.status}>
+          {pending ? "Saving status..." : "Save status"}
+        </Button>
+      </div>
+      {error && (
+        <p role="alert" className="text-destructive text-sm">
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p role="status" className="text-sm">
+          Status saved.
+        </p>
+      )}
+    </form>
+  );
+}
+
+function InquiryNotesSection({ lead }: { lead: AdminInquiryDetail }) {
   const router = useRouter();
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -583,7 +746,6 @@ function InquiryNotesSection({
         }
         setContent("");
         setFeedback("Note saved.");
-        onSaved();
         router.refresh();
       } catch {
         setError(
@@ -742,7 +904,7 @@ function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-muted-foreground text-xs font-bold">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
+      <p className="mt-1 font-semibold [overflow-wrap:anywhere]">{value}</p>
     </div>
   );
 }
@@ -757,14 +919,16 @@ function LeadVehicleInterest({
   if (lead.vehicle) {
     return (
       <div className={cn("min-w-0", expanded && "grid gap-2")}>
-        <p className="truncate font-bold">
+        <p className="font-bold [overflow-wrap:anywhere]">
           {lead.vehicle.make} {lead.vehicle.model}
           {lead.vehicle.variant ? ` ${lead.vehicle.variant}` : ""}
         </p>
-        <p className="text-muted-foreground truncate text-xs">
-          {lead.vehicle.stockNumber} -{" "}
-          {lead.vehicle.location ?? "Location unavailable"}
-        </p>
+        {expanded && (
+          <p className="text-muted-foreground text-xs [overflow-wrap:anywhere]">
+            {lead.vehicle.stockNumber} -{" "}
+            {lead.vehicle.location ?? "Location unavailable"}
+          </p>
+        )}
         {expanded && (
           <p className="text-muted-foreground text-sm">
             {lead.vehicle.mileage === null
@@ -778,11 +942,15 @@ function LeadVehicleInterest({
   if (lead.vehicleTitleSnapshot) {
     return (
       <div className={cn("min-w-0", expanded && "grid gap-2")}>
-        <p className="truncate font-bold">{lead.vehicleTitleSnapshot}</p>
-        <p className="text-muted-foreground truncate text-xs">
-          Historical vehicle reference
-          {lead.vehicleSlugSnapshot ? `: ${lead.vehicleSlugSnapshot}` : ""}
+        <p className="font-bold [overflow-wrap:anywhere]">
+          {lead.vehicleTitleSnapshot}
         </p>
+        {expanded && (
+          <p className="text-muted-foreground text-xs [overflow-wrap:anywhere]">
+            Historical vehicle reference
+            {lead.vehicleSlugSnapshot ? `: ${lead.vehicleSlugSnapshot}` : ""}
+          </p>
+        )}
       </div>
     );
   }
@@ -793,7 +961,7 @@ function LeadVehicleInterest({
   );
 }
 
-function EmptyLeadsState({ hasSearch }: { hasSearch: boolean }) {
+function EmptyLeadsState({ hasFilters }: { hasFilters: boolean }) {
   return (
     <div className="grid min-h-72 place-items-center p-8 text-center">
       <div className="max-w-sm">
@@ -801,23 +969,15 @@ function EmptyLeadsState({ hasSearch }: { hasSearch: boolean }) {
           <Inbox className="size-6" aria-hidden="true" />
         </span>
         <h3 className="mt-4 font-extrabold">
-          {hasSearch ? "No inquiries match" : "No inquiries yet"}
+          {hasFilters ? "No inquiries match" : "No inquiries yet"}
         </h3>
         <p className="text-muted-foreground mt-2 text-sm leading-6">
-          {hasSearch
-            ? "Try another search term or clear the search."
+          {hasFilters
+            ? "Try another search term or change the status filter."
             : "Accepted inquiries will appear here."}
         </p>
       </div>
     </div>
-  );
-}
-
-function SourceBadge({ source }: { source: AdminInquiryListItem["source"] }) {
-  return (
-    <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
-      {sourceLabels[source]}
-    </Badge>
   );
 }
 

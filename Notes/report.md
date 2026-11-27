@@ -4,6 +4,41 @@
 - **Branch / revision:** `test/backend-integration-and-release` / `466f70e`
   **Checklist reviewed:** [Checklist.md](./Checklist.md), cross-checked with the [implemented-sections test guide](./Implemented-Sections-Test-Guide.md), [README](../README.md), and [operations runbook](./Operations-and-Recovery-Runbook.md).
 
+## Vehicle-photo simplification
+
+- [x] **Production inventory and storage preflight (2026-11-27, read-only).**
+  Production had zero vehicles, zero photo associations, and no active upload
+  intents. The database had 11 unattached private image records and four
+  unattached public image records; the two buckets contained 11 and four
+  objects respectively. Each public copy matched its private original's key
+  suffix, size, and ETag. No objects were downloaded or changed. Recheck all
+  counts and compare key sets under a write freeze before cutover.
+- [x] **Additive photo data backfill.**
+  The additive `20261127100000_backfill_vehicle_photos` migration introduces
+  one private object reference per owned photo and preserves existing photo
+  IDs, vehicle ownership, ordering, and image metadata. The current app still
+  uses the old tables. **Do not deploy the migration independently**: a
+  backfill performed while legacy writes remain enabled would miss later
+  associations. Keep the migration pending until the replacement flow is ready.
+  The isolated media migration suite passed all 12 tests, including populated
+  private and public attachment backfill and exclusion of unattached images.
+  Prisma schema validation, TypeScript, ESLint, all 151 source tests, and an
+  optimized local build passed.
+- [ ] **Vehicle-owned photo flow and removal of the standalone library.**
+- [ ] **Isolated verification and Production approval.** Freeze legacy writes
+  and capture an approved recovery point and restricted manifests of attached,
+  unattached, and storage-only objects. For each attached private photo, verify
+  its current private key. For each attached public photo, copy its bytes to
+  `photo-migration/<asset ID>` in the private bucket and verify the copy against
+  the source before applying the migration. Abort if any attached photo cannot
+  be verified. After backfill, compare photo counts, IDs, positions, and private
+  object references before retiring the legacy tables. Keep unattached private
+  objects out of the new application and retain them for a separate decision.
+  The selected plan is to retire the public copies only after independently
+  verifying private replacements and receiving separate approval for deletion;
+  leaving an object in a public-read bucket leaves its old URL readable.
+  No Production migration or object deletion has been approved or run.
+
 ## V1 delivery milestone
 
 **2026-11-26 — Delivered and accepted for protected customer review**, not

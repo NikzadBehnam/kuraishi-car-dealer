@@ -153,6 +153,7 @@ model Vehicle {
   updatedBy         User                     @relation("VehicleUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
   changes           VehicleChange[]
   mediaAttachments  VehicleMedia[]
+  photos            VehiclePhoto[]
   inquiries         Inquiry[]
   dealerId          String
   dealer            Dealer                   @relation(fields: [dealerId], references: [id], onDelete: Restrict)
@@ -286,6 +287,19 @@ model VehicleMedia {
   mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
 
   @@id([vehicleId, position])
+}
+
+model VehiclePhoto {
+  id         String  @id @default(cuid())
+  vehicleId  String
+  vehicle    Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  objectKey  String  @unique @db.VarChar(1024)
+  position   Int     @db.SmallInt
+  altText    String?
+  mimeType   String  @db.VarChar(127)
+  sizeBytes  BigInt
+
+  @@unique([vehicleId, position])
 }
 
 model MediaUploadIntent {

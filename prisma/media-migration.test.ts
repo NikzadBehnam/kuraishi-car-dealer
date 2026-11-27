@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { after, before, describe, it } from "node:test";
 
 import { Prisma } from "../src/generated/prisma/client.ts";
@@ -167,6 +168,95 @@ describe("isolated media metadata migration", { concurrency: false }, () => {
 
   after(async () => {
     await prisma.$disconnect();
+  });
+
+  it("backfills attached photos in order and leaves unattached assets alone", async () => {
+    await withTestVehicle(async (tx, vehicleId, _dealerId, uploaderId) => {
+      const createImage = (key: string, isPublic = false) =>
+        tx.mediaAsset.create({
+          data: {
+            objectKey: key,
+            bucketAccess: isPublic ? "public_read" : "private",
+            type: "image",
+            title: "Test car",
+            originalFilename: "car.jpg",
+            altText: "Front of test car",
+            verifiedMimeType: "image/jpeg",
+            sizeBytes: BigInt(2048),
+            uploadedById: uploaderId,
+            publicApprovedAt: isPublic ? new Date() : null,
+            publicApprovedById: isPublic ? uploaderId : null,
+          },
+        });
+      const privateImage = await createImage(`assets/${randomUUID()}.jpg`);
+      const publicImage = await createImage(
+        `approved/${randomUUID()}.jpg`,
+        true,
+      );
+      const unattached = await createImage(`assets/${randomUUID()}.jpg`);
+      await tx.vehicleMedia.createMany({
+        data: [
+          { vehicleId, mediaAssetId: privateImage.id, position: 1 },
+          { vehicleId, mediaAssetId: publicImage.id, position: 0 },
+        ],
+      });
+
+      const migration = readFileSync(
+        new URL(
+          "./migrations/20261127100000_backfill_vehicle_photos/migration.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      );
+      await tx.$executeRaw`DROP TABLE "VehiclePhoto"`;
+      for (const statement of migration.split(";").map((part) => part.trim())) {
+        if (statement && statement !== "BEGIN" && statement !== "COMMIT") {
+          await tx.$executeRawUnsafe(statement);
+        }
+      }
+
+      const photos = await tx.vehiclePhoto.findMany({
+        where: { vehicleId },
+        orderBy: { position: "asc" },
+      });
+      assert.deepEqual(
+        photos.map(
+          ({ id, objectKey, position, altText, mimeType, sizeBytes }) => [
+            id,
+            objectKey,
+            position,
+            altText,
+            mimeType,
+            sizeBytes,
+          ],
+        ),
+        [
+          [
+            publicImage.id,
+            `photo-migration/${publicImage.id}`,
+            0,
+            "Front of test car",
+            "image/jpeg",
+            BigInt(2048),
+          ],
+          [
+            privateImage.id,
+            privateImage.objectKey,
+            1,
+            "Front of test car",
+            "image/jpeg",
+            BigInt(2048),
+          ],
+        ],
+      );
+      assert.equal(
+        await tx.vehiclePhoto.findUnique({ where: { id: unattached.id } }),
+        null,
+      );
+      assert.ok(
+        await tx.mediaAsset.findUnique({ where: { id: unattached.id } }),
+      );
+    });
   });
 
   it("stores private assets and explicitly approved public assets", async () => {

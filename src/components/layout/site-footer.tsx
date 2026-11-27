@@ -196,18 +196,26 @@ function ContactLink({
   external?: boolean;
   children: React.ReactNode;
 }) {
+  const content = (
+    <>
+      <Icon
+        className="text-accent mt-0.5 size-4 shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"
+        aria-hidden="true"
+      />
+      <span className="min-w-0 wrap-anywhere">{children}</span>
+    </>
+  );
+  const className = "flex min-w-0 w-fit items-start gap-3";
+  if (!href.trim()) return <span className={className}>{content}</span>;
+
   return (
     <a
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noreferrer" : undefined}
-      className="group flex w-fit items-start gap-3 transition-colors hover:text-white"
+      className={`${className} group transition-colors hover:text-white`}
     >
-      <Icon
-        className="text-accent mt-0.5 size-4 shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:scale-110"
-        aria-hidden="true"
-      />
-      <span>{children}</span>
+      {content}
     </a>
   );
 }

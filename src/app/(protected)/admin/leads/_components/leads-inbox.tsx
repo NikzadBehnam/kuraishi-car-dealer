@@ -452,7 +452,7 @@ function LeadDetailSheet({
 
             <DetailSection title="Message">
               <p className="text-muted-foreground text-sm leading-6 break-words whitespace-pre-wrap">
-                {lead.message}
+                {lead.message.trim() ? lead.message : "No message provided."}
               </p>
             </DetailSection>
 

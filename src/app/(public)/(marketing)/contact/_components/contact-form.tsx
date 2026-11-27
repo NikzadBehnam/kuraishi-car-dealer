@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
 import { LoaderCircle, Send } from "lucide-react";
 import {
   contactFormSchema,
@@ -37,6 +36,7 @@ export function ContactForm({
   appointmentType: ContactFormValues["appointmentType"];
 }) {
   const [submitted, setSubmitted] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [website, setWebsite] = useState("");
   const retry = useRef<{ fingerprint: string; key: string } | null>(null);
   const inFlight = useRef(false);
@@ -44,6 +44,7 @@ export function ContactForm({
     register,
     control,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
@@ -56,12 +57,9 @@ export function ContactForm({
     },
   });
   const submit = async (fields: ContactFormValues) => {
-    if (!enabled || contextError) {
-      toast.error(contextError ?? formContent.unavailable);
-      return;
-    }
-    if (inFlight.current) return;
+    if (!enabled || contextError || inFlight.current) return;
     inFlight.current = true;
+    setSubmissionError(null);
     try {
       const payload = {
         fields,
@@ -78,24 +76,29 @@ export function ContactForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, requestId: retry.current.key }),
       });
-      const result: unknown = await response.json();
       if (!response.ok) {
-        const failure = z.object({ error: z.string() }).safeParse(result);
-        toast.error(
-          failure.success
-            ? failure.data.error
-            : "Ihre Anfrage konnte nicht gespeichert werden.",
+        if ([400, 409, 429].includes(response.status)) {
+          const failure = z
+            .object({ error: z.string() })
+            .safeParse(await response.json());
+          if (failure.success) {
+            setSubmissionError(failure.data.error);
+            return;
+          }
+        }
+        setSubmissionError(
+          "Ihre Anfrage konnte derzeit nicht gespeichert werden. Bitte versuchen Sie es erneut.",
         );
         return;
       }
-      z.strictObject({ ok: z.literal(true) }).parse(result);
+      z.strictObject({ ok: z.literal(true) }).parse(await response.json());
+      reset();
+      retry.current = null;
+      setWebsite("");
       setSubmitted(true);
-      toast.success(
-        "Ihre Anfrage wurde gespeichert. Ein Wunschtermin ist noch nicht bestätigt.",
-      );
     } catch {
-      toast.error(
-        "Ihre Anfrage konnte nicht bestätigt werden. Bitte versuchen Sie es mit unveränderten Angaben erneut.",
+      setSubmissionError(
+        "Wir konnten den Eingang Ihrer Anfrage nicht bestätigen. Bitte versuchen Sie es mit unveränderten Angaben erneut.",
       );
     } finally {
       inFlight.current = false;
@@ -103,8 +106,14 @@ export function ContactForm({
   };
   if (submitted) {
     return (
-      <div className="py-12 text-center" role="status">
-        <h2 className="section-title">{formContent.successTitle}</h2>
+      <div className="py-12 text-center">
+        <h3
+          className="section-title"
+          tabIndex={-1}
+          ref={(heading) => heading?.focus()}
+        >
+          {formContent.successTitle}
+        </h3>
         <p className="text-muted-foreground mt-3">
           {formContent.successDescription}
         </p>
@@ -184,7 +193,7 @@ export function ContactForm({
         disabled={isSubmitting || !enabled || Boolean(contextError)}
         className="grid min-w-0 gap-5"
       >
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field
             id="appointment-type"
             label={formContent.appointmentType}
@@ -197,7 +206,13 @@ export function ContactForm({
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger
                     id="appointment-type"
-                    aria-invalid={!!errors.appointmentType}
+                    ref={field.ref}
+                    className="max-w-full min-w-0"
+                    aria-required
+                    {...validationProps(
+                      "appointment-type",
+                      errors.appointmentType?.message,
+                    )}
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -221,13 +236,16 @@ export function ContactForm({
               name="preferredDate"
               control={control}
               render={({ field }) => (
-                <div className="grid gap-2">
+                <div className="grid min-w-0 gap-2">
                   <DatePicker
                     id="preferred-date"
-                    className="focus-visible:outline-none!"
+                    triggerRef={field.ref}
                     value={field.value}
                     onChange={field.onChange}
-                    invalid={!!errors.preferredDate}
+                    {...validationProps(
+                      "preferred-date",
+                      errors.preferredDate?.message,
+                    )}
                     minDate={new Date(`${dealershipDate()}T00:00:00`)}
                     placeholder="Wunschtermin auswählen"
                   />
@@ -251,11 +269,11 @@ export function ContactForm({
           >
             <input
               id="contact-phone"
-              className="control focus-visible:outline-none!"
+              className="control min-w-0"
               type="tel"
               autoComplete="tel"
               maxLength={32}
-              aria-invalid={!!errors.phone}
+              {...validationProps("contact-phone", errors.phone?.message)}
               {...register("phone")}
             />
           </Field>
@@ -266,8 +284,10 @@ export function ContactForm({
           >
             <input
               id="contact-name"
-              className="control focus-visible:outline-none!"
-              aria-invalid={!!errors.name}
+              className="control min-w-0"
+              autoComplete="name"
+              aria-required
+              {...validationProps("contact-name", errors.name?.message)}
               {...register("name")}
             />
           </Field>
@@ -278,9 +298,11 @@ export function ContactForm({
           >
             <input
               id="contact-email"
-              className="control focus-visible:outline-none!"
+              className="control min-w-0"
               type="email"
-              aria-invalid={!!errors.email}
+              autoComplete="email"
+              aria-required
+              {...validationProps("contact-email", errors.email?.message)}
               {...register("email")}
             />
           </Field>
@@ -292,38 +314,75 @@ export function ContactForm({
         >
           <textarea
             id="contact-message"
-            className="control focus-visible:outline-none!"
+            className="control min-w-0"
             rows={5}
+            {...validationProps(
+              "contact-message",
+              errors.message?.message,
+              "contact-message-limit",
+            )}
             {...register("message")}
           />
+          <p
+            id="contact-message-limit"
+            className="text-muted-foreground text-sm"
+          >
+            Bis zu 1.000 Zeichen.
+          </p>
         </Field>
         <label className="flex items-start gap-3 text-sm">
           <input
-            className="mt-1 size-4 focus-visible:outline-none!"
+            className="aria-invalid:outline-destructive mt-1 size-4 shrink-0 aria-invalid:outline"
             type="checkbox"
+            aria-required
+            {...validationProps("contact-consent", errors.consent?.message)}
             {...register("consent")}
           />
           <span>{formContent.consent}</span>
         </label>
         {errors.consent && (
-          <p className="text-destructive text-sm">{errors.consent.message}</p>
+          <p id="contact-consent-error" className="text-destructive text-sm">
+            {errors.consent.message}
+          </p>
         )}
-        <Button
-          variant="accent"
-          disabled={isSubmitting || !enabled || Boolean(contextError)}
-          className="w-full justify-center rounded-[var(--radius-sm)] focus-visible:outline-none!"
-        >
-          {isSubmitting ? <LoaderCircle className="animate-spin" /> : <Send />}
-          {isSubmitting
-            ? "Wird gespeichert …"
-            : enabled
-              ? "Anfrage senden"
-              : "Anfrage senden (noch nicht verfügbar)"}
-        </Button>
+        <div>
+          <div role="alert" className="text-destructive text-sm">
+            {submissionError ? (
+              <p className="mb-3">
+                {submissionError} Ihre Angaben bleiben im Formular erhalten.
+              </p>
+            ) : null}
+          </div>
+          <Button
+            variant="accent"
+            disabled={isSubmitting || !enabled || Boolean(contextError)}
+            className="h-auto min-h-11 w-full justify-center rounded-[var(--radius-sm)] whitespace-normal"
+          >
+            {isSubmitting ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <Send />
+            )}
+            {isSubmitting
+              ? "Wird gespeichert …"
+              : enabled
+                ? "Anfrage senden"
+                : "Anfrage senden (noch nicht verfügbar)"}
+          </Button>
+        </div>
       </fieldset>
     </form>
   );
 }
+function validationProps(id: string, error?: string, hint?: string) {
+  return {
+    "aria-invalid": Boolean(error),
+    "aria-describedby":
+      [hint, error ? `${id}-error` : undefined].filter(Boolean).join(" ") ||
+      undefined,
+  };
+}
+
 function Field({
   id,
   label,
@@ -336,10 +395,14 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="field">
+    <div className="field min-w-0">
       <label htmlFor={id}>{label}</label>
       {children}
-      {error && <span className="text-destructive text-sm">{error}</span>}
+      {error && (
+        <span id={`${id}-error`} className="text-destructive text-sm">
+          {error}
+        </span>
+      )}
     </div>
   );
 }

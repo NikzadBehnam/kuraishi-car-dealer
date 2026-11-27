@@ -89,7 +89,10 @@ export const dealershipSettingsFieldsSchema = z.strictObject({
   postalCode: publicText("Postal code", 32),
   city: publicText("City", 120),
   country: publicText("Country", 120),
-  mapUrl,
+  mapUrl: z
+    .string()
+    .trim()
+    .pipe(z.union([mapUrl, z.literal("")])),
 });
 
 function optionalText(schema: z.ZodType<string, string>) {

@@ -24,6 +24,15 @@ const validSettings = {
 };
 
 describe("dealership settings validation", () => {
+  it("allows clearing the optional directions URL", () => {
+    const result = saveDealershipSettingsSchema.parse({
+      ...validSettings,
+      expectedVersion: 1,
+      mapUrl: "  ",
+    });
+    assert.equal(result.mapUrl, "");
+  });
+
   it("requires an explicit null version for first-run creation", () => {
     assert.equal(
       saveDealershipSettingsSchema.safeParse({

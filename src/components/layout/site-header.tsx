@@ -13,9 +13,9 @@ export function SiteHeader({ dealershipName }: { dealershipName: string }) {
   const [open, setOpen] = useState(false);
   return (
     <header className="glass sticky top-0 z-50 h-[var(--header-height)] border-b">
-      <div className="site-container flex h-full items-center gap-8">
+      <div className="site-container flex h-full items-center gap-2 sm:gap-8">
         <Link
-          className="w-[clamp(8.5rem,14vw,11rem)] shrink-0"
+          className="w-[clamp(8.5rem,14vw,11rem)] min-w-0 lg:shrink-0"
           href={routes.home}
           aria-label={`${dealershipName} – Startseite`}
         >

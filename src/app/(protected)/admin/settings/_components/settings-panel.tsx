@@ -394,7 +394,7 @@ export function SettingsPanel({
                 </Field>
                 <Field
                   id="mapUrl"
-                  label="Map URL"
+                  label="Map URL (optional)"
                   className="md:col-span-2"
                   error={fieldErrors.mapUrl}
                 >

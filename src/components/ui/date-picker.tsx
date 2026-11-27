@@ -1,15 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { addMonths, format, parseISO } from "date-fns";
+import { addMonths, format, parseISO, startOfMonth } from "date-fns";
 import { de } from "date-fns/locale";
-import {
-  CalendarDays,
-  CalendarIcon,
-  CalendarRange,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -41,7 +35,9 @@ type DatePickerProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
-  invalid?: boolean;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+  triggerRef?: React.Ref<HTMLButtonElement>;
   minDate?: Date;
 };
 
@@ -52,43 +48,51 @@ export function DatePicker({
   onChange,
   placeholder = "Datum auswählen",
   disabled,
-  invalid,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
+  triggerRef,
   minDate,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const selected = value ? parseISO(value) : undefined;
-  const currentYear = new Date().getFullYear();
+  const currentYear = (minDate ?? new Date()).getFullYear();
   const minYear = currentYear;
   const maxYear = currentYear + 3;
-  const [visibleMonth, setVisibleMonth] = useState(selected ?? new Date());
+  const [visibleMonth, setVisibleMonth] = useState(
+    selected ?? minDate ?? new Date(),
+  );
   const [view, setView] = useState<"calendar" | "months" | "years">("calendar");
   const visibleYear = visibleMonth.getFullYear();
   const visibleMonthIndex = visibleMonth.getMonth();
-  const yearPageStart = Math.floor(visibleYear / 12) * 12;
-  const yearPageEnd = Math.min(yearPageStart + 11, maxYear);
   const firstAllowedMonth = minDate
     ? new Date(minDate.getFullYear(), minDate.getMonth(), 1)
     : new Date(minYear, 0, 1);
   const lastAllowedMonth = new Date(maxYear, 11, 1);
+  const monthStart = startOfMonth(visibleMonth);
 
   return (
     <Popover
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
+        if (nextOpen && monthStart < firstAllowedMonth) {
+          setVisibleMonth(firstAllowedMonth);
+        }
         if (!nextOpen) setView("calendar");
       }}
     >
       <PopoverTrigger asChild>
         <Button
           id={id}
+          ref={triggerRef}
           type="button"
           variant="outline"
           disabled={disabled}
           aria-invalid={invalid}
+          aria-describedby={describedBy}
           data-empty={!selected}
           className={cn(
-            "control justify-start rounded-[var(--radius-sm)] px-3 text-left font-normal hover:translate-y-0",
+            "control h-auto min-h-9 min-w-0 justify-start rounded-[var(--radius-sm)] px-3 text-left font-normal whitespace-normal hover:translate-y-0",
             "data-[empty=true]:text-muted-foreground",
             className,
           )}
@@ -110,7 +114,7 @@ export function DatePicker({
                 variant="ghost"
                 size="icon"
                 className="size-9 min-h-0"
-                disabled={visibleMonth <= firstAllowedMonth}
+                disabled={monthStart <= firstAllowedMonth}
                 aria-label="Vorheriger Monat"
                 onClick={() => setVisibleMonth((month) => addMonths(month, -1))}
               >
@@ -121,22 +125,20 @@ export function DatePicker({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="min-h-9 min-w-20 hover:translate-y-0"
+                  className="min-h-9 px-2 hover:translate-y-0"
                   aria-label="Monat auswählen"
                   onClick={() => setView("months")}
                 >
-                  <CalendarDays className="size-4" />
                   {months[visibleMonthIndex]}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="min-h-9 min-w-20 hover:translate-y-0"
+                  className="min-h-9 px-2 hover:translate-y-0"
                   aria-label="Jahr auswählen"
                   onClick={() => setView("years")}
                 >
-                  <CalendarRange className="size-4" />
                   {visibleYear}
                 </Button>
               </div>
@@ -145,7 +147,7 @@ export function DatePicker({
                 variant="ghost"
                 size="icon"
                 className="size-9 min-h-0"
-                disabled={visibleMonth >= lastAllowedMonth}
+                disabled={monthStart >= lastAllowedMonth}
                 aria-label="Nächster Monat"
                 onClick={() => setVisibleMonth((month) => addMonths(month, 1))}
               >
@@ -155,12 +157,17 @@ export function DatePicker({
             <Calendar
               mode="single"
               locale={de}
+              today={minDate}
+              labels={{
+                labelDayButton: (date, { today, selected }) =>
+                  `${today ? "Heute, " : ""}${format(date, "PPPP", { locale: de })}${selected ? ", ausgewählt" : ""}`,
+              }}
               month={visibleMonth}
               onMonthChange={setVisibleMonth}
               captionLayout="label"
-              className="pt-1"
+              className="pt-1 [--cell-size:min(2.25rem,calc((100vw_-_4rem)/7))]"
               classNames={{ month_caption: "hidden", nav: "hidden" }}
-              startMonth={new Date(minYear, 0)}
+              startMonth={firstAllowedMonth}
               endMonth={new Date(maxYear, 11)}
               selected={selected}
               disabled={minDate ? { before: minDate } : undefined}
@@ -172,7 +179,7 @@ export function DatePicker({
             />
           </>
         ) : view === "months" ? (
-          <div className="w-72 p-3">
+          <div className="w-72 max-w-full p-3">
             <div className="mb-3 flex items-center justify-between gap-2">
               <Button
                 type="button"
@@ -194,11 +201,10 @@ export function DatePicker({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="min-h-9 min-w-28 hover:translate-y-0"
+                className="min-h-9 px-2 hover:translate-y-0"
                 aria-label="Jahr auswählen"
                 onClick={() => setView("years")}
               >
-                <CalendarRange className="size-4" />
                 {visibleYear}
               </Button>
               <Button
@@ -218,7 +224,7 @@ export function DatePicker({
                 <ChevronRight className="size-4" />
               </Button>
             </div>
-            <div className="grid grid-cols-3 gap-1" role="grid">
+            <div className="grid grid-cols-3 gap-1">
               {months.map((month, index) => {
                 const candidate = new Date(visibleYear, index, 1);
                 const unavailable =
@@ -244,56 +250,20 @@ export function DatePicker({
             </div>
           </div>
         ) : (
-          <div className="w-72 p-3">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-9 min-h-0"
-                disabled={yearPageStart <= minYear}
-                aria-label="Vorherige Jahre"
-                onClick={() =>
-                  setVisibleMonth(
-                    (month) =>
-                      new Date(month.getFullYear() - 12, month.getMonth()),
-                  )
-                }
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="min-h-9 min-w-28 hover:translate-y-0"
-                aria-label="Kalender anzeigen"
-                onClick={() => setView("calendar")}
-              >
-                <CalendarDays className="size-4" />
-                {Math.max(yearPageStart, minYear)}–{yearPageEnd}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-9 min-h-0"
-                disabled={yearPageEnd >= maxYear}
-                aria-label="Nächste Jahre"
-                onClick={() =>
-                  setVisibleMonth(
-                    (month) =>
-                      new Date(month.getFullYear() + 12, month.getMonth()),
-                  )
-                }
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-3 gap-1" role="grid">
+          <div className="w-72 max-w-full p-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mb-3 w-full hover:translate-y-0"
+              onClick={() => setView("calendar")}
+            >
+              Kalender anzeigen
+            </Button>
+            <div className="grid grid-cols-2 gap-1">
               {Array.from(
-                { length: 12 },
-                (_, index) => yearPageStart + index,
+                { length: maxYear - minYear + 1 },
+                (_, index) => minYear + index,
               ).map((year) => (
                 <Button
                   key={year}
@@ -301,11 +271,12 @@ export function DatePicker({
                   variant={year === visibleYear ? "accent" : "ghost"}
                   size="sm"
                   className="min-h-9 px-2 hover:translate-y-0"
-                  disabled={year < minYear || year > maxYear}
                   aria-pressed={year === visibleYear}
+                  autoFocus={year === visibleYear}
                   onClick={() => {
+                    const target = new Date(year, visibleMonthIndex);
                     setVisibleMonth(
-                      (month) => new Date(year, month.getMonth()),
+                      target < firstAllowedMonth ? firstAllowedMonth : target,
                     );
                     setView("calendar");
                   }}

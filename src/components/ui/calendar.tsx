@@ -84,16 +84,22 @@ function Calendar({
             : "[&>svg]:text-muted-foreground flex h-8 items-center gap-1 rounded-md pl-2 pr-1 text-sm [&>svg]:size-3.5",
           defaultClassNames.caption_label,
         ),
-        month_grid: cn("block w-[15.75rem]", defaultClassNames.month_grid),
+        month_grid: cn(
+          "block w-[calc(7*var(--cell-size))]",
+          defaultClassNames.month_grid,
+        ),
         weekdays: cn(
-          "grid w-[15.75rem] grid-cols-7",
+          "grid w-[calc(7*var(--cell-size))] grid-cols-7",
           defaultClassNames.weekdays,
         ),
         weekday: cn(
           "text-muted-foreground block size-[--cell-size] select-none rounded-md text-center text-[0.8rem] leading-[--cell-size] font-normal",
           defaultClassNames.weekday,
         ),
-        week: cn("mt-2 grid w-[15.75rem] grid-cols-7", defaultClassNames.week),
+        week: cn(
+          "mt-2 grid w-[calc(7*var(--cell-size))] grid-cols-7",
+          defaultClassNames.week,
+        ),
         week_number_header: cn(
           "w-[--cell-size] select-none",
           defaultClassNames.week_number_header,

@@ -19,6 +19,7 @@ import {
   FilePenLine,
   MoreHorizontal,
   Plus,
+  RotateCcw,
   Search,
   Trash2,
 } from "lucide-react";
@@ -102,7 +103,7 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
 const lifecycleMutationResponseSchema = z.strictObject({
   vehicleId: z.string().min(1),
   version: z.number().int().positive(),
-  status: z.enum(["published", "reserved", "sold", "archived"]),
+  status: z.enum(["draft", "published", "reserved", "sold", "archived"]),
   soldAt: z.string().datetime({ offset: true }).nullable(),
   changed: z.boolean(),
 });
@@ -781,9 +782,8 @@ function VehicleRowActions({
   onDeleted: () => void;
 }) {
   const title = `${vehicle.make} ${vehicle.model}`;
-  const [lifecycleAction, setLifecycleAction] = useState<
-    "published" | "reserved" | "sold" | "archived" | null
-  >(null);
+  const [lifecycleAction, setLifecycleAction] =
+    useState<AdminVehicleStatus | null>(null);
   const [isChangingLifecycle, setIsChangingLifecycle] = useState(false);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
@@ -828,14 +828,19 @@ function VehicleRowActions({
       }
       setLifecycleAction(null);
       if (result.changed) {
-        if (result.status === "sold") toast.success("Vehicle marked sold.");
+        if (result.status === "draft")
+          toast.success("Vehicle returned to draft.");
+        else if (result.status === "sold")
+          toast.success("Vehicle marked sold.");
         else if (result.status === "archived")
           toast.success("Vehicle archived.");
         else if (result.status === "reserved")
           toast.success("Vehicle reserved.");
         else toast.success("Reservation released. Vehicle is available again.");
       } else {
-        if (result.status === "sold")
+        if (result.status === "draft")
+          toast.info("This vehicle is already a draft.");
+        else if (result.status === "sold")
           toast.info("This vehicle is already sold.");
         else if (result.status === "archived")
           toast.info("This vehicle is already archived.");
@@ -1014,6 +1019,12 @@ function VehicleRowActions({
               Release reservation
             </DropdownMenuItem>
           )}
+          {vehicle.status === "sold" && (
+            <DropdownMenuItem onSelect={() => setLifecycleAction("draft")}>
+              <RotateCcw />
+              Return to draft
+            </DropdownMenuItem>
+          )}
           {vehicle.status !== "archived" && (
             <DropdownMenuItem onSelect={() => setLifecycleAction("archived")}>
               <Archive />
@@ -1032,22 +1043,26 @@ function VehicleRowActions({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {lifecycleAction === "sold"
-                ? `Mark ${title} as sold?`
-                : lifecycleAction === "archived"
-                  ? `Archive ${title}?`
-                  : lifecycleAction === "reserved"
-                    ? `Mark ${title} as reserved?`
-                    : `Release ${title}'s reservation?`}
+              {lifecycleAction === "draft"
+                ? `Return ${title} to draft?`
+                : lifecycleAction === "sold"
+                  ? `Mark ${title} as sold?`
+                  : lifecycleAction === "archived"
+                    ? `Archive ${title}?`
+                    : lifecycleAction === "reserved"
+                      ? `Mark ${title} as reserved?`
+                      : `Release ${title}'s reservation?`}
             </DialogTitle>
             <DialogDescription>
-              {lifecycleAction === "sold"
-                ? "This records the completed sale, clears any reservation, removes the vehicle from active stock, and keeps its sold detail page available."
-                : lifecycleAction === "archived"
-                  ? "This removes the vehicle from public pages without permanently deleting it. Its history is retained; restore it to Draft before republishing."
-                  : lifecycleAction === "reserved"
-                    ? "This removes the vehicle from available stock and clears Featured placement. No automatic expiry is set; staff must release the reservation."
-                    : "This makes the vehicle available again. Featured placement is not restored automatically."}
+              {lifecycleAction === "draft"
+                ? "This corrects the recorded sale and hides the listing from the public. Its details and photos are kept. Publish it again when it is ready."
+                : lifecycleAction === "sold"
+                  ? "This records the completed sale, clears any reservation, removes the vehicle from active stock, and keeps its sold detail page available."
+                  : lifecycleAction === "archived"
+                    ? "This removes the vehicle from public pages without permanently deleting it. Its history is retained; restore it to Draft before republishing."
+                    : lifecycleAction === "reserved"
+                      ? "This removes the vehicle from available stock and clears Featured placement. No automatic expiry is set; staff must release the reservation."
+                      : "This makes the vehicle available again. Featured placement is not restored automatically."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1071,13 +1086,15 @@ function VehicleRowActions({
             >
               {isChangingLifecycle
                 ? "Saving…"
-                : lifecycleAction === "sold"
-                  ? "Mark sold"
-                  : lifecycleAction === "archived"
-                    ? "Archive vehicle"
-                    : lifecycleAction === "reserved"
-                      ? "Reserve vehicle"
-                      : "Release reservation"}
+                : lifecycleAction === "draft"
+                  ? "Return to draft"
+                  : lifecycleAction === "sold"
+                    ? "Mark sold"
+                    : lifecycleAction === "archived"
+                      ? "Archive vehicle"
+                      : lifecycleAction === "reserved"
+                        ? "Reserve vehicle"
+                        : "Release reservation"}
             </Button>
           </DialogFooter>
         </DialogContent>

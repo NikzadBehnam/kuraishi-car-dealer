@@ -164,7 +164,7 @@ export const updateVehicleSchema = vehicleDraftFieldsSchema
 export const vehicleLifecycleMutationSchema = z.strictObject({
   vehicleId: inventoryIdSchema,
   expectedVersion: z.number().int().min(1).max(2_147_483_647),
-  status: z.enum(["published", "reserved", "sold", "archived"]),
+  status: z.enum(["draft", "published", "reserved", "sold", "archived"]),
 });
 
 export const bulkVehicleLifecycleMutationSchema =
@@ -878,6 +878,13 @@ async function transitionVehicleLifecycleForSession(
           };
         }
 
+        if (status === "draft" && current.status !== "sold") {
+          throw new InventoryMutationError(
+            422,
+            "Only sold vehicles can be returned to draft using this action.",
+          );
+        }
+
         const photoCount = await tx.vehiclePhoto.count({
           where: { vehicleId },
         });
@@ -888,7 +895,12 @@ async function transitionVehicleLifecycleForSession(
         );
         assertPublicVehicleHasPhoto(lifecycle.status, photoCount);
 
-        const soldAt = status === "sold" ? new Date() : current.soldAt;
+        const soldAt =
+          lifecycle.status === "sold"
+            ? new Date()
+            : lifecycle.status === "draft"
+              ? null
+              : current.soldAt;
         const update = await tx.vehicle.updateMany({
           where: {
             id: vehicleId,

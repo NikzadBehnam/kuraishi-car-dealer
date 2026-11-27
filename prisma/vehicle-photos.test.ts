@@ -392,6 +392,47 @@ describe("vehicle-owned photos on isolated Neon resources", () => {
       (await gallery.listStaffVehiclePhotos(draft.vehicleId)).length,
       2,
     );
+    const republished = await mutations.publishVehicle({
+      ...publication,
+      expectedVersion: withdrawn.version,
+    });
+    await assert.rejects(
+      mutations.transitionVehicleLifecycle({
+        vehicleId: draft.vehicleId,
+        expectedVersion: republished.version,
+        status: "draft",
+      }),
+      /Only sold vehicles/,
+    );
+    const sold = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: republished.version,
+      status: "sold",
+    });
+    assert.ok(sold.soldAt);
+    const restored = await mutations.transitionVehicleLifecycle({
+      vehicleId: draft.vehicleId,
+      expectedVersion: sold.version,
+      status: "draft",
+    });
+    assert.equal(restored.status, "draft");
+    assert.equal(restored.soldAt, null);
+    assert.deepEqual(
+      (await gallery.listStaffVehiclePhotos(draft.vehicleId)).map(
+        ({ id }) => id,
+      ),
+      updated.photoIds,
+    );
+    assert.equal(
+      (await gallery.serveVehiclePhoto(third.uploadId, "public")).status,
+      404,
+    );
+    const history = await prisma.vehicleChange.findFirstOrThrow({
+      where: { vehicleId: draft.vehicleId, version: restored.version },
+    });
+    assert.equal(history.previousStatus, "sold");
+    assert.equal(history.previousSoldAt?.toISOString(), sold.soldAt);
+    assert.equal(history.soldAt, null);
   });
 
   it("rejects a fake photo and cleans an uploaded photo discarded before save", async () => {

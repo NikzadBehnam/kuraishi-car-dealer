@@ -6,6 +6,13 @@
 
 ## Vehicle-photo simplification
 
+### Accidental sale correction
+
+- On a Sold vehicle, open **Vehicles → ⋯ → Return to draft** and confirm.
+  The vehicle is hidden from the public and removed from the sold count.
+  Its details, photos, and sale correction history remain intact. Publish
+  it explicitly after review; no database migration is needed.
+
 ### Add/Edit Vehicle follow-up
 
 - Drafts retain a staff-only **Feature on publish** choice. Publication

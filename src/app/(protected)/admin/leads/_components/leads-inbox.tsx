@@ -93,6 +93,7 @@ const deliveryErrorMessages: Record<InquiryNotificationErrorCode, string> = {
 const dateTime = new Intl.DateTimeFormat("en-GB", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: "Europe/Vienna",
 });
 const businessDate = new Intl.DateTimeFormat("en-GB", {
   dateStyle: "medium",

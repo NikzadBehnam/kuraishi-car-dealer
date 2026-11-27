@@ -205,9 +205,6 @@ describe("isolated inventory queries", { concurrency: false }, () => {
           send: async () => ({ ContentLength: 8, ContentType: "image/png" }),
         }),
         getPrivateMediaBucket: () => "private-test-bucket",
-        getPublicMediaBucket: () => "public-test-bucket",
-        getPublicMediaObjectUrl: () =>
-          "https://media.example.invalid/integration.png",
       },
     });
     queries = await import("../src/lib/inventory-queries.ts");
@@ -304,7 +301,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       slug: `route-${prefix}`,
       make: "Example",
       model: "Route integration",
-      mediaAssetIds: [],
+      photoIds: [],
     };
     const untrustedOrigin = await adminVehicleRoutes.POST(
       new Request("http://localhost:3000/api/admin/vehicles", {
@@ -388,7 +385,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
       slug: `failure-${prefix}`,
       make: "Example",
       model: "Failure integration",
-      mediaAssetIds: [],
+      photoIds: [],
     };
     const vehicleRequest = (method: "POST" | "PATCH", body: string) =>
       new Request("http://localhost:3000/api/admin/vehicles", {
@@ -542,36 +539,30 @@ describe("isolated inventory queries", { concurrency: false }, () => {
     inquiryClients.push(clientHash);
 
     try {
-      await prisma.mediaAsset.create({
-        data: {
-          id: imageId,
-          objectKey: `integration/${imageId}.png`,
-          bucketAccess: "public_read",
-          type: "image",
-          title: "Integration flow image",
-          originalFilename: "integration.png",
-          altText: "Synthetic integration vehicle",
-          verifiedMimeType: "image/png",
-          sizeBytes: BigInt(8),
-          uploadedById: actorId,
-          publicApprovedAt: new Date(),
-          publicApprovedById: actorId,
-        },
-      });
-
       const draftResponse = await adminVehicleRoutes.POST(
         jsonRequest("http://localhost:3000/api/admin/vehicles", "POST", {
           stockNumber,
           slug: vehicleSlug,
           make,
           model,
-          mediaAssetIds: [],
+          photoIds: [],
         }),
       );
       assert.equal(draftResponse.status, 201);
       const draft: { vehicleId: string; version: number } =
         await draftResponse.json();
       vehicleId = draft.vehicleId;
+      await prisma.vehiclePhotoUpload.create({
+        data: {
+          id: imageId,
+          vehicleId,
+          uploadedById: actorId,
+          mimeType: "image/png",
+          sizeBytes: BigInt(8),
+          completedAt: new Date(),
+          expiresAt: new Date(Date.now() + 60_000),
+        },
+      });
 
       const publicationResponse = await adminVehiclePublishRoute.POST(
         jsonRequest(
@@ -595,7 +586,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
             fuelType: "petrol",
             transmissionType: "automatic",
             bodyType: "wagon",
-            mediaAssetIds: [imageId],
+            photoIds: [imageId],
             confirmInspectionPassed: true,
           },
         ),
@@ -769,7 +760,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
           await tx.vehicle.deleteMany({ where: { id: vehicleId } });
         });
       }
-      await prisma.mediaAsset.deleteMany({ where: { id: imageId } });
+      await prisma.vehiclePhotoUpload.deleteMany({ where: { id: imageId } });
     }
   });
 
@@ -782,7 +773,7 @@ describe("isolated inventory queries", { concurrency: false }, () => {
         slug: `flow-${prefix}-${suffix.toLowerCase()}`,
         make: "Example",
         model: "Integration",
-        mediaAssetIds: [],
+        photoIds: [],
       });
       createdIds.push(result.vehicleId);
       return result;

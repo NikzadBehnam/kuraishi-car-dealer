@@ -49,7 +49,7 @@ export function toCreateVehicleDraftPayload(values: VehicleFormValues) {
     co2Emission: values.co2Emission ?? null,
     features: splitLines(values.featuresText),
     labels: splitLines(values.labelsText),
-    mediaAssetIds: values.mediaAssetIds,
+    photoIds: values.photoIds,
   };
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -37,6 +38,7 @@ import {
   MAX_INVENTORY_SELECTION_SIZE,
 } from "@/lib/inventory-validation";
 import { cn } from "@/lib/utils";
+import { staffPhotoUrl } from "@/lib/vehicle-photo-validation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -529,15 +531,32 @@ export function VehicleInventoryTable({
                     />
                   </TableCell>
                   <TableCell className="px-3">
-                    <div className="bg-secondary text-muted-foreground grid h-12 w-16 place-items-center overflow-hidden rounded-[var(--radius-sm)]">
-                      <CarFront className="size-6" aria-hidden="true" />
-                    </div>
+                    <Link
+                      href={`${adminRoutes.vehicles}/${encodeURIComponent(vehicle.id)}/preview`}
+                      aria-label={`View ${vehicle.make} ${vehicle.model}`}
+                      className="bg-secondary text-muted-foreground relative grid h-12 w-16 place-items-center overflow-hidden rounded-[var(--radius-sm)]"
+                    >
+                      {vehicle.photoIds[0] ? (
+                        <Image
+                          fill
+                          unoptimized
+                          className="object-cover"
+                          src={staffPhotoUrl(vehicle.photoIds[0])}
+                          alt=""
+                        />
+                      ) : (
+                        <CarFront className="size-6" aria-hidden="true" />
+                      )}
+                    </Link>
                   </TableCell>
                   <TableCell className="min-w-64 px-3">
                     <div className="min-w-0">
-                      <p className="truncate font-extrabold">
+                      <Link
+                        href={`${adminRoutes.vehicles}/${encodeURIComponent(vehicle.id)}/preview`}
+                        className="block truncate font-extrabold hover:underline"
+                      >
                         {vehicle.make} {vehicle.model}
-                      </p>
+                      </Link>
                       <p className="text-muted-foreground truncate text-xs">
                         {vehicle.stockNumber} - {vehicle.variant ?? "—"}
                       </p>
@@ -910,9 +929,7 @@ function VehicleRowActions({
       }
       setIsDeleteDialogOpen(false);
       onDeleted();
-      toast.success(
-        `${vehicle.stockNumber} deleted. Its media assets remain in the Media Library.`,
-      );
+      toast.success(`${vehicle.stockNumber} deleted.`);
       router.refresh();
     } catch (error) {
       toast.error(
@@ -1113,9 +1130,8 @@ function VehicleRowActions({
             <DialogTitle>Delete {title} permanently?</DialogTitle>
             <DialogDescription>
               This permanently removes the never-published draft and its status
-              history. Attached media assets remain in the Media Library.
-              Previously published vehicles cannot be deleted, and linked
-              records are never deleted.
+              history and photos. Previously published vehicles cannot be
+              deleted, and linked records are never deleted.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

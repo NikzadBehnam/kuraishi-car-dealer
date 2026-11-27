@@ -28,18 +28,10 @@ export class InventoryPolicyError extends Error {
 
 export const MINIMUM_PUBLISHABLE_VEHICLE_IMAGES = 1;
 
-export type InventoryPolicyMediaAsset = {
-  type: "image" | "document" | "brand";
-  bucketAccess: "private" | "public_read";
-  publicApprovedAt: Date | null;
-  publicApprovedById: string | null;
-};
-
-// The caller must supply server-loaded state and attached assets, never browser claims.
 export function resolveInventoryPolicyUpdate(
   current: InventoryPolicyState,
   input: unknown,
-  mediaAssets: readonly InventoryPolicyMediaAsset[] = [],
+  photoCount = 0,
 ): InventoryPolicyState & { isAvailable: boolean } {
   const stored = inventoryPolicyStateSchema.parse({
     status: current.status,
@@ -82,17 +74,11 @@ export function resolveInventoryPolicyUpdate(
   if (
     status === "published" &&
     stored.status !== "published" &&
-    mediaAssets.filter(
-      (asset) =>
-        asset.type === "image" &&
-        asset.bucketAccess === "public_read" &&
-        asset.publicApprovedAt !== null &&
-        asset.publicApprovedById !== null,
-    ).length < MINIMUM_PUBLISHABLE_VEHICLE_IMAGES
+    photoCount < MINIMUM_PUBLISHABLE_VEHICLE_IMAGES
   ) {
     throw new InventoryPolicyError(
       "PUBLIC_IMAGE_REQUIRED",
-      `Publishing requires at least ${MINIMUM_PUBLISHABLE_VEHICLE_IMAGES} explicitly approved public vehicle image.`,
+      "Add at least one vehicle photo before publishing.",
     );
   }
 

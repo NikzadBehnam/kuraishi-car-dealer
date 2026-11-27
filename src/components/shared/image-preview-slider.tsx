@@ -56,8 +56,8 @@ export function ImagePreviewSlider({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[80] bg-[#06101f]/58 backdrop-blur-xl data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 z-[90] flex max-h-[calc(100svh-2rem)] w-[calc(100vw-1.25rem)] max-w-6xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[var(--radius-sm)] border border-white/14 bg-[#0b1626]/82 text-white shadow-2xl outline-none backdrop-blur-2xl data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:w-[min(92vw,72rem)]">
+        <Dialog.Overlay className="data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[80] bg-[#06101f]/58 backdrop-blur-xl" />
+        <Dialog.Content className="data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-1/2 left-1/2 z-[90] flex max-h-[calc(100svh-2rem)] w-[calc(100vw-1.25rem)] max-w-6xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[var(--radius-sm)] border border-white/14 bg-[#0b1626]/82 text-white shadow-2xl backdrop-blur-2xl outline-none sm:w-[min(92vw,72rem)]">
           <Dialog.Title className="sr-only">{title}</Dialog.Title>
           <Dialog.Description className="sr-only">
             Fahrzeugbilder in großer Ansicht mit Vorschaubildern auswählen.
@@ -107,6 +107,7 @@ export function ImagePreviewSlider({
             }}
           >
             <Image
+              unoptimized={activeImage.src.startsWith("/api/vehicle-photos/")}
               key={activeImage.src}
               fill
               priority
@@ -128,12 +129,13 @@ export function ImagePreviewSlider({
                   className={cn(
                     "relative h-14 w-20 shrink-0 overflow-hidden rounded-[var(--radius-sm)] border transition-[border-color,opacity,transform] duration-200 sm:h-16 sm:w-24",
                     index === activeIndex
-                      ? "scale-[1.02] border-accent opacity-100 shadow-lg shadow-accent/20"
+                      ? "border-accent shadow-accent/20 scale-[1.02] opacity-100 shadow-lg"
                       : "border-white/18 opacity-60 hover:opacity-100",
                   )}
                   onClick={() => setActiveIndex(index)}
                 >
                   <Image
+                    unoptimized={image.src.startsWith("/api/vehicle-photos/")}
                     fill
                     sizes="8rem"
                     src={image.src}
@@ -141,7 +143,7 @@ export function ImagePreviewSlider({
                     className="object-cover"
                   />
                   {index === activeIndex && (
-                    <span className="absolute right-1 bottom-1 grid size-5 place-items-center rounded-full bg-accent text-accent-foreground">
+                    <span className="bg-accent text-accent-foreground absolute right-1 bottom-1 grid size-5 place-items-center rounded-full">
                       <Maximize2 className="size-3" aria-hidden="true" />
                     </span>
                   )}

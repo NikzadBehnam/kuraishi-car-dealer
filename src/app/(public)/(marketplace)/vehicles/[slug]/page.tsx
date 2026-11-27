@@ -10,8 +10,8 @@ import {
 } from "@/lib/inventory-queries";
 import {
   listPublicVehicleCardImages,
-  listPublicVehicleMediaAssets,
-} from "@/lib/media-attachments";
+  listPublicVehiclePhotos,
+} from "@/lib/vehicle-photos";
 
 import { InventoryVehicleDetail } from "./_components/inventory-vehicle-detail";
 import VehicleDetailsLoading from "./_components/vehicle-details-loading";
@@ -41,7 +41,7 @@ export async function generateMetadata({
   const description =
     vehicle.description ??
     `${vehicle.make} ${vehicle.model} bei ${vehicle.dealer.name}.`;
-  const { assets } = await listPublicVehicleMediaAssets(vehicle.id);
+  const photos = await listPublicVehiclePhotos(vehicle.id);
   const baseMetadata = await createPublicMetadata(
     title,
     description,
@@ -51,11 +51,11 @@ export async function generateMetadata({
     ...baseMetadata,
     openGraph: {
       ...baseMetadata.openGraph,
-      images: assets[0]
+      images: photos[0]
         ? [
             {
-              url: assets[0].previewUrl,
-              alt: assets[0].altText?.trim() || assets[0].title,
+              url: photos[0].previewUrl,
+              alt: photos[0].altText?.trim() || title,
             },
           ]
         : [],
@@ -88,8 +88,8 @@ async function VisibleVehicleDetail({
     { kind: "visible" }
   >["vehicle"];
 }) {
-  const [media, candidates] = await Promise.all([
-    listPublicVehicleMediaAssets(vehicle.id),
+  const [photos, candidates] = await Promise.all([
+    listPublicVehiclePhotos(vehicle.id),
     getRelatedVehicles({ id: vehicle.id, limit: 3 }),
   ]);
   const relatedVehicles = candidates ?? [];
@@ -99,9 +99,9 @@ async function VisibleVehicleDetail({
   return (
     <InventoryVehicleDetail
       vehicle={vehicle}
-      images={media.assets.map(({ id, title, altText, previewUrl }) => ({
+      images={photos.map(({ id, altText, previewUrl }, index) => ({
         id,
-        title,
+        title: `Fahrzeugfoto ${index + 1}`,
         altText,
         url: previewUrl,
       }))}

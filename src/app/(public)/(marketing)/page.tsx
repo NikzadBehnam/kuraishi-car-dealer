@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { publicRoutes } from "@/config/routes.config";
 import { createPublicMetadata } from "@/lib/metadata";
 import { getFeaturedVehicles } from "@/lib/inventory-queries";
-import { listPublicVehicleCardImages } from "@/lib/media-attachments";
+import { listPublicVehicleCardImages } from "@/lib/vehicle-photos";
 
 export async function generateMetadata() {
   return createPublicMetadata(

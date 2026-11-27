@@ -5,7 +5,7 @@ import type {
   PublicVehicleCardImageDTO,
 } from "@/types/inventory";
 import { getPublicComparisonVehicles } from "@/lib/inventory-queries";
-import { listPublicVehicleCardImages } from "@/lib/media-attachments";
+import { listPublicVehicleCardImages } from "@/lib/vehicle-photos";
 
 export async function resolvePublicComparison(ids: string[]): Promise<
   Array<{

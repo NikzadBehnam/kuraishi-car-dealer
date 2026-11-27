@@ -16,20 +16,12 @@
     "test:watch": "node --experimental-loader=./test-support/node-test-loader.mjs --experimental-test-module-mocks --test --watch --experimental-test-isolation=none --experimental-strip-types src/**/*.test.ts",
     "test:auth-actions": "node --experimental-loader=./test-support/node-test-loader.mjs --experimental-test-module-mocks --test --experimental-strip-types \"src/app/(protected)/admin/accounts/new/actions.test.ts\"",
     "test:inventory-db": "node --experimental-loader=./test-support/node-test-loader.mjs --env-file=.env.inventory-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\inventory-migration.test.ts prisma\\inventory-queries.test.ts",
-    "test:media-db": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\media-migration.test.ts",
-    "test:media-approvals": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\media-approvals.test.ts",
-    "test:media-upload": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\media-uploads.test.ts",
-    "test:media-library": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\media-library.test.ts",
-    "test:media-downloads": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\media-downloads.test.ts",
-    "test:media-deletions": "node --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\media-deletions.test.ts",
-    "test:vehicle-media": "node --experimental-loader=./test-support/node-test-loader.mjs --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\vehicle-media.test.ts",
-    "test:media-storage": "node --env-file=.env.media-test.local --conditions=react-server --test --experimental-test-isolation=none --experimental-strip-types prisma\\media-storage.test.ts",
+    "test:vehicle-photos": "node --experimental-loader=./test-support/node-test-loader.mjs --env-file=.env.media-test.local --conditions=react-server --experimental-test-module-mocks --test --experimental-test-isolation=none --experimental-strip-types prisma\\vehicle-photos.test.ts",
     "inventory:fixtures": "node --env-file=.env.inventory-test.local --experimental-strip-types prisma\\seed-inventory.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1171.0",
     "@aws-sdk/s3-presigned-post": "3.1171.0",
-    "@aws-sdk/s3-request-presigner": "3.1171.0",
     "@better-auth/prisma-adapter": "1.7.23",
     "@hookform/resolvers": "latest",
     "@neondatabase/serverless": "1.2.1",
@@ -65,7 +57,6 @@
     "sonner": "latest",
     "tailwind-merge": "latest",
     "ws": "8.23.0",
-    "yazl": "3.3.1",
     "zod": "latest"
   },
   "devDependencies": {
@@ -74,7 +65,6 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/ws": "8.18.2",
-    "@types/yazl": "3.3.1",
     "eslint": "9.39.4",
     "eslint-config-next": "latest",
     "prettier": "3.9.6",

@@ -367,6 +367,64 @@ unknown**, with a brief explanation for each unresolved result. Do not share
 connection strings, tokens, credentials, or screenshots showing values.
 Leave 16.11 open if any required check fails or remains unknown.
 
+## Vehicle photo cutover
+
+The implementation branch is based on the protected customer-review
+release. The Git default branch is `master`; the Production database branch
+is `main`. This runbook is a proposal, not authorization.
+
+1. Stage the exact verified Vercel Production candidate without assigning
+   the domain. Confirm Vercel Authentication, the named customer access,
+   anonymous denial, `noindex, nofollow`, sitemap denial, disabled email
+   and inquiry modes, and the known Production direct and private-storage
+   targets. Keep the existing rollback deployment available.
+2. Freeze writes on all serving deployments that can reach Production.
+   Wait for outstanding legacy upload grants to expire. Recount vehicles,
+   associations and assets; list both buckets; save the exact counts, a
+   restricted legacy metadata manifest, and a verified pre-cutover recovery
+   point. If new or unknown public objects are present, stop for review.
+   For every attached private image verify its object; for every attached
+   public image copy and verify it at `photo-migration/<asset ID>` in the
+   existing private bucket. Never run the backfill while legacy writes can
+   still succeed.
+3. Use Prisma `migrate deploy` on the confirmed direct Production target.
+   `20261127100000_backfill_vehicle_photos` copies attached photo IDs,
+   vehicle IDs, position and technical metadata into `VehiclePhoto`.
+   `20261127110000_retire_legacy_media` aborts on backfill drift or active
+   grants, then creates the upload and deletion tables and drops
+   `VehicleMedia`, `MediaAsset`, `MediaUploadIntent`, their triggers,
+   functions and enums. These migrations do not delete objects or vehicles.
+   Reconcile schema, migration checksums, photo counts and runtime grants
+   (including CRUD on the three vehicle photo tables) before promotion.
+4. Retire only the following redundant objects from
+   `kuraishi-production-public` after explicit deletion authorization.
+   The read-only inventory on 2026-11-27 showed zero vehicles, zero
+   associations and no live grants. Each listed public key matched its
+   `assets/<same filename>` private original by exact size and ETag.
+   Recheck those matches at cutover. Preserve all 11 private originals and
+   do not delete the bucket or any other object.
+
+   | Public key | Bytes | ETag |
+   | --- | ---: | --- |
+   | `approved/1c705031-5d27-4d88-9e03-594cc4c8c902.jpg` | 107610 | `c9ffd318d4305f587c28a826017369a9` |
+   | `approved/925228d7-83d7-4131-bfb3-c5331ffa2208.jpg` | 162032 | `3960a08b4284ea30e26cca8733188e82` |
+   | `approved/95ecc3d3-7fbd-43e7-8125-1d1a185f9490.jpg` | 149423 | `8efad8ee6eb7d46241682787c33b34f4` |
+   | `approved/bae65bc1-9742-455f-bd97-6738c6ab11d8.jpg` | 149423 | `8efad8ee6eb7d46241682787c33b34f4` |
+
+5. Merge the reviewed revision, promote the verified deployment to
+   `www.kuraishicars.com`, and check the legacy paths are absent and the
+   authenticated ordinary-staff Vehicles → Create vehicle → Photos tab works
+   without an administrator action. Recheck no indexing, no sitemap, no
+   anonymous access and no external email. Use the existing isolated tests
+   for synthetic CRUD; do not write test records into customer Production
+   without separate approval. Restore access after the smoke checks pass.
+
+Rollback after the retiring migration is **not** a code-only Vercel rollback:
+the old app expects the dropped schema. Keep writes frozen, capture evidence
+and obtain approval for the tested database recovery procedure before pointing
+the domain at the old app. The 11 private objects are left intact; restoring
+public copies or database state requires separate authorization.
+
 ## Manual Production deployment (16.13)
 
 Approved on 2026-11-20: an authorized release operator deploys through the

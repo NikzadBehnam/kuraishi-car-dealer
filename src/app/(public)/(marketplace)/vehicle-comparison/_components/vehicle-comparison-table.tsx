@@ -224,6 +224,7 @@ export function ComparisonTable() {
                     <div className="bg-secondary relative h-16 w-24 overflow-hidden rounded-sm sm:justify-self-end">
                       {primaryImage ? (
                         <Image
+                          unoptimized
                           fill
                           sizes="6rem"
                           src={primaryImage.url}

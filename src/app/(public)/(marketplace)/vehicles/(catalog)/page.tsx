@@ -6,7 +6,7 @@ import { vehicleListingContent as content } from "@/content/de/vehicle-listing";
 import { createPublicMetadata } from "@/lib/metadata";
 import { publicRoutes } from "@/config/routes.config";
 import { listPublicVehicles } from "@/lib/inventory-queries";
-import { listPublicVehicleCardImages } from "@/lib/media-attachments";
+import { listPublicVehicleCardImages } from "@/lib/vehicle-photos";
 import { Button } from "@/components/ui/button";
 import {
   PUBLIC_CATALOG_PAGE_SIZE,

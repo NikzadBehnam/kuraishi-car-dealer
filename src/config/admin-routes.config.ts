@@ -1,6 +1,5 @@
 import {
   Gauge,
-  Images,
   Inbox,
   Settings,
   CarFront,
@@ -11,7 +10,6 @@ export const adminRoutes = {
   dashboard: "/admin",
   vehicles: "/admin/vehicles",
   leads: "/admin/leads",
-  media: "/admin/media",
   settings: "/admin/settings",
   newAccount: "/admin/accounts/new",
 } as const;
@@ -40,12 +38,6 @@ export const adminNavigation: AdminNavigationItem[] = [
     description: "Review inquiries and contact requests.",
     href: adminRoutes.leads,
     Icon: Inbox,
-  },
-  {
-    label: "Media",
-    description: "Organize vehicle imagery and dealership assets.",
-    href: adminRoutes.media,
-    Icon: Images,
   },
   {
     label: "Settings",

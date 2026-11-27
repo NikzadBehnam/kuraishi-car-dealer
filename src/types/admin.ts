@@ -8,7 +8,6 @@ export type AdminInspectionStatus =
   "pending" | "in_progress" | "passed" | "failed";
 
 export interface AdminVehicle extends Vehicle {
-  mediaAssetIds?: string[];
   stockNumber: string;
   status: AdminVehicleStatus;
   inspectionStatus: AdminInspectionStatus;
@@ -105,32 +104,4 @@ export interface AdminInquiryPage {
   pageSize: number;
   totalPages: number;
   search: string;
-}
-
-export type AdminMediaType = "image" | "document" | "brand";
-export type AdminMediaUsage = "vehicle" | "brand" | "legal" | "unused";
-
-export interface AdminMediaAsset {
-  id: string;
-  type: AdminMediaType;
-  usage: AdminMediaUsage;
-  bucketAccess: "private" | "public_read";
-  publicApprovedAt: string | null;
-  title: string;
-  filename: string;
-  url: string;
-  alt: string;
-  sizeKb: number;
-  width?: number;
-  height?: number;
-  usedByVehicleId?: string;
-  usedByVehicle?: Pick<Vehicle, "id" | "make" | "model">;
-  uploadedAt: string;
-}
-
-export interface AdminMediaLibraryPage {
-  assets: AdminMediaAsset[];
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
 }

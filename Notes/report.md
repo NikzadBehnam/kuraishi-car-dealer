@@ -16,16 +16,36 @@
 - [x] **Additive photo data backfill.**
   The additive `20261127100000_backfill_vehicle_photos` migration introduces
   one private object reference per owned photo and preserves existing photo
-  IDs, vehicle ownership, ordering, and image metadata. The current app still
-  uses the old tables. **Do not deploy the migration independently**: a
+  IDs, vehicle ownership, ordering, and image metadata. **Do not deploy the
+  migration independently**: a
   backfill performed while legacy writes remain enabled would miss later
   associations. Keep the migration pending until the replacement flow is ready.
   The isolated media migration suite passed all 12 tests, including populated
   private and public attachment backfill and exclusion of unattached images.
   Prisma schema validation, TypeScript, ESLint, all 151 source tests, and an
   optimized local build passed.
-- [ ] **Vehicle-owned photo flow and removal of the standalone library.**
-- [ ] **Isolated verification and Production approval.** Freeze legacy writes
+- [x] **Vehicle-owned photo flow and removal of the standalone library.**
+  The feature branch replaces the library with the vehicle editor's **Photos**
+  tab. The first saved photo is the cover. The staff detail view shows all
+  photos. Both image-serving routes read the private bucket; the public route
+  rechecks public-detail eligibility on each request. Photo removal is saved
+  with the vehicle and enqueues object deletion in the same transaction.
+  Completed but unclaimed photos expire after one hour; a later upload
+  sweeps expired grants and retries failed object deletions.
+- [x] **Isolated database, storage, and browser verification.**
+  All 30 inventory regression tests and all three dedicated photo tests
+  passed. The photo suite covered legacy data preservation, retirement
+  guards, ordinary staff, failed saves, cancelled uploads, and publication
+  access against isolated storage. Chromium verified multi-photo creation,
+  add/remove/reorder during editing, cover selection, persistence after
+  reload, and the staff and published galleries on desktop and mobile.
+  Cancelling an in-flight browser upload returned `204`; the retired page
+  and API returned `404`. The localized published gallery rendered both
+  images in the optimized build without horizontal overflow. The isolated
+  browser database and its recorded storage keys were removed.
+  All 140 source tests, Prisma validation, ESLint, TypeScript, the optimized
+  Next.js build, and the frozen lockfile check passed.
+- [ ] **Production authorization and cutover.** Freeze legacy writes
   and capture an approved recovery point and restricted manifests of attached,
   unattached, and storage-only objects. For each attached private photo, verify
   its current private key. For each attached public photo, copy its bytes to
@@ -37,6 +57,8 @@
   The selected plan is to retire the public copies only after independently
   verifying private replacements and receiving separate approval for deletion;
   leaving an object in a public-read bucket leaves its old URL readable.
+  See the [vehicle photo cutover](./Operations-and-Recovery-Runbook.md#vehicle-photo-cutover)
+  for the two migrations, the four exact keys, and deployment/rollback gates.
   No Production migration or object deletion has been approved or run.
 
 ## V1 delivery milestone

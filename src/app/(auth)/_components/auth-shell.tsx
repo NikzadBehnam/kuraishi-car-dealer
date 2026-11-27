@@ -57,7 +57,7 @@ export function AuthShell({
             </h1>
             <p className="text-muted-foreground mt-4 text-sm leading-6">
               Sign in with your staff account to access inventory, inquiries,
-              media, and dealership settings. Staff accounts are created by an
+              and dealership settings. Staff accounts are created by an
               administrator.
             </p>
           </div>

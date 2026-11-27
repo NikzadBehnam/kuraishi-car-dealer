@@ -54,17 +54,6 @@ enum VehicleInspectionStatus {
   failed
 }
 
-enum MediaAssetType {
-  image
-  document
-  brand
-}
-
-enum MediaBucketAccess {
-  private
-  public_read
-}
-
 enum InquirySource {
   contact
   test_drive @map("test-drive")
@@ -152,7 +141,6 @@ model Vehicle {
   updatedById       String
   updatedBy         User                     @relation("VehicleUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
   changes           VehicleChange[]
-  mediaAttachments  VehicleMedia[]
   photos            VehiclePhoto[]
   inquiries         Inquiry[]
   dealerId          String
@@ -252,43 +240,6 @@ model VehicleChange {
   @@index([actorId])
 }
 
-model MediaAsset {
-  id                 String            @id @default(cuid())
-  objectKey          String            @db.VarChar(1024)
-  bucketAccess       MediaBucketAccess
-  type               MediaAssetType
-  title              String            @db.VarChar(255)
-  originalFilename   String            @db.VarChar(255)
-  altText            String?
-  verifiedMimeType   String            @db.VarChar(127)
-  sizeBytes          BigInt
-  width              Int?
-  height             Int?
-  uploadedAt         DateTime          @default(now()) @db.Timestamptz(3)
-  uploadedById       String
-  uploadedBy         User              @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-  publicApprovedAt   DateTime?         @db.Timestamptz(3)
-  publicApprovedById String?
-  publicApprovedBy   User?             @relation("MediaPublicApprover", fields: [publicApprovedById], references: [id], onDelete: Restrict)
-  vehicleAttachment  VehicleMedia?
-
-  @@unique([bucketAccess, objectKey])
-  @@index([type, bucketAccess])
-  @@index([uploadedAt(sort: Desc), id])
-  @@index([uploadedById])
-  @@index([publicApprovedById])
-}
-
-model VehicleMedia {
-  vehicleId    String
-  mediaAssetId String     @unique
-  position     Int        @db.SmallInt
-  vehicle      Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Restrict)
-
-  @@id([vehicleId, position])
-}
-
 model VehiclePhoto {
   id         String  @id @default(cuid())
   vehicleId  String
@@ -302,26 +253,25 @@ model VehiclePhoto {
   @@unique([vehicleId, position])
 }
 
-model MediaUploadIntent {
-  id               String         @id
-  objectKey        String         @db.VarChar(1024)
-  stagingKey       String         @unique @db.VarChar(1024)
-  type             MediaAssetType
-  title            String         @db.VarChar(255)
-  originalFilename String         @db.VarChar(255)
-  altText          String?
-  claimedMimeType  String         @db.VarChar(127)
-  sizeBytes        BigInt
-  uploadedById     String
-  uploadedBy       User           @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
-  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
-  expiresAt        DateTime       @db.Timestamptz(3)
-  completedAt      DateTime?      @db.Timestamptz(3)
-  cancelledAt      DateTime?      @db.Timestamptz(3)
+model VehiclePhotoUpload {
+  id            String    @id
+  vehicleId     String?
+  uploadedById  String
+  mimeType      String    @db.VarChar(127)
+  sizeBytes     BigInt
+  expiresAt     DateTime  @db.Timestamptz(3)
+  completedAt   DateTime? @db.Timestamptz(3)
+  cancelledAt   DateTime? @db.Timestamptz(3)
+  claimedAt     DateTime? @db.Timestamptz(3)
 
-  @@unique([objectKey])
-  @@index([uploadedById, createdAt])
   @@index([expiresAt])
+}
+
+model VehiclePhotoDeletion {
+  objectKey String   @id @db.VarChar(1024)
+  queuedAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([queuedAt])
 }
 
 model User {
@@ -342,9 +292,6 @@ model User {
   createdVehicles     Vehicle[]           @relation("VehicleCreator")
   updatedVehicles     Vehicle[]           @relation("VehicleUpdater")
   vehicleChanges      VehicleChange[]
-  uploadedMedia       MediaAsset[]        @relation("MediaUploader")
-  approvedPublicMedia MediaAsset[]        @relation("MediaPublicApprover")
-  mediaUploadIntents  MediaUploadIntent[]
 
   @@unique([email])
   @@map("user")

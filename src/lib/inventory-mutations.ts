@@ -1,17 +1,20 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { HeadObjectCommand } from "@aws-sdk/client-s3";
+import { photoIdsSchema } from "./vehicle-photo-validation.ts";
 import { Prisma } from "../generated/prisma/client.ts";
 import { z } from "zod";
 
 import { prisma } from "./db.ts";
 import { dealershipDate } from "./business-date.ts";
 import {
-  getMediaStorageClient,
-  getPrivateMediaBucket,
-  getPublicMediaBucket,
-} from "./media-storage.ts";
+  queuePhotoDeletions,
+  saveVehiclePhotos,
+} from "./vehicle-photo-mutations.ts";
+import {
+  sweepPhotoDeletions,
+  VehiclePhotoError,
+} from "./vehicle-photo-uploads.ts";
 import {
   firstRegistrationMonthSchema,
   inventoryIdSchema,
@@ -93,13 +96,6 @@ const optionalDescription = optionalText(10_000).refine(
   "Description must be at least 20 characters when provided.",
 );
 
-const mediaAssetIdsSchema = z
-  .array(inventoryIdSchema)
-  .max(20, "A vehicle can have at most 20 images.")
-  .refine((ids) => new Set(ids).size === ids.length, {
-    message: "An image cannot be attached more than once.",
-  });
-
 const vehicleDraftFieldsSchema = z.strictObject({
   stockNumber: requiredText("Stock number", 64).transform((value) =>
     value.toUpperCase(),
@@ -139,7 +135,7 @@ const vehicleDraftFieldsSchema = z.strictObject({
 });
 
 export const createDraftVehicleSchema = vehicleDraftFieldsSchema.extend({
-  mediaAssetIds: mediaAssetIdsSchema.default([]),
+  photoIds: photoIdsSchema.default([]),
 });
 
 export const updateVehicleSchema = vehicleDraftFieldsSchema
@@ -147,7 +143,7 @@ export const updateVehicleSchema = vehicleDraftFieldsSchema
   .extend({
     vehicleId: inventoryIdSchema,
     expectedVersion: z.number().int().min(1).max(2_147_483_647),
-    mediaAssetIds: mediaAssetIdsSchema.optional(),
+    photoIds: photoIdsSchema.optional(),
   })
   .refine(
     (changes) =>
@@ -186,7 +182,7 @@ export const deleteVehicleMutationSchema = z.strictObject({
 
 export const publishVehicleSchema = vehicleDraftFieldsSchema
   .extend({
-    mediaAssetIds: mediaAssetIdsSchema,
+    photoIds: photoIdsSchema,
     confirmInspectionPassed: z.literal(true),
     vehicleId: inventoryIdSchema.optional(),
     expectedVersion: z.number().int().min(1).max(2_147_483_647).optional(),
@@ -275,18 +271,6 @@ export const publishVehicleSchema = vehicleDraftFieldsSchema
     }
   });
 
-type MediaAssetRecord = {
-  id: string;
-  objectKey: string;
-  bucketAccess: "private" | "public_read";
-  type: "image" | "document" | "brand";
-  verifiedMimeType: string;
-  sizeBytes: bigint;
-  publicApprovedAt: Date | null;
-  publicApprovedById: string | null;
-  vehicleAttachment: { vehicleId: string } | null;
-};
-
 export class InventoryMutationError extends Error {
   readonly status: 404 | 409 | 422 | 503;
 
@@ -334,163 +318,11 @@ function assertValidConsumption(state: {
   }
 }
 
-function validateMediaRows(
-  assets: MediaAssetRecord[],
-  ids: string[],
-  vehicleId?: string,
-): MediaAssetRecord[] {
-  const byId = new Map(assets.map((asset) => [asset.id, asset]));
-  if (byId.size !== ids.length) {
+function assertPublicVehicleHasPhoto(status: string, count: number) {
+  if (["published", "reserved", "sold"].includes(status) && count === 0) {
     throw new InventoryMutationError(
       422,
-      "One or more selected images are missing, unfinished, or unavailable.",
-    );
-  }
-
-  const ordered: MediaAssetRecord[] = [];
-  for (const id of ids) {
-    const asset = byId.get(id);
-    if (
-      !asset ||
-      asset.type !== "image" ||
-      !["image/jpeg", "image/png"].includes(asset.verifiedMimeType)
-    ) {
-      throw new InventoryMutationError(
-        422,
-        "Only completed image assets can be attached to a vehicle.",
-      );
-    }
-    if (
-      asset.vehicleAttachment &&
-      asset.vehicleAttachment.vehicleId !== vehicleId
-    ) {
-      throw new InventoryMutationError(
-        409,
-        "An image is already attached to another vehicle.",
-      );
-    }
-    if (
-      asset.bucketAccess === "public_read" &&
-      (!asset.publicApprovedAt || !asset.publicApprovedById)
-    ) {
-      throw new InventoryMutationError(
-        422,
-        "An image with public access must have a recorded approval.",
-      );
-    }
-    ordered.push(asset);
-  }
-  return ordered;
-}
-
-async function loadMediaRows(ids: string[], vehicleId?: string) {
-  if (!ids.length) {
-    return [];
-  }
-
-  const assets = await prisma.mediaAsset.findMany({
-    where: { id: { in: ids } },
-    select: {
-      id: true,
-      objectKey: true,
-      bucketAccess: true,
-      type: true,
-      verifiedMimeType: true,
-      sizeBytes: true,
-      publicApprovedAt: true,
-      publicApprovedById: true,
-      vehicleAttachment: {
-        select: { vehicleId: true },
-      },
-    },
-  });
-  const ordered = validateMediaRows(assets, ids, vehicleId);
-  const client = getMediaStorageClient();
-
-  for (const asset of ordered) {
-    const bucket =
-      asset.bucketAccess === "private"
-        ? getPrivateMediaBucket()
-        : getPublicMediaBucket();
-    let head;
-    try {
-      head = await client.send(
-        new HeadObjectCommand({ Bucket: bucket, Key: asset.objectKey }),
-      );
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.name === "NotFound" || error.name === "NoSuchKey")
-      ) {
-        throw new InventoryMutationError(
-          422,
-          "A selected image is missing from storage.",
-        );
-      }
-      throw error;
-    }
-    if (
-      head.ContentLength !== Number(asset.sizeBytes) ||
-      head.ContentType !== asset.verifiedMimeType
-    ) {
-      throw new InventoryMutationError(
-        422,
-        "A selected image no longer matches its verified metadata.",
-      );
-    }
-  }
-  return ordered;
-}
-
-async function assertMediaAvailableInTransaction(
-  tx: Prisma.TransactionClient,
-  ids: string[],
-  vehicleId?: string,
-) {
-  if (!ids.length) {
-    return [];
-  }
-  const assets = await tx.mediaAsset.findMany({
-    where: { id: { in: ids } },
-    select: {
-      id: true,
-      objectKey: true,
-      bucketAccess: true,
-      type: true,
-      verifiedMimeType: true,
-      sizeBytes: true,
-      publicApprovedAt: true,
-      publicApprovedById: true,
-      vehicleAttachment: {
-        select: { vehicleId: true },
-      },
-    },
-  });
-  return validateMediaRows(assets, ids, vehicleId);
-}
-
-type PublicMediaAsset = Pick<
-  MediaAssetRecord,
-  "type" | "bucketAccess" | "publicApprovedAt" | "publicApprovedById"
->;
-
-function assertPublicVehicleHasApprovedImage(
-  status: string,
-  assets: readonly PublicMediaAsset[],
-) {
-  if (
-    ["published", "reserved", "sold"].includes(status) &&
-    !assets.some(
-      (asset) =>
-        asset.type === "image" &&
-        asset.bucketAccess === "public_read" &&
-        asset.publicApprovedAt !== null &&
-        asset.publicApprovedById !== null,
-    )
-  ) {
-    throw new InventoryMutationError(
-      422,
-      "Published, reserved, and sold vehicles must retain at least one approved public image.",
+      "Keep at least one photo on a published, reserved, or sold vehicle.",
     );
   }
 }
@@ -515,6 +347,8 @@ function todayInDealershipTimezone(now = new Date()): Date {
 }
 
 function prismaMutationError(error: unknown): never {
+  if (error instanceof VehiclePhotoError)
+    throw new InventoryMutationError(422, error.message);
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2002") {
       throw new InventoryMutationError(
@@ -542,13 +376,11 @@ export async function createDraftVehicle(input: unknown) {
   const session = await requireSession();
   const parsed = createDraftVehicleSchema.parse(input);
   assertValidConsumption(parsed);
-  const { mediaAssetIds, ...vehicleFields } = parsed;
-  const media = await loadMediaRows(mediaAssetIds);
+  const { photoIds, ...vehicleFields } = parsed;
 
   try {
     return await prisma.$transaction(
       async (tx) => {
-        await assertMediaAvailableInTransaction(tx, mediaAssetIds);
         const dealershipId = await getSingleDealershipId(tx);
         const vehicle = await tx.vehicle.create({
           data: {
@@ -574,19 +406,17 @@ export async function createDraftVehicle(input: unknown) {
             inspectionStatus: "pending",
           },
         });
-        if (media.length) {
-          await tx.vehicleMedia.createMany({
-            data: media.map((asset, position) => ({
-              vehicleId: vehicle.id,
-              mediaAssetId: asset.id,
-              position,
-            })),
-          });
-        }
+        await saveVehiclePhotos(
+          tx,
+          vehicle.id,
+          photoIds,
+          session.user.id,
+          true,
+        );
         return {
           vehicleId: vehicle.id,
           version: vehicle.version,
-          mediaAssetIds,
+          photoIds,
         };
       },
       { isolationLevel: "Serializable" },
@@ -728,7 +558,7 @@ export async function deleteDraftVehicle(input: unknown) {
     deleteVehicleMutationSchema.parse(input);
 
   try {
-    return await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
         const current = await tx.vehicle.findUnique({
           where: { id: vehicleId },
@@ -765,6 +595,13 @@ export async function deleteDraftVehicle(input: unknown) {
           );
         }
 
+        await queuePhotoDeletions(
+          tx,
+          await tx.vehiclePhoto.findMany({
+            where: { vehicleId },
+            select: { objectKey: true },
+          }),
+        );
         await tx.vehicleChange.deleteMany({ where: { vehicleId } });
         const deleted = await tx.vehicle.deleteMany({
           where: {
@@ -784,6 +621,8 @@ export async function deleteDraftVehicle(input: unknown) {
       },
       { isolationLevel: "Serializable" },
     );
+    await sweepPhotoDeletions();
+    return result;
   } catch (error) {
     if (error instanceof InventoryMutationError) {
       throw error;
@@ -804,7 +643,7 @@ export async function deleteDraftVehicle(input: unknown) {
 export async function updateVehicle(input: unknown) {
   const session = await requireSession();
   const parsed = updateVehicleSchema.parse(input);
-  const { vehicleId, expectedVersion, mediaAssetIds, ...changes } = parsed;
+  const { vehicleId, expectedVersion, photoIds, ...changes } = parsed;
   const current = await prisma.vehicle.findUnique({
     where: { id: vehicleId },
     select: {
@@ -852,41 +691,14 @@ export async function updateVehicle(input: unknown) {
         ? current.consumptionUnit
         : changes.consumptionUnit,
   });
-  const media =
-    mediaAssetIds !== undefined
-      ? await loadMediaRows(mediaAssetIds, vehicleId)
-      : undefined;
-  if (media !== undefined) {
-    assertPublicVehicleHasApprovedImage(current.status, media);
-  }
-
   try {
-    return await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
-        const transactionMedia =
-          mediaAssetIds !== undefined
-            ? await assertMediaAvailableInTransaction(
-                tx,
-                mediaAssetIds,
-                vehicleId,
-              )
-            : (
-                await tx.vehicleMedia.findMany({
-                  where: { vehicleId },
-                  orderBy: { position: "asc" },
-                  select: {
-                    mediaAsset: {
-                      select: {
-                        type: true,
-                        bucketAccess: true,
-                        publicApprovedAt: true,
-                        publicApprovedById: true,
-                      },
-                    },
-                  },
-                })
-              ).map(({ mediaAsset }) => mediaAsset);
-        assertPublicVehicleHasApprovedImage(current.status, transactionMedia);
+        assertPublicVehicleHasPhoto(
+          current.status,
+          photoIds?.length ??
+            (await tx.vehiclePhoto.count({ where: { vehicleId } })),
+        );
 
         const update = await tx.vehicle.updateMany({
           where: {
@@ -920,33 +732,32 @@ export async function updateVehicle(input: unknown) {
             soldAt: current.soldAt,
           },
         });
-        if (media !== undefined) {
-          await tx.vehicleMedia.deleteMany({ where: { vehicleId } });
-          if (media.length) {
-            await tx.vehicleMedia.createMany({
-              data: media.map((asset, position) => ({
-                vehicleId,
-                mediaAssetId: asset.id,
-                position,
-              })),
-            });
-          }
-        }
-
+        if (photoIds)
+          await saveVehiclePhotos(
+            tx,
+            vehicleId,
+            photoIds,
+            session.user.id,
+            false,
+          );
         return {
           vehicleId,
           version,
-          mediaAssetIds: (
-            await tx.vehicleMedia.findMany({
-              where: { vehicleId },
-              orderBy: { position: "asc" },
-              select: { mediaAssetId: true },
-            })
-          ).map(({ mediaAssetId }) => mediaAssetId),
+          photoIds:
+            photoIds ??
+            (
+              await tx.vehiclePhoto.findMany({
+                where: { vehicleId },
+                orderBy: { position: "asc" },
+                select: { id: true },
+              })
+            ).map(({ id }) => id),
         };
       },
       { isolationLevel: "Serializable" },
     );
+    if (photoIds) await sweepPhotoDeletions();
+    return result;
   } catch (error) {
     if (error instanceof InventoryMutationError) {
       throw error;
@@ -996,40 +807,6 @@ async function transitionVehicleLifecycleForSession(
     };
   }
 
-  if (status === "sold") {
-    const attachments = await prisma.vehicleMedia.findMany({
-      where: { vehicleId },
-      orderBy: { position: "asc" },
-      select: {
-        mediaAssetId: true,
-        mediaAsset: {
-          select: {
-            type: true,
-            bucketAccess: true,
-            publicApprovedAt: true,
-            publicApprovedById: true,
-          },
-        },
-      },
-    });
-    const approvedImageIds = attachments
-      .filter(
-        ({ mediaAsset }) =>
-          mediaAsset.type === "image" &&
-          mediaAsset.bucketAccess === "public_read" &&
-          mediaAsset.publicApprovedAt !== null &&
-          mediaAsset.publicApprovedById !== null,
-      )
-      .map(({ mediaAssetId }) => mediaAssetId);
-    if (!approvedImageIds.length) {
-      throw new InventoryMutationError(
-        422,
-        "A sold vehicle must retain at least one approved public image.",
-      );
-    }
-    await loadMediaRows(approvedImageIds, vehicleId);
-  }
-
   try {
     return await prisma.$transaction(
       async (tx) => {
@@ -1063,27 +840,15 @@ async function transitionVehicleLifecycleForSession(
           };
         }
 
-        const attachments = await tx.vehicleMedia.findMany({
+        const photoCount = await tx.vehiclePhoto.count({
           where: { vehicleId },
-          orderBy: { position: "asc" },
-          select: {
-            mediaAsset: {
-              select: {
-                type: true,
-                bucketAccess: true,
-                publicApprovedAt: true,
-                publicApprovedById: true,
-              },
-            },
-          },
         });
-        const mediaAssets = attachments.map(({ mediaAsset }) => mediaAsset);
         const lifecycle = resolveInventoryPolicyUpdate(
           current,
           { status },
-          mediaAssets,
+          photoCount,
         );
-        assertPublicVehicleHasApprovedImage(lifecycle.status, mediaAssets);
+        assertPublicVehicleHasPhoto(lifecycle.status, photoCount);
 
         const soldAt = status === "sold" ? new Date() : current.soldAt;
         const update = await tx.vehicle.updateMany({
@@ -1219,7 +984,7 @@ export async function publishVehicle(input: unknown) {
   const {
     vehicleId,
     expectedVersion,
-    mediaAssetIds,
+    photoIds,
     ...vehicleFieldsWithConfirmation
   } = parsed;
   const { confirmInspectionPassed, ...vehicleFields } =
@@ -1268,7 +1033,6 @@ export async function publishVehicle(input: unknown) {
   }
 
   assertValidConsumption(vehicleFields);
-  const media = await loadMediaRows(mediaAssetIds, vehicleId);
   const currentPolicy = current ?? {
     status: "draft" as const,
     inspectionStatus: "pending" as const,
@@ -1278,23 +1042,16 @@ export async function publishVehicle(input: unknown) {
     status: "published" as const,
     inspectionStatus: "passed" as const,
   };
-  resolveInventoryPolicyUpdate(currentPolicy, publication, media);
+  const lifecycle = resolveInventoryPolicyUpdate(
+    currentPolicy,
+    publication,
+    photoIds.length,
+  );
   const publishedAt = current?.publishedAt ?? new Date();
 
   try {
-    return await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
-        const transactionMedia = await assertMediaAvailableInTransaction(
-          tx,
-          mediaAssetIds,
-          vehicleId,
-        );
-        const lifecycle = resolveInventoryPolicyUpdate(
-          currentPolicy,
-          publication,
-          transactionMedia,
-        );
-
         if (!current) {
           const dealershipId = await getSingleDealershipId(tx);
           const vehicle = await tx.vehicle.create({
@@ -1324,17 +1081,17 @@ export async function publishVehicle(input: unknown) {
               soldAt: null,
             },
           });
-          await tx.vehicleMedia.createMany({
-            data: transactionMedia.map((asset, position) => ({
-              vehicleId: vehicle.id,
-              mediaAssetId: asset.id,
-              position,
-            })),
-          });
+          await saveVehiclePhotos(
+            tx,
+            vehicle.id,
+            photoIds,
+            session.user.id,
+            true,
+          );
           return {
             vehicleId: vehicle.id,
             version: vehicle.version,
-            mediaAssetIds,
+            photoIds,
             created: true,
           };
         }
@@ -1377,26 +1134,25 @@ export async function publishVehicle(input: unknown) {
             soldAt: null,
           },
         });
-        await tx.vehicleMedia.deleteMany({
-          where: { vehicleId: current.id },
-        });
-        await tx.vehicleMedia.createMany({
-          data: transactionMedia.map((asset, position) => ({
-            vehicleId: current.id,
-            mediaAssetId: asset.id,
-            position,
-          })),
-        });
+        await saveVehiclePhotos(
+          tx,
+          current.id,
+          photoIds,
+          session.user.id,
+          false,
+        );
 
         return {
           vehicleId: current.id,
           version,
-          mediaAssetIds,
+          photoIds,
           created: false,
         };
       },
       { isolationLevel: "Serializable" },
     );
+    if (current) await sweepPhotoDeletions();
+    return result;
   } catch (error) {
     if (
       error instanceof InventoryMutationError ||

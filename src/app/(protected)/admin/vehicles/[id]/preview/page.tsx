@@ -17,7 +17,7 @@ import {
   formatTransmission,
 } from "@/lib/formatters";
 import { getStaffVehicle } from "@/lib/inventory-queries";
-import { listVehicleMediaAssets } from "@/lib/media-attachments";
+import { listStaffVehiclePhotos } from "@/lib/vehicle-photos";
 import { inventoryIdSchema } from "@/lib/inventory-validation";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +47,7 @@ export default async function VehiclePreviewPage({
 
   const vehicle = await getStaffVehicle(parsedId.data);
   if (!vehicle) notFound();
-  const { assets } = await listVehicleMediaAssets(vehicle.id);
+  const photos = await listStaffVehiclePhotos(vehicle.id);
   const title = `${vehicle.make} ${vehicle.model}`;
   const facts = [
     [
@@ -80,7 +80,7 @@ export default async function VehiclePreviewPage({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="eyebrow">Staff-only saved preview</p>
-          <h1 className="section-title mt-2">Vehicle preview</h1>
+          <h1 className="section-title mt-2">Vehicle details</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
@@ -116,11 +116,11 @@ export default async function VehiclePreviewPage({
 
       <article className="grid min-w-0 gap-5">
         <Card className="overflow-hidden rounded-[var(--radius-sm)] shadow-none">
-          {assets.length ? (
+          {photos.length ? (
             <div className="grid gap-1 sm:grid-cols-2">
-              {assets.slice(0, 4).map((asset, index) => (
+              {photos.map((photo, index) => (
                 <div
-                  key={asset.id}
+                  key={photo.id}
                   className={`bg-secondary relative aspect-[16/10] overflow-hidden ${
                     index === 0 ? "sm:col-span-2 sm:aspect-[2.4/1]" : ""
                   }`}
@@ -134,8 +134,8 @@ export default async function VehiclePreviewPage({
                         : "(max-width: 640px) 100vw, 45vw"
                     }
                     className="object-cover"
-                    src={asset.previewUrl}
-                    alt={asset.altText ?? `${title} image ${index + 1}`}
+                    src={photo.previewUrl}
+                    alt={photo.altText ?? `${title} photo ${index + 1}`}
                   />
                 </div>
               ))}

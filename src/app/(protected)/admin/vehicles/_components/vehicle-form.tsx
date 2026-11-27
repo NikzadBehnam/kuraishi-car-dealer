@@ -1,32 +1,17 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowLeft,
-  BadgeCheck,
-  Eye,
-  ImagePlus,
-  LoaderCircle,
-  Save,
-  Trash2,
-  Upload,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, BadgeCheck, Eye, LoaderCircle, Save } from "lucide-react";
+import { useState } from "react";
 import { Controller, useForm, type DefaultValues } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import type { StaffInventoryVehicleDTO } from "@/types/inventory";
 import { adminRoutes } from "@/config/admin-routes.config";
-import {
-  completedVehicleImageUploadResponseSchema,
-  MAX_MEDIA_FILES_PER_REQUEST,
-} from "@/lib/media-upload-validation";
+import { useVehiclePhotos, VehiclePhotosField } from "./vehicle-photos-field";
 import {
   vehicleFormSchema,
   type VehicleFormValues,
@@ -54,82 +39,16 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
-const uploadIntentResponseSchema = z.strictObject({
-  uploads: z.array(
-    z.strictObject({
-      uploadId: z.string().uuid(),
-      url: z.string().url(),
-      method: z.literal("POST"),
-      fields: z.record(z.string(), z.string()),
-    }),
-  ),
-  cleanup: z.strictObject({
-    scanned: z.number(),
-    cleaned: z.number(),
-    failed: z.number(),
-  }),
-});
-
-const cancellationResponseSchema = z.strictObject({
-  cancelled: z.boolean(),
-  cleanupPending: z.boolean(),
-});
-
-const attachableAssetsResponseSchema = z.strictObject({
-  assets: z.array(
-    z.strictObject({
-      id: z.string(),
-      title: z.string(),
-      filename: z.string(),
-      altText: z.string().nullable(),
-      isPublicApproved: z.boolean(),
-      sizeBytes: z.number(),
-      uploadedAt: z.string(),
-      previewUrl: z.string().url(),
-    }),
-  ),
-  page: z.number(),
-  pageSize: z.number(),
-  hasMore: z.boolean(),
-});
-
 const apiErrorResponseSchema = z.object({ error: z.string() });
 
 const createVehicleResponseSchema = z.strictObject({
   vehicleId: z.string().min(1),
   version: z.number().int().positive(),
-  mediaAssetIds: z.array(z.string()),
+  photoIds: z.array(z.string()),
 });
 const publishVehicleResponseSchema = createVehicleResponseSchema.extend({
   created: z.boolean(),
 });
-
-const vehicleMediaAssetsResponseSchema = z.strictObject({
-  assets: z.array(
-    z.strictObject({
-      id: z.string(),
-      title: z.string(),
-      altText: z.string().nullable(),
-      isPublicApproved: z.boolean(),
-      previewUrl: z.string().url(),
-    }),
-  ),
-});
-
-type UploadIntent = z.infer<
-  typeof uploadIntentResponseSchema
->["uploads"][number];
-type AttachableAsset = z.infer<
-  typeof attachableAssetsResponseSchema
->["assets"][number];
-type VehicleMediaItem = {
-  key: string;
-  mediaAssetId: string | null;
-  previewUrl: string | null;
-  title: string;
-  altText: string;
-  isPublicApproved: boolean;
-};
 
 async function readApiResponse<T extends z.ZodType>(
   response: Response,
@@ -184,7 +103,7 @@ const defaultValues: VehicleFormValues = {
   co2Emission: undefined,
   featuresText: "",
   labelsText: "",
-  mediaAssetIds: [],
+  photoIds: [],
   status: "draft",
   inspectionStatus: "pending",
   isFeatured: false,
@@ -214,317 +133,21 @@ export function VehicleForm({
   });
 
   const [confirmInspectionPassed, setConfirmInspectionPassed] = useState(false);
-  const [mediaItems, setMediaItems] = useState<VehicleMediaItem[]>(() =>
-    (vehicle?.mediaAssetIds ?? []).map((mediaAssetId, index) => ({
-      key: mediaAssetId,
-      mediaAssetId,
-      previewUrl: null,
-      title: `Image ${index + 1}`,
-      altText: "",
-      isPublicApproved: false,
-    })),
-  );
-  const [isUploading, setIsUploading] = useState(false);
-  const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
-  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
-  const [assetLoadError, setAssetLoadError] = useState("");
-  const [attachableAssets, setAttachableAssets] = useState<AttachableAsset[]>(
-    [],
-  );
-  const [assetPage, setAssetPage] = useState(1);
-  const [hasMoreAssets, setHasMoreAssets] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const objectUrlsRef = useRef(new Set<string>());
-  const vehicleId = vehicle?.id;
-
-  useEffect(
-    () => () => {
-      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-      objectUrlsRef.current.clear();
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (mode !== "edit" || !vehicleId) return;
-
-    let active = true;
-    void (async () => {
-      try {
-        const response = await fetch(
-          `/api/admin/vehicles/${encodeURIComponent(vehicleId)}/media`,
-          { cache: "no-store" },
-        );
-        const result = await readApiResponse(
-          response,
-          vehicleMediaAssetsResponseSchema,
-        );
-        if (!active) return;
-
-        const assetsById = new Map(
-          result.assets.map((asset) => [asset.id, asset]),
-        );
-        setMediaItems((current) =>
-          current.map((item) => {
-            const asset = item.mediaAssetId
-              ? assetsById.get(item.mediaAssetId)
-              : undefined;
-            return asset
-              ? {
-                  ...item,
-                  previewUrl: asset.previewUrl,
-                  title: asset.title,
-                  altText: asset.altText ?? "",
-                  isPublicApproved: asset.isPublicApproved,
-                }
-              : item;
-          }),
-        );
-      } catch (error) {
-        if (!active) return;
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Could not load vehicle images.",
-        );
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [mode, vehicleId]);
-
-  const setOrderedMediaItems = (items: VehicleMediaItem[]) => {
-    setMediaItems(items);
-    setValue(
-      "mediaAssetIds",
-      items.flatMap((item) => (item.mediaAssetId ? [item.mediaAssetId] : [])),
-      { shouldDirty: true, shouldTouch: true, shouldValidate: true },
-    );
-  };
-
-  const uploadFiles = async (files: File[]) => {
-    if (files.length === 0) return;
-    if (files.length > MAX_MEDIA_FILES_PER_REQUEST) {
-      toast.error(
-        `Upload no more than ${MAX_MEDIA_FILES_PER_REQUEST} images at a time.`,
-      );
-      return;
-    }
-    if (mediaItems.length + files.length > 20) {
-      toast.error("A vehicle can have at most 20 images.");
-      return;
-    }
-
-    setIsUploading(true);
-    let uploads: UploadIntent[] = [];
-    const completedUploadIds = new Set<string>();
-    const uploadedItems: VehicleMediaItem[] = [];
-    let cleanupPending = false;
-
-    try {
-      const intentResponse = await fetch("/api/admin/media/uploads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          files: files.map((file) => ({
-            originalFilename: file.name,
-            contentType: file.type,
-            sizeBytes: file.size,
-            type: "image",
-          })),
-        }),
+  const photos = useVehiclePhotos(
+    vehicle?.id,
+    vehicle?.photoIds ?? [],
+    (ids) => {
+      setValue("photoIds", ids, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
       });
-      const intentResult = await readApiResponse(
-        intentResponse,
-        uploadIntentResponseSchema,
-      );
-      uploads = intentResult.uploads;
-      if (uploads.length !== files.length) {
-        throw new Error("The server returned an incomplete upload batch.");
-      }
-      if (intentResult.cleanup.failed > 0) {
-        toast.info(
-          "Some expired uploads still need cleanup; the new uploads can continue.",
-        );
-      }
-
-      for (const [index, upload] of uploads.entries()) {
-        const formData = new FormData();
-        for (const [name, value] of Object.entries(upload.fields)) {
-          formData.set(name, value);
-        }
-        formData.set("file", files[index], files[index].name);
-        const storageResponse = await fetch(upload.url, {
-          method: upload.method,
-          body: formData,
-        });
-        if (!storageResponse.ok) {
-          throw new Error(
-            `Storage rejected ${files[index].name} (${storageResponse.status}).`,
-          );
-        }
-
-        const completionResponse = await fetch(
-          "/api/admin/media/uploads/complete",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ uploadId: upload.uploadId }),
-          },
-        );
-        const completion = await readApiResponse(
-          completionResponse,
-          completedVehicleImageUploadResponseSchema,
-        );
-        completedUploadIds.add(upload.uploadId);
-        cleanupPending ||= completion.cleanupPending;
-        const previewUrl = URL.createObjectURL(files[index]);
-        objectUrlsRef.current.add(previewUrl);
-        uploadedItems.push({
-          key: completion.asset.id,
-          mediaAssetId: completion.asset.id,
-          previewUrl,
-          title: completion.asset.title,
-          altText: "",
-          isPublicApproved: false,
-        });
-      }
-
-      setOrderedMediaItems([...mediaItems, ...uploadedItems]);
-      if (cleanupPending) {
-        toast.info(
-          "Upload completed; staging-object cleanup is pending a later cleanup retry.",
-        );
-      }
-      toast.success(
-        "Images uploaded as private assets. They will be attached when the vehicle is saved.",
-      );
-    } catch (error) {
-      for (const [index, upload] of uploads.entries()) {
-        if (completedUploadIds.has(upload.uploadId)) continue;
-        try {
-          const cancellationResponse = await fetch(
-            "/api/admin/media/uploads/cancel",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ uploadId: upload.uploadId }),
-            },
-          );
-          if (cancellationResponse.status === 409) {
-            const file = files[index];
-            if (!file) {
-              cleanupPending = true;
-              continue;
-            }
-            try {
-              const retryResponse = await fetch(
-                "/api/admin/media/uploads/complete",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ uploadId: upload.uploadId }),
-                },
-              );
-              const retry = await readApiResponse(
-                retryResponse,
-                completedVehicleImageUploadResponseSchema,
-              );
-              completedUploadIds.add(upload.uploadId);
-              cleanupPending ||= retry.cleanupPending;
-              const previewUrl = URL.createObjectURL(file);
-              objectUrlsRef.current.add(previewUrl);
-              uploadedItems.push({
-                key: retry.asset.id,
-                mediaAssetId: retry.asset.id,
-                previewUrl,
-                title: retry.asset.title,
-                altText: "",
-                isPublicApproved: false,
-              });
-            } catch (recoveryError) {
-              cleanupPending = true;
-              console.error(
-                "Could not reconcile an interrupted media upload.",
-                {
-                  uploadId: upload.uploadId,
-                  errorType:
-                    recoveryError instanceof Error
-                      ? recoveryError.name
-                      : "UnknownError",
-                },
-              );
-            }
-            continue;
-          }
-          const cancellation = await readApiResponse(
-            cancellationResponse,
-            cancellationResponseSchema,
-          );
-          cleanupPending ||= cancellation.cleanupPending;
-        } catch (cleanupError) {
-          cleanupPending = true;
-          console.error("Could not cancel an incomplete media upload.", {
-            uploadId: upload.uploadId,
-            errorType:
-              cleanupError instanceof Error
-                ? cleanupError.name
-                : "UnknownError",
-          });
-        }
-      }
-
-      if (uploadedItems.length > 0) {
-        setOrderedMediaItems([...mediaItems, ...uploadedItems]);
-        toast.info(
-          `${uploadedItems.length} image(s) were uploaded and remain unattached.`,
-        );
-      }
-      if (cleanupPending) {
-        toast.info(
-          "Some upload cleanup failed and will be retried during a later upload or cleanup sweep.",
-        );
-      }
-      toast.error(
-        error instanceof Error ? error.message : "The image upload failed.",
-      );
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const loadAttachableAssets = async (page: number, replace = false) => {
-    setIsLoadingAssets(true);
-    setAssetLoadError("");
-    try {
-      const response = await fetch(
-        `/api/admin/media/attachable?page=${page}&pageSize=24`,
-        { cache: "no-store" },
-      );
-      const result = await readApiResponse(
-        response,
-        attachableAssetsResponseSchema,
-      );
-      setAttachableAssets((current) =>
-        replace ? result.assets : [...current, ...result.assets],
-      );
-      setAssetPage(result.page);
-      setHasMoreAssets(result.hasMore);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Could not load attachable images.";
-      setAssetLoadError(message);
-      toast.error(message);
-    } finally {
-      setIsLoadingAssets(false);
-    }
-  };
+    },
+  );
+  const isUploading = photos.progress !== null;
 
   const submit = async (values: VehicleFormValues) => {
+    if (isUploading) return;
     const payload =
       mode === "create"
         ? toCreateVehicleDraftPayload(values)
@@ -543,6 +166,7 @@ export function VehicleForm({
         body: JSON.stringify(payload),
       });
       await readApiResponse(response, createVehicleResponseSchema);
+      photos.markSaved();
       toast.success(
         mode === "create" ? "Vehicle draft saved." : "Vehicle updated.",
       );
@@ -559,6 +183,7 @@ export function VehicleForm({
   const canPublish = mode === "create" || vehicle?.status === "draft";
 
   const publish = async (values: VehicleFormValues) => {
+    if (isUploading) return;
     if (!confirmInspectionPassed) {
       toast.error(
         "Confirm that the vehicle passed inspection before publishing.",
@@ -590,6 +215,7 @@ export function VehicleForm({
         response,
         publishVehicleResponseSchema,
       );
+      photos.markSaved();
       toast.success(result.created ? "Vehicle published." : "Draft published.");
       router.push(adminRoutes.vehicles);
     } catch (error) {
@@ -629,7 +255,7 @@ export function VehicleForm({
             <h2 className="mt-3 text-xl font-extrabold">{title}</h2>
             <p className="text-muted-foreground mt-1 text-sm">
               {mode === "create"
-                ? "Save an incomplete draft, or publish a complete listing with an explicitly approved public image."
+                ? "Save an incomplete draft, or publish a complete listing with at least one photo."
                 : vehicle?.status === "draft"
                   ? "Save draft changes, or publish the complete listing after confirming inspection."
                   : "Saving updates vehicle details and images without changing its lifecycle state."}
@@ -724,8 +350,8 @@ export function VehicleForm({
             <TabsTrigger className={formTabClassName} value="features">
               Features
             </TabsTrigger>
-            <TabsTrigger className={formTabClassName} value="media">
-              Media
+            <TabsTrigger className={formTabClassName} value="photos">
+              Photos
             </TabsTrigger>
             <TabsTrigger className={formTabClassName} value="publishing">
               Publishing
@@ -941,292 +567,15 @@ export function VehicleForm({
           </Panel>
         </TabsContent>
 
-        <TabsContent value="media">
+        <TabsContent value="photos">
           <Panel
-            title="Media"
-            description="Uploads become private assets immediately. Selected image IDs stay ordered and are attached when the vehicle is saved. Removing an image detaches it without deleting the asset; attaching it does not approve public access."
+            title="Photos"
+            description="Add, reorder, or remove photos. The first photo is the cover. Changes are saved with the vehicle."
           >
-            <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-              <div className="grid min-w-0 content-start gap-3">
-                <div className="bg-background grid min-h-56 place-items-center rounded-[var(--radius-sm)] border border-dashed p-6 text-center">
-                  <div>
-                    <span className="bg-secondary text-primary mx-auto grid size-12 place-items-center rounded-[var(--radius-sm)]">
-                      {isUploading ? (
-                        <LoaderCircle
-                          className="size-6 animate-spin"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <Upload className="size-6" aria-hidden="true" />
-                      )}
-                    </span>
-                    <span className="mt-4 block font-extrabold">
-                      Upload vehicle images
-                    </span>
-                    <span className="text-muted-foreground mt-2 block text-sm">
-                      JPEG or PNG, up to 10 MiB each; five files per upload and
-                      20 images per vehicle.
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="mt-4"
-                      disabled={isUploading || mediaItems.length >= 20}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      Choose images
-                    </Button>
-                    <Input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png"
-                      multiple
-                      className="sr-only"
-                      aria-label="Upload vehicle images"
-                      onChange={(event) => {
-                        const files = Array.from(
-                          event.currentTarget.files ?? [],
-                        );
-                        event.currentTarget.value = "";
-                        void uploadFiles(files);
-                      }}
-                    />
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  aria-expanded={isAssetPickerOpen}
-                  aria-controls="attachable-media-assets"
-                  disabled={isUploading}
-                  onClick={() => {
-                    const shouldOpen = !isAssetPickerOpen;
-                    setIsAssetPickerOpen(shouldOpen);
-                    if (shouldOpen && attachableAssets.length === 0) {
-                      void loadAttachableAssets(1, true);
-                    }
-                  }}
-                >
-                  {isAssetPickerOpen
-                    ? "Hide existing images"
-                    : "Choose existing image"}
-                </Button>
-                {isAssetPickerOpen && (
-                  <div
-                    id="attachable-media-assets"
-                    className="bg-background grid min-w-0 gap-3 rounded-[var(--radius-sm)] border p-3"
-                    aria-live="polite"
-                  >
-                    {isLoadingAssets && (
-                      <p className="text-muted-foreground text-sm">
-                        Loading images…
-                      </p>
-                    )}
-                    {assetLoadError && (
-                      <p role="alert" className="text-destructive text-sm">
-                        {assetLoadError}
-                      </p>
-                    )}
-                    {attachableAssets
-                      .filter(
-                        (asset) =>
-                          !mediaItems.some(
-                            (item) => item.mediaAssetId === asset.id,
-                          ),
-                      )
-                      .map((asset) => (
-                        <div
-                          key={asset.id}
-                          className="flex min-w-0 items-center gap-3"
-                        >
-                          <div className="bg-secondary relative size-16 shrink-0 overflow-hidden rounded border">
-                            <Image
-                              fill
-                              sizes="4rem"
-                              src={asset.previewUrl}
-                              alt={asset.altText ?? asset.title}
-                              unoptimized
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-bold">
-                              {asset.title}
-                            </p>
-                            <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary mt-1">
-                              {asset.isPublicApproved
-                                ? "Public approved"
-                                : "Private"}
-                            </Badge>
-                            <p className="text-muted-foreground truncate text-xs">
-                              {asset.filename}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={mediaItems.length >= 20}
-                            onClick={() => {
-                              setOrderedMediaItems([
-                                ...mediaItems,
-                                {
-                                  key: asset.id,
-                                  mediaAssetId: asset.id,
-                                  previewUrl: asset.previewUrl,
-                                  title: asset.title,
-                                  altText: asset.altText ?? "",
-                                  isPublicApproved: asset.isPublicApproved,
-                                },
-                              ]);
-                            }}
-                          >
-                            Attach
-                          </Button>
-                        </div>
-                      ))}
-                    {!isLoadingAssets &&
-                      !assetLoadError &&
-                      attachableAssets.every((asset) =>
-                        mediaItems.some(
-                          (item) => item.mediaAssetId === asset.id,
-                        ),
-                      ) && (
-                        <p className="text-muted-foreground text-sm">
-                          No unselected images are available on this page.
-                        </p>
-                      )}
-                    {hasMoreAssets && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        disabled={isLoadingAssets}
-                        onClick={() => void loadAttachableAssets(assetPage + 1)}
-                      >
-                        Load more images
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {mediaItems.map((item, index) => {
-                  const attachedPosition = item.mediaAssetId
-                    ? mediaItems
-                        .slice(0, index + 1)
-                        .filter((candidate) => candidate.mediaAssetId).length
-                    : null;
-                  return (
-                    <div
-                      key={item.key}
-                      className="bg-background overflow-hidden rounded-[var(--radius-sm)] border"
-                    >
-                      <div className="bg-secondary relative aspect-[4/3]">
-                        {item.previewUrl ? (
-                          <Image
-                            fill
-                            sizes="(max-width: 768px) 50vw, 18rem"
-                            src={item.previewUrl}
-                            alt={item.altText || item.title}
-                            unoptimized
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div
-                            role="img"
-                            aria-label={`${item.title} preview unavailable`}
-                            className="text-muted-foreground grid h-full place-items-center gap-2 p-3 text-center text-xs"
-                          >
-                            <ImagePlus className="size-6" aria-hidden="true" />
-                            {item.title}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2 p-2">
-                        <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
-                          {attachedPosition === 1
-                            ? "Cover"
-                            : `Image ${attachedPosition ?? index + 1}`}
-                        </Badge>
-                        <Badge className="bg-secondary text-secondary-foreground dark:bg-secondary">
-                          {item.isPublicApproved
-                            ? "Public approved"
-                            : "Private"}
-                        </Badge>
-                        <div className="flex gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Move image ${index + 1} up`}
-                            disabled={index === 0 || isUploading}
-                            onClick={() => {
-                              const reordered = [...mediaItems];
-                              [reordered[index - 1], reordered[index]] = [
-                                reordered[index],
-                                reordered[index - 1],
-                              ];
-                              setOrderedMediaItems(reordered);
-                            }}
-                          >
-                            <ArrowUp />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Move image ${index + 1} down`}
-                            disabled={
-                              index === mediaItems.length - 1 || isUploading
-                            }
-                            onClick={() => {
-                              const reordered = [...mediaItems];
-                              [reordered[index], reordered[index + 1]] = [
-                                reordered[index + 1],
-                                reordered[index],
-                              ];
-                              setOrderedMediaItems(reordered);
-                            }}
-                          >
-                            <ArrowDown />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Remove image ${index + 1} from vehicle`}
-                            disabled={isUploading}
-                            onClick={() => {
-                              if (item.previewUrl?.startsWith("blob:")) {
-                                URL.revokeObjectURL(item.previewUrl);
-                                objectUrlsRef.current.delete(item.previewUrl);
-                              }
-                              setOrderedMediaItems(
-                                mediaItems.filter(
-                                  (candidate) => candidate.key !== item.key,
-                                ),
-                              );
-                            }}
-                          >
-                            <Trash2 />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                {mediaItems.length === 0 && (
-                  <div className="bg-background grid min-h-44 place-items-center rounded-[var(--radius-sm)] border p-5 text-center">
-                    <span>
-                      <ImagePlus className="text-muted-foreground mx-auto size-8" />
-                      <span className="mt-3 block text-sm font-bold">
-                        No images yet
-                      </span>
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
+            <VehiclePhotosField
+              field={photos}
+              disabled={isSubmitting || isUploading}
+            />
           </Panel>
         </TabsContent>
 
@@ -1235,7 +584,7 @@ export function VehicleForm({
             title="Publishing"
             description={
               canPublish
-                ? "Publishing is a separate action from saving a draft and enforces the complete-listing and approved-image requirements."
+                ? "Publishing is a separate action from saving a draft and enforces a complete listing, a passed inspection, and at least one photo."
                 : "Lifecycle state and quality gates are managed separately; saving vehicle details does not change them."
             }
           >
@@ -1464,6 +813,6 @@ function toFormValues(
     inspectionStatus: vehicle.inspectionStatus,
     isFeatured: vehicle.isFeatured,
     isAvailable: vehicle.status === "published",
-    mediaAssetIds: vehicle.mediaAssetIds ?? [],
+    photoIds: vehicle.photoIds ?? [],
   };
 }

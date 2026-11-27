@@ -1,6 +1,6 @@
 # Kuraishi car dealer
 
-Next.js application for a German car dealership, with a public vehicle marketplace and a protected staff workspace. Better Auth provides staff sign-in, and Prisma/Neon back the implemented inventory, dealership settings, inquiries, staff inbox and dashboard features. Media workflows use S3-compatible storage; comparison selection remains browser-local. See the checklist and test guide for implementation and deployment status.
+Next.js application for a German car dealership, with a public vehicle marketplace and a protected staff workspace. Better Auth provides staff sign-in, and Prisma/Neon back the implemented inventory, dealership settings, inquiries, staff inbox and dashboard features. Vehicle photos use S3-compatible storage; comparison selection remains browser-local. See the checklist and test guide for implementation and deployment status.
 
 ## Technology stack
 
@@ -40,9 +40,9 @@ settings. Never commit or include values in documentation or reports.
 - Runtime database and authentication: `DATABASE_URL`, `BETTER_AUTH_SECRET`,
   `BETTER_AUTH_URL`.
 - Direct migration connection: `DIRECT_URL`.
-- S3-compatible media storage: `AWS_ACCESS_KEY_ID`,
+- S3-compatible private vehicle-photo storage: `AWS_ACCESS_KEY_ID`,
   `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`,
-  `MEDIA_PRIVATE_BUCKET`, `MEDIA_PUBLIC_BUCKET`.
+  `MEDIA_PRIVATE_BUCKET`.
 - Isolated inquiry-intake testing: `INQUIRY_TEST_MODE`,
   `INQUIRY_HASH_SECRET`.
 - Resend simulator-only notifications: `INQUIRY_EMAIL_MODE`, `RESEND_API_KEY`,
@@ -57,6 +57,12 @@ Production sender or scheduled worker. Database integration scripts apply
 migrations and perform temporary writes, so run them only against their
 verified isolated targets. Follow the [test guide](Notes/Implemented-Sections-Test-Guide.md)
 and [operations and recovery runbook](Notes/Operations-and-Recovery-Runbook.md).
+
+Use the **Photos** tab when creating or editing a vehicle. The first
+photo is its cover; saving the vehicle applies changes to its gallery.
+Photos stay in the private bucket and are delivered publicly only while
+the vehicle is eligible for a public detail page. `pnpm test:vehicle-photos`
+uses the guarded media-test database and isolated private storage bucket.
 
 ## Architecture
 
@@ -89,8 +95,8 @@ The public vehicle catalog uses bounded server-side database search, and the sta
 ## Authentication and backend boundaries
 
 - Better Auth email/password sign-in uses persisted sessions. Public self-registration is disabled; only the master admin can create staff accounts.
-- Inventory, dealership settings, inquiry intake/inbox/notes, and dashboard metrics have database-backed implementations. Media workflows also have server-side storage integrations. Migration, isolated-test, and deployment status is tracked per section in [`Notes/Checklist.md`](Notes/Checklist.md).
-- `GET /api/health` exposes only aggregate readiness status; it probes the database and configured media buckets. The bounded expired-upload cleanup does not purge unused media assets or perform a bucket-wide orphan sweep.
+- Inventory, dealership settings, inquiry intake/inbox/notes, and dashboard metrics have database-backed implementations. Migration, isolated-test, and deployment status is tracked per section in [`Notes/Checklist.md`](Notes/Checklist.md).
+- `GET /api/health` exposes only aggregate readiness status; it probes the database and the private vehicle photo bucket. Photo cleanup processes expired upload grants and queued deletions, not a bucket-wide orphan sweep.
 - Inquiry intake is guarded and configured separately from notification delivery. Email delivery is not enabled for Production, and an inquiry's preferred date is not a confirmed booking.
 - No inquiry retention or deletion period is approved; do not add automatic deletion or anonymization. See the [operations and recovery runbook](Notes/Operations-and-Recovery-Runbook.md).
 - Customer accounts, self-service password reset, a booking/slot system, CRM integration, and vehicle-view tracking are not implemented. Unsupported view counts are not shown.

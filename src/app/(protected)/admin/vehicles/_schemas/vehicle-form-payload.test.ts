@@ -37,7 +37,7 @@ function formValues(
     co2Emission: 145,
     featuresText: "  Heated seats  \n\n Panoramic roof \r\n",
     labelsText: "  Premium  \n  Low mileage ",
-    mediaAssetIds: ["asset-1", "asset-2"],
+    photoIds: ["asset-1", "asset-2"],
     status: "published",
     inspectionStatus: "passed",
     isFeatured: true,
@@ -75,7 +75,7 @@ describe("vehicle form draft payload", () => {
       co2Emission: 145,
       features: ["Heated seats", "Panoramic roof"],
       labels: ["Premium", "Low mileage"],
-      mediaAssetIds: ["asset-1", "asset-2"],
+      photoIds: ["asset-1", "asset-2"],
     });
   });
 

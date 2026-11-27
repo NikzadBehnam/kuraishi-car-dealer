@@ -62,6 +62,7 @@ export function VehicleImageGallery({
           onClick={() => openPreview(0)}
         >
           <Image
+            unoptimized
             priority
             fill
             sizes="(max-width: 1024px) 100vw, 60vw"
@@ -81,6 +82,7 @@ export function VehicleImageGallery({
               onClick={() => openPreview(index + 1)}
             >
               <Image
+                unoptimized
                 fill
                 sizes="(max-width: 768px) 50vw, 25vw"
                 className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"

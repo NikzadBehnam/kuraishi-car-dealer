@@ -14,19 +14,13 @@ const defaultChecks: ReadinessChecks = {
     await prisma.$queryRaw`SELECT 1`;
   },
   storage: async () => {
-    const {
-      getMediaStorageClient,
-      getPrivateMediaBucket,
-      getPublicMediaBucket,
-    } = await import("@/lib/media-storage");
+    const { getMediaStorageClient, getPrivateMediaBucket } =
+      await import("@/lib/media-storage");
     const client = getMediaStorageClient();
     const abortSignal = AbortSignal.timeout(3000);
-    const buckets = [getPrivateMediaBucket(), getPublicMediaBucket()];
-
-    await Promise.all(
-      buckets.map((Bucket) =>
-        client.send(new HeadBucketCommand({ Bucket }), { abortSignal }),
-      ),
+    await client.send(
+      new HeadBucketCommand({ Bucket: getPrivateMediaBucket() }),
+      { abortSignal },
     );
   },
   delivery: async () => {

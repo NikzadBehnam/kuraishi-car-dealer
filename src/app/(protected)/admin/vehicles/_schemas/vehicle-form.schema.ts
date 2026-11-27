@@ -73,7 +73,7 @@ export const vehicleFormSchema = z
     ),
     featuresText: z.string().optional(),
     labelsText: z.string().optional(),
-    mediaAssetIds: z
+    photoIds: z
       .array(z.string().min(1).max(128))
       .max(20, "A vehicle can have at most 20 images.")
       .refine((ids) => new Set(ids).size === ids.length, {

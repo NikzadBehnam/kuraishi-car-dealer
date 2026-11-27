@@ -16,7 +16,7 @@ export function getTrustedOrigins(
 ) {
   if (isVercelPreview(env)) {
     const origin =
-      env.BETTER_AUTH_URL === "auto"
+      env.BETTER_AUTH_PREVIEW_USE_DEPLOYMENT_URL === "true"
         ? env.VERCEL_URL && `https://${env.VERCEL_URL}`
         : env.BETTER_AUTH_URL;
     return origin && previewOriginPattern.test(origin) ? [origin] : [];

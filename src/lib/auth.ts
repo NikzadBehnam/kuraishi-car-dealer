@@ -35,7 +35,7 @@ const baseURL = isVercelPreview()
 
 if (!baseURL) {
   throw new Error(
-    "Set BETTER_AUTH_URL to the exact HTTPS Preview origin, or to auto for the current Vercel Preview deployment.",
+    "Set BETTER_AUTH_URL to the exact HTTPS Preview origin, or enable BETTER_AUTH_PREVIEW_USE_DEPLOYMENT_URL for the current Vercel Preview deployment.",
   );
 }
 

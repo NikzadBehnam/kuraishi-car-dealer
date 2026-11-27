@@ -873,8 +873,9 @@ are the starting points, not approval of the draft.
 - Keep both inquiry modes off in Production until Phase 4C authorization.
   Synthetic testing uses `INQUIRY_TEST_MODE=true`, an isolated database, and a
   `.invalid` address on `localhost:3000` or the exact protected Vercel Preview
-  deployment host. For a manually staged Preview, `BETTER_AUTH_URL=auto`
-  uses the exact provider-assigned `VERCEL_URL` as the auth origin.
+  deployment host. For a manually staged Preview,
+  `BETTER_AUTH_PREVIEW_USE_DEPLOYMENT_URL=true` uses the exact provider-assigned
+  `VERCEL_URL` as the auth origin without overriding Production authentication.
   Live intake additionally requires the canonical Production
   host and origin, `INQUIRY_LIVE_MODE=true`, the exact approved
   `INQUIRY_APPROVED_NOTICE_VERSION`, and a stable private `INQUIRY_HASH_SECRET`

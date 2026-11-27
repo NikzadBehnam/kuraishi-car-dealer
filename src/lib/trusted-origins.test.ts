@@ -66,14 +66,18 @@ describe("trusted request origins", () => {
     const env = {
       VERCEL: "1",
       VERCEL_ENV: "preview",
-      BETTER_AUTH_URL: "auto",
+      BETTER_AUTH_URL: "https://preview-build.invalid",
+      BETTER_AUTH_PREVIEW_USE_DEPLOYMENT_URL: "true",
       VERCEL_URL: "dealer-current-preview.vercel.app",
     };
     assert.deepEqual(getTrustedOrigins(true, env), [
       "https://dealer-current-preview.vercel.app",
     ]);
     assert.deepEqual(
-      getTrustedOrigins(true, { ...env, VERCEL_URL: "dealer.vercel.app/other" }),
+      getTrustedOrigins(true, {
+        ...env,
+        VERCEL_URL: "dealer.vercel.app/other",
+      }),
       [],
     );
     assert.deepEqual(

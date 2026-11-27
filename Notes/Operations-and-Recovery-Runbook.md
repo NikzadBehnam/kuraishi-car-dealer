@@ -367,6 +367,17 @@ unknown**, with a brief explanation for each unresolved result. Do not share
 connection strings, tokens, credentials, or screenshots showing values.
 Leave 16.11 open if any required check fails or remains unknown.
 
+## Leads status deployment
+
+See the [Phase 3 release record](./report.md#leads-status-management-phase-3-release)
+for the deployed revision, migration ledger, and retained recovery point.
+The staff workflow requires only column-level `UPDATE ("status")` on
+`public."Inquiry"` for `kuraishi_v1_runtime`. Do not grant table-wide
+`UPDATE`, enable real intake, or broaden notification privileges to support
+status management. If the Production inbox is empty, verify the live filter
+and private search without inserting fixtures, and use an isolated database
+for populated details, status writes, and notes.
+
 ## Vehicle photo cutover
 
 The implementation branch is based on the protected customer-review
